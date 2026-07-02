@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-primary: var(--primary);
+  --color-primary-contrast: var(--primary-contrast);
+  --color-primary-glow: var(--primary-glow);
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-border-custom: var(--border-color);
+  
+  --font-sans: var(--font-sans), sans-serif;
+  --font-display: var(--font-display), sans-serif;
+  --font-mono: var(--font-mono), monospace;
+
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-scale-up: scale-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-up: slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-up {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Default token values — Crimson Cinema (overridden at runtime by applyTheme) */
+:root,
+[data-theme="theme-crimson"] {
+  --background: #0a0a0b;
+  --surface: #111112;
+  --surface-hover: #1b1b1c;
+  --primary: #e11d48;
+  --primary-contrast: #ffffff;
+  --primary-glow: rgba(225, 29, 72, 0.4);
+  --accent: #fb7185;
+  --accent-contrast: #280307;
+  --on-surface: #ffffff;
+  --on-surface-variant: rgba(255, 255, 255, 0.68);
+  --border-color: rgba(255, 255, 255, 0.1);
+}
+
+html, body {
+  background-color: var(--background);
+  color: var(--on-surface);
+  font-family: var(--font-sans), sans-serif;
+  transition: background-color 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+@layer components {
+  .bg-primary {
+    color: var(--primary-contrast);
+  }
+
+  .text-readable {
+    color: var(--on-surface);
+  }
+
+  .text-readable-muted {
+    color: var(--on-surface-variant);
+  }
+}
+
+.glass-panel {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Readable text on filled primary surfaces across all themes */
+.bg-primary {
+  color: var(--primary-contrast);
+}

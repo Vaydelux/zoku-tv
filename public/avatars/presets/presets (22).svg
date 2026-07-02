@@ -1,0 +1,95 @@
+<svg viewBox="0 0 100 100" fill="var(--color13, #fff)" width="32" height="32" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <style>
+        :root, .palette0 {color: currentColor;
+            --color0: #3f51b5;
+            --color1: #212121;
+            --color2: #ffe0b2;
+            --color3: #673ab7;
+            --color4: #5d4037;
+            --color5: #d7ccc8;
+            --color6: #e91e63;
+            --color7: #4caf50;
+            --color8: #f44336;
+            --color9: #bdbdbd;
+            --color10: #29b6f6;
+            --color11: #eee;
+            --color12: #8bc34a;
+            --color13: #fff;
+            --color14: #ff5722;
+            --color15: #424242;
+            --color16: #00bcd4;
+            --color17: #ffccbc;
+            --color18: #455a64;
+            --color19: #d32f2f;
+            --color20: #795548;
+            --color21: #f5cda7;
+            --color22: #ff9800;
+            --color23: #9e9e9e;
+            --color24: #e0e0e0;
+            --color25: #009688;
+            --color26: #388e3c;
+            --color27: #fff9c4;
+            --color28: #aed581;
+            --color29: #ffeb3b;
+            --color30: #2196f3;
+            --color31: #00838f;
+            --color32: #263238;
+            --color33: #ffc107;
+            --color34: #8d6e63;
+            --color35: #607d8b;
+            --color36: #af9b8f;
+            --color37: #006064;
+            --color38: #ae8b71;
+            --color39: #3e2723;
+            --color40: #1565c0;
+            --color41: #03a9f4;
+            --color42: #fff59d;
+            --color43: #9c27b0;
+            --color44: #1b5e20;
+            --color45: #6d4c41;
+            --color46: #c49c82;
+            --color47: #bf360c;
+            --color48: #cddc39;
+            --color49: #f48fb1;
+            --color50: #ffecb3;
+            --color51: #ffcc80;
+            --color52: #ffa726;
+            --color53: #ef6c00;
+            --color54: #e65100;
+            --color55: #616161;
+            --color56: #0ff;
+            --color57: #f0f;
+            --color58: #26c6da;
+            --color59: #4dd0e1;
+            --color60: #80deea;
+            --color61: #000;
+            --color62: #b71c1c;
+            --color63: #fdd835;
+            --color64: #1976d2;
+            --color65: #0d47a1;
+            --color66: #fff176;
+            --color67: #1a237e;
+            --color68: #5e35b1;
+            --color69: #7e57c2;
+            --color70: #121212;
+            --color71: #ffcdd2;
+            --color72: #fbc02d;
+            --color73: #f8bbd0;
+            --color74: #f06292;
+            --color75: #d1c4e9;
+            --color76: #ef9a9a;
+            --color77: #bbdefb;
+            --color78: #c8e6c9;
+            --color79: #c0ca33;
+        }
+    </style>
+    <rect fill="var(--color33, #ffc107)" width="100" height="100" />
+    <rect fill="var(--color8, #f44336)" width="6" height="35" x="30" y="50" />
+    <rect fill="var(--color22, #ff9800)" width="6" height="35" x="38" y="50" />
+    <rect fill="var(--color29, #ffeb3b)" width="6" height="35" x="47" y="50" />
+    <rect fill="var(--color7, #4caf50)" width="6" height="35" x="56" y="50" />
+    <rect fill="var(--color30, #2196f3)" width="6" height="35" x="64" y="50" />
+    <circle cx="30" cy="45" r="15" />
+    <circle cx="50" cy="40" r="18" />
+    <circle cx="70" cy="45" r="15" />
+</svg>
