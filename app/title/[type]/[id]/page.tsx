@@ -28,7 +28,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
   const mediaType = type as "movie" | "tv";
   const titleId = Number(id);
 
-  const { user, currentProfile, initializing } = useSessionStore();
+  const { currentProfile } = useSessionStore();
   const { addItem, removeItem, hasItem } = useWatchlistStore();
 
   const [details, setDetails] = useState<TMDBTitle | null>(null);
@@ -40,20 +40,9 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
   const [loading, setLoading] = useState(true);
   const [loadingSeason, setLoadingSeason] = useState(false);
 
-  // Redirection guard
-  useEffect(() => {
-    if (!initializing) {
-      if (!user) {
-        router.replace("/login");
-      } else if (!currentProfile) {
-        router.replace("/profiles");
-      }
-    }
-  }, [user, currentProfile, initializing, router]);
-
   // Fetch Core Details
   useEffect(() => {
-    if (!user || !currentProfile || !titleId) return;
+    if (!currentProfile || !titleId) return;
 
     async function loadTitleData() {
       setLoading(true);
@@ -87,7 +76,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
     }
 
     loadTitleData();
-  }, [user, currentProfile, mediaType, titleId]);
+  }, [currentProfile, mediaType, titleId]);
 
   // Fetch Season Details when season selection changes
   useEffect(() => {
@@ -108,7 +97,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
     loadSeasonData();
   }, [mediaType, titleId, selectedSeason]);
 
-  if (initializing || !user || !currentProfile || loading) {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

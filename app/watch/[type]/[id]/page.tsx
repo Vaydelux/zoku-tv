@@ -26,7 +26,7 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
   const mediaType = type as "movie" | "tv";
   const titleId = Number(id);
 
-  const { user, currentProfile, initializing } = useSessionStore();
+  const { currentProfile } = useSessionStore();
   const { 
     selectedServerId, 
     iframeMode, 
@@ -46,20 +46,9 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
   const overlayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const healthTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Redirection guard
-  useEffect(() => {
-    if (!initializing) {
-      if (!user) {
-        router.replace("/login");
-      } else if (!currentProfile) {
-        router.replace("/profiles");
-      }
-    }
-  }, [user, currentProfile, initializing, router]);
-
   // Fetch title details
   useEffect(() => {
-    if (!user || !currentProfile || !titleId) return;
+    if (!currentProfile || !titleId) return;
 
     async function loadTitle() {
       setLoading(true);
@@ -86,7 +75,7 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
     }
 
     loadTitle();
-  }, [user, currentProfile, mediaType, titleId]);
+  }, [currentProfile, mediaType, titleId]);
 
   // Auto-fading top overlay navigation bar
   const resetOverlayTimer = () => {
@@ -123,7 +112,7 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
     };
   }, [selectedServerId, loadAttempts]);
 
-  if (initializing || !user || !currentProfile || loading) {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-black text-white">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

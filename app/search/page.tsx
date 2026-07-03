@@ -25,7 +25,7 @@ export default function SearchPage() {
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, currentProfile, initializing } = useSessionStore();
+  const { currentProfile } = useSessionStore();
   const { history, loadHistory, addQuery, clearHistory } = useSearchHistoryStore();
 
   const queryParam = searchParams.get("q") || "";
@@ -35,23 +35,12 @@ function SearchPageContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
 
-  // Redirection guard
-  useEffect(() => {
-    if (!initializing) {
-      if (!user) {
-        router.replace("/login");
-      } else if (!currentProfile) {
-        router.replace("/profiles");
-      }
-    }
-  }, [user, currentProfile, initializing, router]);
-
   // Load search history when profile is active
   useEffect(() => {
-    if (user && currentProfile) {
+    if (currentProfile) {
       loadHistory();
     }
-  }, [user, currentProfile, loadHistory]);
+  }, [currentProfile, loadHistory]);
 
   // Sync input value when URL parameter changes externally (e.g. click history item)
   useEffect(() => {
@@ -136,14 +125,6 @@ function SearchPageContent() {
     setInputValue(q);
     router.push(`/search?q=${encodeURIComponent(q)}`);
   };
-
-  if (initializing || !user || !currentProfile) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">

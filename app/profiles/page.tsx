@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSessionStore } from "@/stores";
 import { Plus, Trash2, Edit2, Shield, Tv, Sparkles, X, Loader2 } from "lucide-react";
 import { AvatarPicker } from "@/components/AvatarPicker";
@@ -19,6 +19,7 @@ import {
   resolveAvatarId,
 } from "@/lib/profile-avatars";
 import { canAddProfile, MAX_PROFILES } from "@/lib/profile-limits";
+import { sanitizeNextPath } from "@/lib/auth-routes";
 
 type ToastState = {
   message: string;
@@ -27,8 +28,9 @@ type ToastState = {
 
 export default function ProfilesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isNavigating, startTransition] = useTransition();
-  const { user, profiles, setProfile, createProfile, deleteProfile, updateProfile, initializing } = useSessionStore();
+  const { profiles, setProfile, createProfile, deleteProfile, updateProfile } = useSessionStore();
 
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -46,12 +48,6 @@ export default function ProfilesPage() {
   const showModal = isCreating || isEditing;
   const isBusy = isSubmitting || selectingProfileId !== null || deletingProfileId !== null || isNavigating;
   const selectingProfile = profiles.find((profile) => profile.id === selectingProfileId);
-
-  useEffect(() => {
-    if (!initializing && !user) {
-      router.replace("/login");
-    }
-  }, [user, initializing, router]);
 
   const resetForm = useCallback(() => {
     setNewName("");
@@ -90,8 +86,9 @@ export default function ProfilesPage() {
     if (isBusy) return;
     setSelectingProfileId(p.id);
     setProfile(p);
+    const destination = sanitizeNextPath(searchParams.get("next")) ?? "/home";
     startTransition(() => {
-      router.push("/home");
+      router.push(destination);
     });
   };
 
@@ -194,14 +191,6 @@ export default function ProfilesPage() {
       }
     }
   };
-
-  if (initializing || !user) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-black">
-        <Tv className="h-10 w-10 text-primary animate-ping" />
-      </div>
-    );
-  }
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-black text-on-surface px-4 py-8 sm:py-12">

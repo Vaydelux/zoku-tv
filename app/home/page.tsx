@@ -12,7 +12,7 @@ import { loadHomeGenreRails, loadHomeTrending } from "@/lib/load-home-content";
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, currentProfile, initializing } = useSessionStore();
+  const { user, currentProfile } = useSessionStore();
   const { addItem, removeItem, hasItem } = useWatchlistStore();
 
   const [heroTitle, setHeroTitle] = useState<TMDBTitle | null>(null);
@@ -51,17 +51,6 @@ export default function HomePage() {
       };
     }
   }, []);
-
-  // Auth & Profile redirect check
-  useEffect(() => {
-    if (!initializing) {
-      if (!user) {
-        router.replace("/login");
-      } else if (!currentProfile) {
-        router.replace("/profiles");
-      }
-    }
-  }, [user, currentProfile, initializing, router]);
 
   // Load home content in two parallel phases for faster first paint
   useEffect(() => {
@@ -116,14 +105,6 @@ export default function HomePage() {
       cancelled = true;
     };
   }, [user, currentProfile]);
-
-  if (initializing || !user || !currentProfile) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
 
   const heroName = heroTitle?.title || heroTitle?.name || "Untitled Masterpiece";
   const heroBackdrop = heroTitle?.backdrop_path 

@@ -15,26 +15,15 @@ interface GenrePageProps {
 export default function GenrePage({ params }: GenrePageProps) {
   const router = useRouter();
   const { id: genreId } = use(params);
-  const { user, currentProfile, initializing } = useSessionStore();
+  const { currentProfile } = useSessionStore();
 
   const [genreName, setGenreName] = useState("");
   const [items, setItems] = useState<TMDBTitle[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Redirection guard
-  useEffect(() => {
-    if (!initializing) {
-      if (!user) {
-        router.replace("/login");
-      } else if (!currentProfile) {
-        router.replace("/profiles");
-      }
-    }
-  }, [user, currentProfile, initializing, router]);
-
   // Fetch genre content
   useEffect(() => {
-    if (!user || !currentProfile || !genreId) return;
+    if (!currentProfile || !genreId) return;
 
     async function loadGenreContent() {
       setLoading(true);
@@ -76,15 +65,7 @@ export default function GenrePage({ params }: GenrePageProps) {
     }
 
     loadGenreContent();
-  }, [user, currentProfile, genreId]);
-
-  if (initializing || !user || !currentProfile) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
+  }, [currentProfile, genreId]);
 
   return (
     <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">

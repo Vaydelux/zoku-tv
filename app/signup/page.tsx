@@ -1,30 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Tv, Mail, Lock, User, ShieldCheck, ArrowRight } from "lucide-react";
-import { signupWithEmail, loginWithGoogle, useSessionStore } from "@/stores";
+import { signupWithEmail, loginWithGoogle } from "@/stores";
 import { Spinner } from "@/components/Spinner";
+import { resolvePostLoginPath } from "@/lib/auth-routes";
 
 export default function SignupPage() {
   const router = useRouter();
-  const { user, currentProfile, initializing } = useSessionStore();
+  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!initializing && user) {
-      if (!currentProfile) {
-        router.replace("/profiles");
-      } else {
-        router.replace("/home");
-      }
-    }
-  }, [user, currentProfile, initializing, router]);
+  const redirectAfterAuth = (hasProfile: boolean) => {
+    router.push(resolvePostLoginPath(hasProfile, searchParams.get("next")));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +27,7 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await signupWithEmail(email, password, name);
-      router.push("/profiles");
+      redirectAfterAuth(false);
     } catch (err: any) {
       setError(err.message || "Registration failed.");
     } finally {
@@ -45,7 +40,7 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await loginWithGoogle();
-      router.push("/profiles");
+      redirectAfterAuth(false);
     } catch (err: any) {
       setError(err.message || "Google sign-in failed.");
     } finally {

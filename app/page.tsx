@@ -1,26 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useSessionStore } from "@/stores";
 import { Tv } from "lucide-react";
 
+/** Root route — AuthGate handles redirect to /login, /profiles, or /home. */
 export default function RootPage() {
-  const router = useRouter();
-  const { user, currentProfile, initializing } = useSessionStore();
-
-  useEffect(() => {
-    if (!initializing) {
-      if (!user) {
-        router.replace("/login");
-      } else if (!currentProfile) {
-        router.replace("/profiles");
-      } else {
-        router.replace("/home");
-      }
-    }
-  }, [user, currentProfile, initializing, router]);
-
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-background text-on-surface">
       <div className="flex flex-col items-center gap-4 animate-pulse">

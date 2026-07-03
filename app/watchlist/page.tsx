@@ -9,35 +9,16 @@ import { TitleCard } from "@/components/TitleCard";
 
 export default function WatchlistPage() {
   const router = useRouter();
-  const { user, currentProfile, initializing } = useSessionStore();
+  const { currentProfile } = useSessionStore();
   const { items, initWatchlist } = useWatchlistStore();
-
-  // Redirection guard
-  useEffect(() => {
-    if (!initializing) {
-      if (!user) {
-        router.replace("/login");
-      } else if (!currentProfile) {
-        router.replace("/profiles");
-      }
-    }
-  }, [user, currentProfile, initializing, router]);
 
   // Load Watchlist
   useEffect(() => {
-    if (user && currentProfile) {
+    if (currentProfile) {
       const unsubscribe = initWatchlist();
       return () => unsubscribe();
     }
-  }, [user, currentProfile, initWatchlist]);
-
-  if (initializing || !user || !currentProfile) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
+  }, [currentProfile, initWatchlist]);
 
   return (
     <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">

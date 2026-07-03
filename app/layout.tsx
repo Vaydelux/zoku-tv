@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ClientInitializer } from "@/components/ClientInitializer";
+import { AuthGate } from "@/components/AuthGate";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,7 +39,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased min-h-full bg-background text-on-surface">
         <ClientInitializer />
-        {children}
+        <AuthGate>{children}</AuthGate>
       </body>
     </html>
   );

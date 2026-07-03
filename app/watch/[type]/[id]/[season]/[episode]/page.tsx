@@ -30,7 +30,7 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
   const seasonNum = Number(season);
   const episodeNum = Number(episode);
 
-  const { user, currentProfile, initializing } = useSessionStore();
+  const { currentProfile } = useSessionStore();
   const { 
     selectedServerId, 
     iframeMode, 
@@ -51,20 +51,9 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
   const overlayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const healthTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Redirection guard
-  useEffect(() => {
-    if (!initializing) {
-      if (!user) {
-        router.replace("/login");
-      } else if (!currentProfile) {
-        router.replace("/profiles");
-      }
-    }
-  }, [user, currentProfile, initializing, router]);
-
   // Fetch TV Details and active season details
   useEffect(() => {
-    if (!user || !currentProfile || !titleId) return;
+    if (!currentProfile || !titleId) return;
 
     async function loadTVDetails() {
       setLoading(true);
@@ -96,7 +85,7 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
     }
 
     loadTVDetails();
-  }, [user, currentProfile, titleId, seasonNum]);
+  }, [currentProfile, titleId, seasonNum, episodeNum]);
 
   // Overlay mousemove fade control
   const resetOverlayTimer = () => {
@@ -132,7 +121,7 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
     };
   }, [selectedServerId, seasonNum, episodeNum, loadAttempts]);
 
-  if (initializing || !user || !currentProfile || loading) {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-black text-white">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

@@ -25,7 +25,7 @@ export default function DiscoverPage() {
 function DiscoverPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, currentProfile, initializing } = useSessionStore();
+  const { currentProfile } = useSessionStore();
 
   // Load genres list
   const [availableGenres, setAvailableGenres] = useState<TMDBGenre[]>([]);
@@ -57,17 +57,6 @@ function DiscoverPageContent() {
   const [localMinRuntime, setLocalMinRuntime] = useState(minRuntime);
   const [localMaxRuntime, setLocalMaxRuntime] = useState(maxRuntime);
 
-  // Redirection guard
-  useEffect(() => {
-    if (!initializing) {
-      if (!user) {
-        router.replace("/login");
-      } else if (!currentProfile) {
-        router.replace("/profiles");
-      }
-    }
-  }, [user, currentProfile, initializing, router]);
-
   // Fetch available genres based on active media type
   useEffect(() => {
     async function loadGenres() {
@@ -98,7 +87,7 @@ function DiscoverPageContent() {
 
   // Perform discovery fetch whenever URL changes or page changes
   useEffect(() => {
-    if (!user || !currentProfile) return;
+    if (!currentProfile) return;
 
     async function performDiscovery() {
       if (page === 1) {
@@ -152,7 +141,7 @@ function DiscoverPageContent() {
     }
 
     performDiscovery();
-  }, [mediaType, sortBy, withGenres, yearFrom, yearTo, minRating, minRuntime, maxRuntime, region, language, currentProfile, page, user]);
+  }, [mediaType, sortBy, withGenres, yearFrom, yearTo, minRating, minRuntime, maxRuntime, region, language, currentProfile, page]);
 
   // Apply filters by pushing to URL
   const applyFilters = (updates: Record<string, string>) => {
@@ -189,14 +178,6 @@ function DiscoverPageContent() {
     setPage(1);
     router.push("/discover?type=movie");
   };
-
-  if (initializing || !user || !currentProfile) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
 
   const sortingOptions = [
     { value: "popularity.desc", label: "Popularity High" },

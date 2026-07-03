@@ -40,7 +40,7 @@ export default function SettingsPage() {
 function SettingsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, currentProfile, updateProfile, initializing } = useSessionStore();
+  const { user, currentProfile, updateProfile } = useSessionStore();
   const { iframeMode, setIframeMode } = useEmbedStore();
 
   const [activeTab, setActiveTab] = useState<"theme" | "iframe-mode" | "genre-rails" | "cache">("theme");
@@ -57,17 +57,6 @@ function SettingsPageContent() {
       setActiveTab(section as any);
     }
   }, [searchParams]);
-
-  // Redirection guard
-  useEffect(() => {
-    if (!initializing) {
-      if (!user) {
-        router.replace("/login");
-      } else if (!currentProfile) {
-        router.replace("/profiles");
-      }
-    }
-  }, [user, currentProfile, initializing, router]);
 
   // Load available genres & profile preferences
   useEffect(() => {
@@ -92,14 +81,6 @@ function SettingsPageContent() {
 
     loadGenreOptions();
   }, [user, currentProfile, iframeMode]);
-
-  if (initializing || !user || !currentProfile) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
 
   const handleThemeSelect = async (themeId: string) => {
     setSaving(true);
