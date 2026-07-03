@@ -1,8 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ClientInitializer } from "@/components/ClientInitializer";
 import { AuthGate } from "@/components/AuthGate";
+import { DEFAULT_THEME_ID } from "@/lib/themes";
+import { getPwaIconUrl } from "@/lib/pwa-brand";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,7 +26,44 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Zoku TV - Infinite Streaming Portal",
-  description: "Zoku TV is your high-fidelity, customizable dashboard for cinematic discovery and streaming. Explore genres, manage your watchlists, track your history, and customize your experience with 18 dynamic visual themes.",
+  description:
+    "Zoku TV is your high-fidelity, customizable dashboard for cinematic discovery and streaming. Explore genres, manage your watchlists, track your history, and customize your experience with 18 dynamic visual themes.",
+  applicationName: "Zoku TV",
+  manifest: `/manifest.webmanifest?theme=${DEFAULT_THEME_ID}`,
+  appleWebApp: {
+    capable: true,
+    title: "Zoku TV",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: [
+      {
+        url: getPwaIconUrl(192, DEFAULT_THEME_ID),
+        sizes: "192x192",
+        type: "image/svg+xml",
+      },
+      {
+        url: getPwaIconUrl(512, DEFAULT_THEME_ID),
+        sizes: "512x512",
+        type: "image/svg+xml",
+      },
+    ],
+    apple: [
+      {
+        url: getPwaIconUrl(180, DEFAULT_THEME_ID),
+        sizes: "180x180",
+        type: "image/svg+xml",
+      },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#e11d48",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -34,9 +73,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full`} data-theme="theme-crimson">
-      <head>
-        <meta name="theme-color" content="#0a0a0b" />
-      </head>
       <body className="antialiased min-h-full bg-background text-on-surface">
         <ClientInitializer />
         <AuthGate>{children}</AuthGate>

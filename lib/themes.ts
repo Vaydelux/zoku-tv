@@ -311,8 +311,10 @@ export function applyTheme(themeId: unknown): ThemeId {
 
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute("content", theme.tokens.background);
+    meta.setAttribute("content", theme.tokens.primary);
   }
+
+  void import("@/lib/pwa-brand").then(({ applyPwaBranding }) => applyPwaBranding(id));
 
   return id;
 }

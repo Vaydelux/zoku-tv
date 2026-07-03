@@ -1,8 +1,9 @@
-const CACHE_NAME = "zoku-tv-cache-v1";
+const CACHE_NAME = "zoku-tv-cache-v2";
 const ASSETS_TO_CACHE = [
   "/",
-  "/manifest.json",
-  "/favicon.ico"
+  "/manifest.webmanifest",
+  "/api/pwa-icon?size=192&theme=theme-crimson",
+  "/api/pwa-icon?size=512&theme=theme-crimson",
 ];
 
 // Install Event
@@ -42,6 +43,24 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
+  // PWA manifest and themed icons (network first so theme updates propagate)
+  if (url.pathname === "/manifest.webmanifest" || url.pathname === "/api/pwa-icon") {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
   // 1. TMDB Image Assets Caching (Cache First with background revalidation)
   if (url.hostname === "image.tmdb.org" || url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|ico)$/i)) {
     event.respondWith(
@@ -52,12 +71,8 @@ self.addEventListener("fetch", (event) => {
               cache.put(request, networkResponse.clone());
             }
             return networkResponse;
-          }).catch((err) => {
-            // Silent catch to prevent errors in background updates
-            return null;
-          });
+          }).catch(() => null);
 
-          // Return cached response immediately if available, or wait for network fetch
           return cachedResponse || fetchPromise;
         });
       })
@@ -69,7 +84,6 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request)
       .then((networkResponse) => {
-        // Cache successful GET responses for pages, stylesheets, scripts, and API routes
         if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -79,13 +93,11 @@ self.addEventListener("fetch", (event) => {
         return networkResponse;
       })
       .catch(() => {
-        // Offline Fallback Handler
         return caches.match(request).then((cachedResponse) => {
           if (cachedResponse) {
             return cachedResponse;
           }
           
-          // For navigation/page requests, serve the main document / index shell
           if (request.mode === "navigate") {
             return caches.match("/");
           }

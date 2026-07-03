@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Play, Plus, Check, Star, Info, AlertTriangle } from "lucide-react";
-import { useSessionStore, useWatchlistStore } from "@/stores";
+import { Play, AlertTriangle } from "lucide-react";
+import { useSessionStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
+import { HeroCarousel } from "@/components/HeroCarousel";
 import { TitleRail } from "@/components/TitleRail";
 import { LoadingBanner } from "@/components/LoadingBanner";
 import { TMDBTitle, TMDBGenre } from "@/lib/tmdb";
@@ -13,9 +14,8 @@ import { loadHomeGenreRails, loadHomeTrending } from "@/lib/load-home-content";
 export default function HomePage() {
   const router = useRouter();
   const { user, currentProfile } = useSessionStore();
-  const { addItem, removeItem, hasItem } = useWatchlistStore();
 
-  const [heroTitle, setHeroTitle] = useState<TMDBTitle | null>(null);
+  const [heroSlides, setHeroSlides] = useState<TMDBTitle[]>([]);
   const [trendingMovies, setTrendingMovies] = useState<TMDBTitle[]>([]);
   const [trendingTV, setTrendingTV] = useState<TMDBTitle[]>([]);
   const [genreRails, setGenreRails] = useState<{ genre: TMDBGenre; titles: TMDBTitle[] }[]>([]);
@@ -71,7 +71,7 @@ export default function HomePage() {
         const trending = await loadHomeTrending();
         if (cancelled) return;
 
-        setHeroTitle(trending.heroTitle);
+        setHeroSlides(trending.heroSlides);
         setTrendingMovies(trending.trendingMovies);
         setTrendingTV(trending.trendingTV);
       } catch (err) {
@@ -106,31 +106,6 @@ export default function HomePage() {
     };
   }, [user, currentProfile]);
 
-  const heroName = heroTitle?.title || heroTitle?.name || "Untitled Masterpiece";
-  const heroBackdrop = heroTitle?.backdrop_path 
-    ? `https://image.tmdb.org/t/p/original${heroTitle.backdrop_path}`
-    : "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1920";
-  const heroRating = heroTitle?.vote_average ? heroTitle.vote_average.toFixed(1) : "N/A";
-  const heroYear = (heroTitle?.release_date || heroTitle?.first_air_date || "").split("-")[0];
-  const heroMediaType = heroTitle?.media_type || "movie";
-  const isHeroInWatchlist = heroTitle ? hasItem(heroTitle.id, heroMediaType) : false;
-
-  const handleHeroWatchlistToggle = () => {
-    if (!heroTitle) return;
-    if (isHeroInWatchlist) {
-      removeItem(heroTitle.id, heroMediaType);
-    } else {
-      addItem(
-        heroTitle.id,
-        heroMediaType,
-        heroName,
-        heroTitle.poster_path,
-        heroTitle.backdrop_path,
-        heroTitle.vote_average
-      );
-    }
-  };
-
   const loadingMedia = loadingTrending || loadingGenreRails;
 
   return (
@@ -138,90 +113,7 @@ export default function HomePage() {
       {loadingMedia && loadingMessage && <LoadingBanner message={loadingMessage} />}
       <Navbar />
 
-      {/* 1. Hero Spotlight Banner */}
-      <section className="relative isolate w-full">
-        {/* Backdrop layer — clipped separately so rails/cards below are never cut off */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden bg-black">
-          <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{ backgroundImage: `url('${heroBackdrop}')` }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/20" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/35 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-transparent to-transparent" />
-        </div>
-
-        {/* Hero copy + actions */}
-        {(heroTitle || loadingTrending) && (
-          <div className="relative z-[1] mx-auto flex w-full max-w-7xl min-h-[clamp(340px,52dvh,680px)] flex-col justify-end px-4 pb-6 pt-20 sm:px-6 sm:pb-8 sm:pt-24 lg:px-8 lg:pb-10">
-            {loadingTrending && !heroTitle ? (
-              <div className="flex w-full max-w-3xl flex-col gap-4 animate-pulse">
-                <div className="h-6 w-40 rounded-full bg-surface" />
-                <div className="h-12 w-full max-w-xl rounded-xl bg-surface" />
-                <div className="h-16 w-full max-w-2xl rounded-xl bg-surface" />
-                <div className="flex gap-3">
-                  <div className="h-10 w-32 rounded-xl bg-surface" />
-                  <div className="h-10 w-32 rounded-xl bg-surface" />
-                </div>
-              </div>
-            ) : heroTitle ? (
-            <div className="flex w-full max-w-3xl flex-col items-start gap-3 sm:gap-4 animate-fade-in">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] sm:text-xs md:text-sm font-mono text-on-surface-variant bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-border-custom">
-                <span className="text-primary font-bold uppercase">{heroMediaType}</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-border-custom" />
-                <span>{heroYear}</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-border-custom" />
-                <span className="flex items-center gap-1">
-                  <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                  <span className="text-on-surface font-semibold">{heroRating}</span>
-                </span>
-              </div>
-
-              <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight text-on-surface drop-shadow-lg leading-[1.05] line-clamp-3 sm:line-clamp-none">
-                {heroName}
-              </h1>
-
-              <p className="text-xs sm:text-sm text-on-surface-variant max-w-2xl line-clamp-2 sm:line-clamp-3 md:line-clamp-4 leading-relaxed drop-shadow">
-                {heroTitle.overview}
-              </p>
-
-              <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 pt-1 sm:pt-2">
-                <button
-                  onClick={() => router.push(`/watch/${heroMediaType}/${heroTitle.id}`)}
-                  className="flex items-center gap-2 rounded-xl bg-primary hover:bg-opacity-90 py-2.5 px-5 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-white shadow-lg active:scale-95 transition-all duration-300"
-                >
-                  <Play className="h-4 w-4 fill-white" />
-                  <span>{heroMediaType === "tv" ? "Play Show" : "Play Movie"}</span>
-                </button>
-
-                <button
-                  onClick={() => router.push(`/title/${heroMediaType}/${heroTitle.id}`)}
-                  className="flex items-center gap-2 rounded-xl bg-surface/80 hover:bg-surface-hover border border-border-custom py-2.5 px-5 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-on-surface hover:text-primary active:scale-95 transition-all duration-300"
-                >
-                  <Info className="h-4 w-4" />
-                  <span>More Info</span>
-                </button>
-
-                <button
-                  onClick={handleHeroWatchlistToggle}
-                  className={`p-2.5 sm:p-3 rounded-xl border transition-all duration-300 ${
-                    isHeroInWatchlist
-                      ? "bg-primary/20 border-primary text-primary"
-                      : "bg-surface/60 border-border-custom hover:border-primary text-on-surface"
-                  }`}
-                  title="Add/Remove Watchlist"
-                >
-                  {isHeroInWatchlist ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-            ) : null}
-          </div>
-        )}
-
-        {/* Soft fade into the rails section */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-16 bg-gradient-to-t from-background to-transparent sm:h-24" />
-      </section>
+      <HeroCarousel slides={heroSlides} loading={loadingTrending} />
 
       {/* 2. Media Horizontal Rails */}
       <section className="relative z-10 bg-background pt-1 sm:pt-2 space-y-1 md:space-y-2 pb-16">

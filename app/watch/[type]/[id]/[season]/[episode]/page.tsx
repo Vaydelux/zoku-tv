@@ -11,7 +11,6 @@ import {
   RefreshCw, 
   AlertTriangle,
   MonitorPlay,
-  LayoutGrid
 } from "lucide-react";
 import { useSessionStore, useEmbedStore } from "@/stores";
 import { EMBED_SERVER_CATALOG, getEmbedUrl } from "@/lib/embed";
@@ -43,6 +42,7 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
   const [details, setDetails] = useState<TMDBTitle | null>(null);
   const [seasonDetail, setSeasonDetail] = useState<TMDBSeasonDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingSeason, setLoadingSeason] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
   const [showCompatibilityWarning, setShowCompatibilityWarning] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
@@ -51,7 +51,6 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
   const overlayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const healthTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch TV Details and active season details
   useEffect(() => {
     if (!currentProfile || !titleId) return;
 
@@ -60,32 +59,53 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
       try {
         const info = await getTitleDetails("tv", titleId);
         setDetails(info);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("zoku_last_viewed", JSON.stringify({
-            id: info.id,
-            title: info.name || info.title,
-            overview: info.overview,
-            poster_path: info.poster_path,
-            backdrop_path: info.backdrop_path,
-            media_type: "tv",
-            vote_average: info.vote_average,
-            season: seasonNum,
-            episode: episodeNum,
-            viewedAt: new Date().toISOString()
-          }));
-        }
-
-        const seasonInfo = await getSeasonDetails(titleId, seasonNum);
-        setSeasonDetail(seasonInfo);
       } catch (err) {
-        console.error("Failed to load TV details/season details", err);
+        console.error("Failed to load TV details", err);
       } finally {
         setLoading(false);
       }
     }
 
     loadTVDetails();
+  }, [currentProfile, titleId]);
+
+  useEffect(() => {
+    if (!currentProfile || !titleId) return;
+
+    async function loadSeasonData() {
+      setLoadingSeason(true);
+      try {
+        const seasonInfo = await getSeasonDetails(titleId, seasonNum);
+        setSeasonDetail(seasonInfo);
+      } catch (err) {
+        console.error("Failed to load season details", err);
+      } finally {
+        setLoadingSeason(false);
+      }
+    }
+
+    loadSeasonData();
   }, [currentProfile, titleId, seasonNum, episodeNum]);
+
+  useEffect(() => {
+    if (!details || typeof window === "undefined") return;
+
+    localStorage.setItem(
+      "zoku_last_viewed",
+      JSON.stringify({
+        id: details.id,
+        title: details.name || details.title,
+        overview: details.overview,
+        poster_path: details.poster_path,
+        backdrop_path: details.backdrop_path,
+        media_type: "tv",
+        vote_average: details.vote_average,
+        season: seasonNum,
+        episode: episodeNum,
+        viewedAt: new Date().toISOString(),
+      })
+    );
+  }, [details, seasonNum, episodeNum]);
 
   // Overlay mousemove fade control
   const resetOverlayTimer = () => {
@@ -196,6 +216,12 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
 
   const activeEpisode = seasonDetail.episodes?.find(e => e.episode_number === episodeNum);
   const name = details.name || details.title || "TV Series";
+  const availableSeasons = details.seasons ?? [];
+
+  const handleSeasonChange = (newSeason: number) => {
+    if (newSeason === seasonNum) return;
+    router.push(`/watch/tv/${titleId}/${newSeason}/1`);
+  };
 
   return (
     <div className="relative w-screen h-screen bg-black overflow-y-auto flex flex-col justify-between">
@@ -331,30 +357,55 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
 
         {/* Quick Click-to-Play Episode List Panel */}
         <div className="space-y-3">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-2">
-            <LayoutGrid className="h-4 w-4 text-primary" />
-            <span>Quick-Switch Season Episodes</span>
-          </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-2">
+              <MonitorPlay className="h-4 w-4 text-primary" />
+              <span>Episodes & Portal Seasons</span>
+            </span>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-            {seasonDetail.episodes?.map((ep) => {
-              const isActive = ep.episode_number === episodeNum;
-              return (
-                <button
-                  key={ep.id}
-                  onClick={() => router.push(`/watch/tv/${titleId}/${seasonNum}/${ep.episode_number}`)}
-                  className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all ${
-                    isActive 
-                      ? "bg-primary/20 border-primary text-primary" 
-                      : "bg-white/5 border-white/10 hover:border-white/25 hover:bg-white/10 text-white/80 hover:text-white"
-                  }`}
-                >
-                  <span className="text-[10px] font-mono text-white/50">Episode {ep.episode_number}</span>
-                  <span className="text-xs font-semibold truncate w-full mt-0.5">{ep.name || `Episode ${ep.episode_number}`}</span>
-                </button>
-              );
-            })}
+            {availableSeasons.length > 0 && (
+              <select
+                value={seasonNum}
+                onChange={(e) => handleSeasonChange(Number(e.target.value))}
+                aria-label="Select season"
+                className="w-full sm:w-auto rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white focus:outline-none cursor-pointer"
+              >
+                {availableSeasons.map((s) => (
+                  <option key={s.id} value={s.season_number} className="bg-neutral-900 text-white">
+                    {s.name} ({s.episode_count} Episodes)
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
+
+          {loadingSeason ? (
+            <div className="flex justify-center py-12">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              {seasonDetail.episodes?.map((ep) => {
+                const isActive = ep.episode_number === episodeNum;
+                return (
+                  <button
+                    key={ep.id}
+                    onClick={() => router.push(`/watch/tv/${titleId}/${seasonNum}/${ep.episode_number}`)}
+                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all ${
+                      isActive
+                        ? "bg-primary/20 border-primary text-primary"
+                        : "bg-white/5 border-white/10 hover:border-white/25 hover:bg-white/10 text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="text-[10px] font-mono text-white/50">Episode {ep.episode_number}</span>
+                    <span className="text-xs font-semibold truncate w-full mt-0.5">
+                      {ep.name || `Episode ${ep.episode_number}`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
       </div>

@@ -2,8 +2,10 @@ import { discoverMedia, getGenres, getTrending, TMDBGenre, TMDBTitle } from "@/l
 
 export type GenreRail = { genre: TMDBGenre; titles: TMDBTitle[] };
 
+const HERO_SLIDE_COUNT = 6;
+
 export async function loadHomeTrending(): Promise<{
-  heroTitle: TMDBTitle | null;
+  heroSlides: TMDBTitle[];
   trendingMovies: TMDBTitle[];
   trendingTV: TMDBTitle[];
 }> {
@@ -13,14 +15,16 @@ export async function loadHomeTrending(): Promise<{
     getTrending("tv", "day"),
   ]);
 
-  const candidates = trendingAll.filter((title) => title.backdrop_path && title.overview);
-  const hero =
-    candidates[Math.floor(Math.random() * Math.min(candidates.length, 5))] ||
-    candidates[0] ||
-    null;
+  const movieCandidates = movies.filter((title) => title.backdrop_path && title.overview);
+  let heroSlides = movieCandidates.slice(0, HERO_SLIDE_COUNT);
+
+  if (heroSlides.length === 0) {
+    const fallback = trendingAll.filter((title) => title.backdrop_path && title.overview);
+    heroSlides = fallback.slice(0, HERO_SLIDE_COUNT);
+  }
 
   return {
-    heroTitle: hero,
+    heroSlides,
     trendingMovies: movies,
     trendingTV: tv,
   };
