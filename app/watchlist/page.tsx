@@ -20,6 +20,10 @@ export default function WatchlistPage() {
     }
   }, [currentProfile, initWatchlist]);
 
+  if (!currentProfile) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">
       <Navbar />

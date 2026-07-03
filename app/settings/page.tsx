@@ -82,6 +82,10 @@ function SettingsPageContent() {
     loadGenreOptions();
   }, [user, currentProfile, iframeMode]);
 
+  if (!user || !currentProfile) {
+    return null;
+  }
+
   const handleThemeSelect = async (themeId: string) => {
     setSaving(true);
     try {

@@ -152,7 +152,7 @@ async function tmdbFetch(endpoint: string, params: Record<string, string | numbe
   const cached = getCachedData(url);
   if (cached) return cached;
 
-  if (inflight[url]) {
+  if (url in inflight) {
     return inflight[url];
   }
 
