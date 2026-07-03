@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Tv, Mail, Lock, ShieldCheck, ArrowRight } from "lucide-react";
 import { loginWithEmail, loginWithGoogle, useSessionStore } from "@/stores";
+import { Spinner } from "@/components/Spinner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -124,8 +125,17 @@ export default function LoginPage() {
             disabled={loading}
             className="group w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 px-4 text-xs font-semibold text-white hover:bg-opacity-90 active:scale-[0.98] transition-all duration-300 disabled:opacity-50"
           >
-            {loading ? "Accessing Channel..." : "Sign In to Zoku TV"}
-            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            {loading ? (
+              <>
+                <Spinner className="h-3.5 w-3.5" />
+                <span>Accessing Channel...</span>
+              </>
+            ) : (
+              <>
+                <span>Sign In to Zoku TV</span>
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </>
+            )}
           </button>
         </form>
 
@@ -143,8 +153,9 @@ export default function LoginPage() {
         <button
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 rounded-xl border border-border-custom bg-background/40 hover:bg-surface-hover py-2.5 px-4 text-xs text-on-surface font-semibold transition-all duration-300 active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-3 rounded-xl border border-border-custom bg-background/40 hover:bg-surface-hover py-2.5 px-4 text-xs text-on-surface font-semibold transition-all duration-300 active:scale-[0.98] disabled:opacity-50"
         >
+          {loading ? <Spinner className="h-4 w-4" /> : (
           <svg className="h-4 w-4" viewBox="0 0 24 24">
             <path
               fill="currentColor"
@@ -163,6 +174,7 @@ export default function LoginPage() {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
+          )}
           <span>Continue with Google</span>
         </button>
 

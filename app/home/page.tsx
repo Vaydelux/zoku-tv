@@ -2,17 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Play, Plus, Check, Star, Info, Volume2, AlertTriangle } from "lucide-react";
+import { Play, Plus, Check, Star, Info, AlertTriangle } from "lucide-react";
 import { useSessionStore, useWatchlistStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { TitleRail } from "@/components/TitleRail";
-import { 
-  getTrending, 
-  discoverMedia, 
-  getGenres, 
-  TMDBTitle, 
-  TMDBGenre 
-} from "@/lib/tmdb";
+import { LoadingBanner } from "@/components/LoadingBanner";
+import { TMDBTitle, TMDBGenre } from "@/lib/tmdb";
+import { loadHomeGenreRails, loadHomeTrending } from "@/lib/load-home-content";
 
 export default function HomePage() {
   const router = useRouter();
@@ -23,7 +19,9 @@ export default function HomePage() {
   const [trendingMovies, setTrendingMovies] = useState<TMDBTitle[]>([]);
   const [trendingTV, setTrendingTV] = useState<TMDBTitle[]>([]);
   const [genreRails, setGenreRails] = useState<{ genre: TMDBGenre; titles: TMDBTitle[] }[]>([]);
-  const [loadingMedia, setLoadingMedia] = useState(true);
+  const [loadingTrending, setLoadingTrending] = useState(true);
+  const [loadingGenreRails, setLoadingGenreRails] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState("Loading your home feed...");
 
   const [isOffline, setIsOffline] = useState(false);
   const [lastViewed, setLastViewed] = useState<any | null>(null);
@@ -65,63 +63,58 @@ export default function HomePage() {
     }
   }, [user, currentProfile, initializing, router]);
 
-  // Load Home Content
+  // Load home content in two parallel phases for faster first paint
   useEffect(() => {
     if (!user || !currentProfile) return;
 
-    async function loadHomeContent() {
-      setLoadingMedia(true);
+    let cancelled = false;
+
+    async function loadTrendingContent() {
+      setLoadingTrending(true);
+      setLoadingGenreRails(true);
+      setLoadingMessage("Loading trending titles...");
+
       try {
         if (typeof window !== "undefined" && !navigator.onLine) {
           throw new Error("Offline status detected");
         }
-        // 1. Fetch Trending movie & tv
-        const trendingAll = await getTrending("all", "week");
-        const movies = await getTrending("movie", "day");
-        const tv = await getTrending("tv", "day");
 
-        setTrendingMovies(movies);
-        setTrendingTV(tv);
+        const trending = await loadHomeTrending();
+        if (cancelled) return;
 
-        // Filter and set Hero Title (prefer titles with high vote, summary, and backdrops)
-        const candidates = trendingAll.filter(t => t.backdrop_path && t.overview);
-        const hero = candidates[Math.floor(Math.random() * Math.min(candidates.length, 5))] || candidates[0];
-        setHeroTitle(hero);
-
-        // 2. Fetch Profile Preferred Genre Rails
-        const movieGenres = await getGenres("movie");
-        const tvGenres = await getGenres("tv");
-        const allGenres = [...movieGenres, ...tvGenres].reduce((acc, curr) => {
-          if (!acc.some(g => g.id === curr.id)) acc.push(curr);
-          return acc;
-        }, [] as TMDBGenre[]);
-
-        const prefGenreIds = currentProfile?.homeGenreRailPreferences || [28, 12, 35, 18];
-        const loadedGenreRails: { genre: TMDBGenre; titles: TMDBTitle[] }[] = [];
-
-        for (const genreId of prefGenreIds) {
-          const matchedGenre = allGenres.find(g => g.id === genreId);
-          if (matchedGenre) {
-            // Fetch titles in genre
-            const titles = await discoverMedia(Math.random() > 0.5 ? "movie" : "tv", {
-              with_genres: String(genreId),
-              sort_by: "popularity.desc",
-            });
-            if (titles.length > 0) {
-              loadedGenreRails.push({ genre: matchedGenre, titles });
-            }
-          }
-        }
-
-        setGenreRails(loadedGenreRails);
+        setHeroTitle(trending.heroTitle);
+        setTrendingMovies(trending.trendingMovies);
+        setTrendingTV(trending.trendingTV);
       } catch (err) {
-        console.error("Failed to load home TMDB data:", err);
+        console.error("Failed to load trending TMDB data:", err);
       } finally {
-        setLoadingMedia(false);
+        if (!cancelled) {
+          setLoadingTrending(false);
+        }
+      }
+
+      setLoadingMessage("Loading genre rails...");
+      try {
+        const prefGenreIds = currentProfile?.homeGenreRailPreferences || [28, 12, 35, 18];
+        const rails = await loadHomeGenreRails(prefGenreIds);
+        if (!cancelled) {
+          setGenreRails(rails);
+        }
+      } catch (err) {
+        console.error("Failed to load genre rails:", err);
+      } finally {
+        if (!cancelled) {
+          setLoadingGenreRails(false);
+          setLoadingMessage("");
+        }
       }
     }
 
-    loadHomeContent();
+    loadTrendingContent();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user, currentProfile]);
 
   if (initializing || !user || !currentProfile) {
@@ -157,8 +150,11 @@ export default function HomePage() {
     }
   };
 
+  const loadingMedia = loadingTrending || loadingGenreRails;
+
   return (
     <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">
+      {loadingMedia && loadingMessage && <LoadingBanner message={loadingMessage} />}
       <Navbar />
 
       {/* 1. Hero Spotlight Banner */}
@@ -175,8 +171,19 @@ export default function HomePage() {
         </div>
 
         {/* Hero copy + actions */}
-        {heroTitle && (
+        {(heroTitle || loadingTrending) && (
           <div className="relative z-[1] mx-auto flex w-full max-w-7xl min-h-[clamp(340px,52dvh,680px)] flex-col justify-end px-4 pb-6 pt-20 sm:px-6 sm:pb-8 sm:pt-24 lg:px-8 lg:pb-10">
+            {loadingTrending && !heroTitle ? (
+              <div className="flex w-full max-w-3xl flex-col gap-4 animate-pulse">
+                <div className="h-6 w-40 rounded-full bg-surface" />
+                <div className="h-12 w-full max-w-xl rounded-xl bg-surface" />
+                <div className="h-16 w-full max-w-2xl rounded-xl bg-surface" />
+                <div className="flex gap-3">
+                  <div className="h-10 w-32 rounded-xl bg-surface" />
+                  <div className="h-10 w-32 rounded-xl bg-surface" />
+                </div>
+              </div>
+            ) : heroTitle ? (
             <div className="flex w-full max-w-3xl flex-col items-start gap-3 sm:gap-4 animate-fade-in">
               <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] sm:text-xs md:text-sm font-mono text-on-surface-variant bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-border-custom">
                 <span className="text-primary font-bold uppercase">{heroMediaType}</span>
@@ -227,6 +234,7 @@ export default function HomePage() {
                 </button>
               </div>
             </div>
+            ) : null}
           </div>
         )}
 
@@ -284,10 +292,10 @@ export default function HomePage() {
           </div>
         )}
 
-        {loadingMedia ? (
+        {loadingTrending ? (
           /* Loading Skeletons */
           <div className="space-y-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-            {[1, 2, 3].map((railIdx) => (
+            {[1, 2].map((railIdx) => (
               <div key={railIdx} className="space-y-4">
                 <div className="h-4 w-48 bg-surface rounded animate-pulse" />
                 <div className="flex gap-3 sm:gap-4 overflow-x-auto overflow-y-visible py-2">
@@ -307,14 +315,32 @@ export default function HomePage() {
             <TitleRail title="Trending Movies" items={trendingMovies} mediaType="movie" />
             <TitleRail title="Trending TV Shows" items={trendingTV} mediaType="tv" />
             
-            {genreRails.map(({ genre, titles }) => (
-              <TitleRail 
-                key={genre.id} 
-                title={`${genre.name} Masterpieces`} 
-                items={titles} 
-                genreId={genre.id}
-              />
-            ))}
+            {loadingGenreRails ? (
+              <div className="space-y-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+                {[1, 2].map((railIdx) => (
+                  <div key={railIdx} className="space-y-4">
+                    <div className="h-4 w-48 bg-surface rounded animate-pulse" />
+                    <div className="flex gap-3 sm:gap-4 overflow-x-auto overflow-y-visible py-2">
+                      {[1, 2, 3, 4, 5, 6].map((cardIdx) => (
+                        <div
+                          key={cardIdx}
+                          className="w-[128px] sm:w-[160px] md:w-[180px] lg:w-[200px] aspect-[2/3] rounded-xl bg-surface border border-border-custom animate-pulse shrink-0"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              genreRails.map(({ genre, titles }) => (
+                <TitleRail 
+                  key={genre.id} 
+                  title={`${genre.name} Masterpieces`} 
+                  items={titles} 
+                  genreId={genre.id}
+                />
+              ))
+            )}
           </div>
         )}
 

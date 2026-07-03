@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { useSessionStore, useEmbedStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
+import { FirebaseStatusIndicator } from "@/components/FirebaseStatusIndicator";
+import { LoadingBanner } from "@/components/LoadingBanner";
 import { getGenres, TMDBGenre } from "@/lib/tmdb";
 import { getGenreIcon } from "@/lib/genreIcons";
 import { applyTheme, getThemeOption, normalizeThemeId, THEME_OPTIONS } from "@/lib/themes";
@@ -200,6 +202,7 @@ function SettingsPageContent() {
 
   return (
     <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">
+      {saving && <LoadingBanner message="Saving your settings..." />}
       <Navbar />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -229,6 +232,8 @@ function SettingsPageContent() {
             <span>{successMsg}</span>
           </div>
         )}
+
+        <FirebaseStatusIndicator userId={user.uid} profileId={currentProfile.id} />
 
         {/* Custom Tabbed layout panel */}
         <div className="flex flex-col md:flex-row gap-8 items-start pt-4">

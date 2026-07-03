@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Validates any profile fields present in the write (supports merge updates).
+    function validProfileFields() {
+      let data = request.resource.data;
+      return (!('name' in data) || (data.name is string && data.name.size() >= 1 && data.name.size() <= 15))
+        && (!('avatar' in data) || data.avatar is string)
+        && (!('avatarColor' in data) || data.avatarColor is string)
+        && (!('kidMode' in data) || data.kidMode is bool)
+        && (!('themePreference' in data) || data.themePreference is string)
+        && (!('iframeModePreference' in data) || data.iframeModePreference in ['Strict', 'Compatibility'])
+        && (!('homeGenreRailPreferences' in data)
+          || (data.homeGenreRailPreferences is list && data.homeGenreRailPreferences.size() <= 6))
+        && (!('createdAt' in data) || data.createdAt is string)
+        && (!('updatedAt' in data) || data.updatedAt is string);
+    }
+
+    function validProfileCreate() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'name', 'kidMode', 'themePreference', 'iframeModePreference', 'homeGenreRailPreferences'
+        ])
+        && validProfileFields();
+    }
+
+    function validWatchlistItem() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['tmdbId', 'media_type', 'added_at'])
+        && data.tmdbId is int
+        && data.media_type in ['movie', 'tv']
+        && data.added_at is string
+        && (!('title' in data) || data.title is string)
+        && (!('poster_path' in data) || data.poster_path == null || data.poster_path is string)
+        && (!('backdrop_path' in data) || data.backdrop_path == null || data.backdrop_path is string)
+        && (!('vote_average' in data) || data.vote_average is number);
+    }
+
+    function validSearchHistory() {
+      let data = request.resource.data;
+      return data.history is list
+        && data.history.size() <= 10
+        && (data.keys().hasOnly(['history'])
+          || (data.keys().hasOnly(['history', 'updatedAt']) && data.updatedAt is string));
+    }
+
+    match /users/{userId} {
+      allow read, write: if false;
+
+      match /profiles/{profileId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && validProfileCreate();
+        allow update: if isOwner(userId) && validProfileFields();
+        allow delete: if isOwner(userId);
+
+        match /watchlist/{entryKey} {
+          allow read: if isOwner(userId);
+          allow create, update: if isOwner(userId) && validWatchlistItem();
+          allow delete: if isOwner(userId);
+        }
+
+        match /searchHistory/{docId} {
+          allow read: if isOwner(userId);
+          allow create, update: if isOwner(userId) && validSearchHistory();
+          allow delete: if isOwner(userId);
+        }
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -74,9 +74,16 @@ export interface TMDBSeasonDetail {
 
 // In-memory + LocalStorage TTL Cache wrapper for server/client fetching
 const cache: Record<string, { data: any; expiry: number }> = {};
+const inflight: Record<string, Promise<any>> = {};
 
-function isGenreRequest(key: string): boolean {
-  return key.includes("genre") || key.includes("with_genres");
+function isPersistedRequest(key: string): boolean {
+  return (
+    key.includes("genre") ||
+    key.includes("with_genres") ||
+    key.includes("/trending/") ||
+    key.includes("/genre/") ||
+    key.includes("/discover/")
+  );
 }
 
 function getCachedData(key: string): any | null {
@@ -85,8 +92,8 @@ function getCachedData(key: string): any | null {
     return cached.data;
   }
   
-  // Check LocalStorage on client side for genre-specific results
-  if (typeof window !== "undefined" && isGenreRequest(key)) {
+  // Check LocalStorage on client side for frequently reused catalog results
+  if (typeof window !== "undefined" && isPersistedRequest(key)) {
     try {
       const stored = localStorage.getItem(`zoku_tmdb_cache_${key}`);
       if (stored) {
@@ -106,9 +113,8 @@ function getCachedData(key: string): any | null {
   return null;
 }
 
-function setCachedData(key: string, data: any, ttlMs: number = 300000) { // 5 minutes default
-  // Use a shorter TTL for genre-specific localStorage caching (e.g. 2 minutes / 120000 ms)
-  const actualTtl = isGenreRequest(key) ? Math.min(120000, ttlMs) : ttlMs;
+function setCachedData(key: string, data: any, ttlMs: number = 300000) {
+  const actualTtl = isPersistedRequest(key) ? Math.max(120000, ttlMs) : ttlMs;
   const expiry = Date.now() + actualTtl;
 
   cache[key] = {
@@ -116,8 +122,7 @@ function setCachedData(key: string, data: any, ttlMs: number = 300000) { // 5 mi
     expiry,
   };
 
-  // Persist genre-specific results to localStorage on client side
-  if (typeof window !== "undefined" && isGenreRequest(key)) {
+  if (typeof window !== "undefined" && isPersistedRequest(key)) {
     try {
       localStorage.setItem(
         `zoku_tmdb_cache_${key}`,
@@ -147,21 +152,35 @@ async function tmdbFetch(endpoint: string, params: Record<string, string | numbe
   const cached = getCachedData(url);
   if (cached) return cached;
 
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${TMDB_ACCESS_TOKEN}`,
-      Accept: "application/json",
-    },
-    next: { revalidate: 300 }, // 5 minutes ISR
-  });
-
-  if (!res.ok) {
-    throw new Error(`TMDB API call failed: ${res.statusText} for ${endpoint}`);
+  if (inflight[url]) {
+    return inflight[url];
   }
 
-  const data = await res.json();
-  setCachedData(url, data);
-  return data;
+  const request = (async () => {
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${TMDB_ACCESS_TOKEN}`,
+        Accept: "application/json",
+      },
+      next: { revalidate: 300 }, // 5 minutes ISR
+    });
+
+    if (!res.ok) {
+      throw new Error(`TMDB API call failed: ${res.statusText} for ${endpoint}`);
+    }
+
+    const data = await res.json();
+    setCachedData(url, data);
+    return data;
+  })();
+
+  inflight[url] = request;
+
+  try {
+    return await request;
+  } finally {
+    delete inflight[url];
+  }
 }
 
 export async function getTrending(type: "all" | "movie" | "tv" = "all", timeWindow: "day" | "week" = "day"): Promise<TMDBTitle[]> {

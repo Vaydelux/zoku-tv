@@ -8,11 +8,13 @@ import {
   getCollectionRef, 
   getDocRef,
   listenToCollection,
+  listenToOrderedCollection,
   listenToDoc,
   updateDocument,
   deleteDocument
 } from "@/lib/firebase";
 import { applyTheme, DEFAULT_THEME_ID } from "@/lib/themes";
+import { canAddProfile, MAX_PROFILES } from "@/lib/profile-limits";
 
 // === TYPES ===
 
@@ -25,6 +27,8 @@ export interface Profile {
   themePreference: string;
   iframeModePreference: "Strict" | "Compatibility";
   homeGenreRailPreferences: number[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface WatchlistItem {
@@ -46,7 +50,7 @@ interface SessionState {
   loading: boolean;
   initializing: boolean;
   setProfile: (profile: Profile | null) => void;
-  createProfile: (name: string, avatar: string, kidMode: boolean, avatarColor?: string) => Promise<void>;
+  createProfile: (name: string, avatar: string, kidMode: boolean, avatarColor?: string) => Promise<{ success: boolean; error?: string }>;
   updateProfile: (profileId: string, updates: Partial<Profile>) => Promise<void>;
   deleteProfile: (profileId: string) => Promise<void>;
   initSession: () => () => void;
@@ -68,11 +72,21 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   createProfile: async (name, avatar, kidMode, avatarColor) => {
-    const { user } = get();
-    if (!user) return;
+    const { user, profiles } = get();
+    if (!user) {
+      return { success: false, error: "You must be signed in to create a profile." };
+    }
+    if (!canAddProfile(profiles.length)) {
+      return {
+        success: false,
+        error: `Maximum of ${MAX_PROFILES} profiles reached. Delete one to add another.`,
+      };
+    }
+
     set({ loading: true });
     try {
       const profileId = "profile_" + Math.random().toString(36).substr(2, 9);
+      const now = new Date().toISOString();
       const newProfile: Profile = {
         id: profileId,
         name,
@@ -82,11 +96,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         themePreference: DEFAULT_THEME_ID,
         iframeModePreference: "Strict",
         homeGenreRailPreferences: [28, 12, 35, 18], // Action, Adventure, Comedy, Drama
+        createdAt: now,
+        updatedAt: now,
       };
 
       const docRef = getDocRef(`users/${user.uid}/profiles`, profileId);
       await setDocument(docRef, newProfile);
-      // Wait for real-time listener to handle update
+      return { success: true };
+    } catch (e) {
+      console.error("Failed to create profile", e);
+      return { success: false, error: "Could not create profile. Please try again." };
     } finally {
       set({ loading: false });
     }
@@ -97,7 +116,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!user) return;
     try {
       const docRef = getDocRef(`users/${user.uid}/profiles`, profileId);
-      await setDocument(docRef, updates); // setDocument has merge: true
+      await setDocument(docRef, {
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      });
 
       if (currentProfile && currentProfile.id === profileId) {
         const updated = { ...currentProfile, ...updates };
@@ -132,21 +154,32 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   initSession: () => {
-    return onAuthChanged((firebaseUser) => {
+    let unsubscribeProfiles: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthChanged((firebaseUser) => {
+      if (unsubscribeProfiles) {
+        unsubscribeProfiles();
+        unsubscribeProfiles = null;
+      }
+
       if (firebaseUser) {
         set({ user: firebaseUser, initializing: false });
-        
-        // Listen to user's profiles
+
         const colRef = getCollectionRef(`users/${firebaseUser.uid}/profiles`);
-        const unsubscribeProfiles = listenToCollection(colRef, (snapshot) => {
+        unsubscribeProfiles = listenToCollection(colRef, (snapshot) => {
           const profilesList: Profile[] = [];
           snapshot.forEach((docSnap: any) => {
             profilesList.push({ id: docSnap.id, ...docSnap.data() } as Profile);
           });
-          
+
+          profilesList.sort((a, b) => {
+            const aTime = a.createdAt ?? "";
+            const bTime = b.createdAt ?? "";
+            return aTime.localeCompare(bTime);
+          });
+
           set({ profiles: profilesList });
 
-          // Auto-select profile if stored or if only one exists
           if (profilesList.length > 0) {
             const stored = localStorage.getItem(`zoku_active_profile_${firebaseUser.uid}`);
             const matched = stored ? profilesList.find(p => p.id === JSON.parse(stored).id) : null;
@@ -163,14 +196,18 @@ export const useSessionStore = create<SessionState>((set, get) => ({
             set({ currentProfile: null });
           }
         });
-
-        return () => unsubscribeProfiles();
       } else {
         set({ user: null, profiles: [], currentProfile: null, initializing: false });
         applyTheme(DEFAULT_THEME_ID);
-        return () => {};
       }
     });
+
+    return () => {
+      if (unsubscribeProfiles) {
+        unsubscribeProfiles();
+      }
+      unsubscribeAuth();
+    };
   }
 }));
 
@@ -201,7 +238,10 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     }
 
     const colRef = getCollectionRef(`users/${user.uid}/profiles/${profile.id}/watchlist`);
-    return listenToCollection(colRef, (snapshot) => {
+    return listenToOrderedCollection(
+      colRef,
+      { orderByField: "added_at", direction: "desc", limitTo: 100 },
+      (snapshot) => {
       const itemsList: WatchlistItem[] = [];
       snapshot.forEach((docSnap: any) => {
         itemsList.push(docSnap.data() as WatchlistItem);
@@ -364,7 +404,10 @@ export const useSearchHistoryStore = create<SearchHistoryState>((set, get) => ({
 
     try {
       const docRef = getDocRef(`users/${user.uid}/profiles/${profile.id}/searchHistory`, "list");
-      await setDocument(docRef, { history: newHistory });
+      await setDocument(docRef, {
+        history: newHistory,
+        updatedAt: new Date().toISOString(),
+      });
     } catch (e) {
       console.error("Failed to save search history", e);
     }
@@ -380,7 +423,10 @@ export const useSearchHistoryStore = create<SearchHistoryState>((set, get) => ({
 
     try {
       const docRef = getDocRef(`users/${user.uid}/profiles/${profile.id}/searchHistory`, "list");
-      await setDocument(docRef, { history: [] });
+      await setDocument(docRef, {
+        history: [],
+        updatedAt: new Date().toISOString(),
+      });
     } catch (e) {
       console.error("Failed to clear search history", e);
     }
@@ -391,7 +437,8 @@ export const useSearchHistoryStore = create<SearchHistoryState>((set, get) => ({
 export { 
   loginWithEmail, 
   signupWithEmail, 
-  loginWithGoogle, 
+  loginWithGoogle,
+  signInWithGoogle,
   logout 
 } from "@/lib/firebase";
 

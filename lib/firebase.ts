@@ -1,61 +1,81 @@
 // Zoku TV - Firebase client module with automatic local/offline fallback
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
   onAuthStateChanged,
   signInWithPopup,
   GoogleAuthProvider,
-  User as FirebaseUser
+  type Auth,
+  type UserCredential,
 } from "firebase/auth";
-import { 
-  getFirestore, 
-  doc, 
-  collection, 
-  setDoc, 
-  getDoc, 
-  updateDoc, 
-  deleteDoc, 
-  onSnapshot, 
-  query, 
-  where,
-  addDoc,
+import {
+  getFirestore,
+  doc,
+  collection,
+  setDoc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  limit,
   getDocs,
-  Firestore
+  type Firestore,
 } from "firebase/firestore";
 
-// Check if we have valid firebase config. Since the user declined setup,
-// we will detect if we have valid parameters, and if not, use our elegant localStorage fallback
-// that mimics the Firebase Auth and Firestore API identically.
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 const hasRealConfig = !!(firebaseConfig.apiKey && firebaseConfig.projectId);
 
-let app;
-let realAuth: any = null;
-let realDb: any = null;
+// --- Firebase App + Auth initialization ---
+let app: FirebaseApp | undefined;
+let realAuth: Auth | null = null;
+let realDb: Firestore | null = null;
+
+/** Google OAuth provider — null when Firebase env vars are not configured */
+export let googleProvider: GoogleAuthProvider | null = null;
 
 if (hasRealConfig) {
   try {
+    // 1. Initialize Firebase App
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+    // 2. Initialize Firebase Auth & Google provider
     realAuth = getAuth(app);
+    googleProvider = new GoogleAuthProvider();
+    googleProvider.setCustomParameters({ prompt: "select_account" });
+
+    // Firestore for profiles, watchlist, etc.
     realDb = getFirestore(app);
+
     console.log("Zoku TV: Firebase initialized successfully with cloud configuration.");
   } catch (error) {
     console.error("Zoku TV: Failed to initialize real Firebase:", error);
+    googleProvider = null;
   }
 }
 
-// === LOCAL FALLBACK ENGINE ===
+// 3. Export Auth instance (real Firebase Auth, or local mock when offline)
+
+interface MockAuth {
+  currentUser: MockUser | null;
+}
+
+const mockAuth: MockAuth = { currentUser: null };
+
+export const auth: Auth | MockAuth = realAuth ?? mockAuth;
 // This replicates the precise behavior of Auth and Firestore using localStorage
 // so that the application is 100% interactive and functional even when offline/not provisioned.
 
@@ -64,10 +84,6 @@ interface MockUser {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
-}
-
-class MockGoogleAuthProvider {
-  static PROVIDER_ID = 'google.com';
 }
 
 const STORAGE_KEY_AUTH = "zoku_local_auth_user";
@@ -147,20 +163,133 @@ const triggerDbChange = (path: string) => {
   }
 };
 
-// === EXPORTED AUTHS & FIRESTORE APIs ===
+// === EXPORTED FIRESTORE API ===
 
-export const auth = realAuth || {
-  currentUser: null as MockUser | null,
-};
-
-// Initialize current user from localStorage on load if in client
+// Initialize current user from localStorage on load if in client (mock mode only)
 if (!realAuth && typeof window !== "undefined") {
-  auth.currentUser = getLocalUser();
+  mockAuth.currentUser = getLocalUser();
 }
 
 export const db = realDb || {};
 
-export const oAuthEnabled = hasRealConfig;
+export const firebaseProjectId = firebaseConfig.projectId || null;
+export const isCloudFirebaseConfigured = hasRealConfig;
+export const isCloudFirebaseActive = () => !!(hasRealConfig && realDb && realAuth);
+
+export type FirebaseHealthState =
+  | "checking"
+  | "not_configured"
+  | "offline_mode"
+  | "network_offline"
+  | "connected"
+  | "rules_ok"
+  | "rules_error"
+  | "index_error";
+
+export type FirebaseHealthResult = {
+  state: FirebaseHealthState;
+  message: string;
+  details?: string;
+  checkedAt: string;
+  projectId: string | null;
+};
+
+export async function runFirestoreHealthCheck(
+  userId: string,
+  profileId?: string
+): Promise<FirebaseHealthResult> {
+  const checkedAt = new Date().toISOString();
+
+  if (!hasRealConfig) {
+    return {
+      state: "not_configured",
+      message: "Firebase is not configured. Data stays on this device only.",
+      checkedAt,
+      projectId: null,
+    };
+  }
+
+  if (!realDb) {
+    return {
+      state: "offline_mode",
+      message: "Local offline mode is active. Cloud Firestore is unavailable.",
+      checkedAt,
+      projectId: firebaseProjectId,
+    };
+  }
+
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return {
+      state: "network_offline",
+      message: "Browser is offline. Cloud sync is paused until you reconnect.",
+      checkedAt,
+      projectId: firebaseProjectId,
+    };
+  }
+
+  try {
+    await getDocs(collection(realDb, `users/${userId}/profiles`));
+
+    if (profileId) {
+      const historyRef = doc(realDb, `users/${userId}/profiles/${profileId}/searchHistory/list`);
+      const historySnap = await getDoc(historyRef);
+      const history = historySnap.exists() ? historySnap.data()?.history ?? [] : [];
+      await setDoc(
+        historyRef,
+        { history, updatedAt: checkedAt },
+        { merge: true }
+      );
+
+      const watchlistQuery = query(
+        collection(realDb, `users/${userId}/profiles/${profileId}/watchlist`),
+        orderBy("added_at", "desc"),
+        limit(1)
+      );
+      await getDocs(watchlistQuery);
+    }
+
+    return {
+      state: "rules_ok",
+      message: "Cloud connected. Security rules and indexes are working.",
+      checkedAt,
+      projectId: firebaseProjectId,
+    };
+  } catch (error: unknown) {
+    const firebaseError = error as { code?: string; message?: string };
+    const code = firebaseError.code ?? "";
+    const details = firebaseError.message;
+
+    if (code === "permission-denied") {
+      return {
+        state: "rules_error",
+        message: "Firestore rules blocked this account. Deploy firestore.rules from this repo.",
+        details,
+        checkedAt,
+        projectId: firebaseProjectId,
+      };
+    }
+
+    if (code === "failed-precondition") {
+      return {
+        state: "index_error",
+        message: "A Firestore index is missing or still building. Run: npm run firebase:deploy:indexes",
+        details,
+        checkedAt,
+        projectId: firebaseProjectId,
+      };
+    }
+
+    return {
+      state: "connected",
+      message: "Firebase is connected, but the health check could not finish.",
+      details,
+      checkedAt,
+      projectId: firebaseProjectId,
+    };
+  }
+}
+
+export const oAuthEnabled = hasRealConfig && !!realAuth && !!googleProvider;
 
 export { GoogleAuthProvider };
 
@@ -175,7 +304,7 @@ export async function loginWithEmail(email: string, password: string) {
     throw new Error("Invalid email or password");
   }
   const user = { uid: match.uid, email: match.email, displayName: match.name || email.split("@")[0], photoURL: null };
-  auth.currentUser = user;
+  mockAuth.currentUser = user;
   setLocalUser(user);
   triggerAuthChange(user);
   return { user };
@@ -197,31 +326,43 @@ export async function signupWithEmail(email: string, password: string, name: str
   localStorage.setItem("zoku_registered_users", JSON.stringify(users));
 
   const user = { uid, email, displayName: name, photoURL: null };
-  auth.currentUser = user;
+  mockAuth.currentUser = user;
   setLocalUser(user);
   triggerAuthChange(user);
   return { user };
 }
 
-export async function loginWithGoogle() {
-  if (realAuth) {
-    const provider = new GoogleAuthProvider();
-    return signInWithPopup(realAuth, provider);
-  }
-  // Mock Google Login
+async function mockLoginWithGoogle() {
   const uid = "google_mock_" + Math.random().toString(36).substr(2, 9);
-  const user = { uid, email: "google.user@example.com", displayName: "Google Streamer", photoURL: "https://api.dicebear.com/7.x/adventurer/svg?seed=Google" };
-  auth.currentUser = user;
+  const user = {
+    uid,
+    email: "google.user@example.com",
+    displayName: "Google Streamer",
+    photoURL: "https://api.dicebear.com/7.x/adventurer/svg?seed=Google",
+  };
+  mockAuth.currentUser = user;
   setLocalUser(user);
   triggerAuthChange(user);
   return { user };
+}
+
+/** Google sign-in popup — uses Firebase when configured, local mock otherwise. */
+export function signInWithGoogle(): Promise<UserCredential | { user: MockUser }> {
+  if (realAuth && googleProvider) {
+    return signInWithPopup(realAuth, googleProvider);
+  }
+  return mockLoginWithGoogle();
+}
+
+export async function loginWithGoogle() {
+  return signInWithGoogle();
 }
 
 export async function logout() {
   if (realAuth) {
     return signOut(realAuth);
   }
-  auth.currentUser = null;
+  mockAuth.currentUser = null;
   setLocalUser(null);
   triggerAuthChange(null);
 }
@@ -231,9 +372,8 @@ export function onAuthChanged(callback: (user: any) => void) {
     return onAuthStateChanged(realAuth, callback);
   }
   authListeners.push(callback);
-  // Send initial state immediately
   setTimeout(() => {
-    callback(auth.currentUser);
+    callback(mockAuth.currentUser);
   }, 0);
   return () => {
     const idx = authListeners.indexOf(callback);
@@ -360,5 +500,66 @@ export function listenToCollection(collectionRef: any, callback: (snapshot: any)
 
   return () => {
     dbListeners[path] = dbListeners[path].filter(cb => cb !== callback);
+  };
+}
+
+type OrderedCollectionOptions = {
+  orderByField: string;
+  direction?: "asc" | "desc";
+  limitTo?: number;
+};
+
+export function listenToOrderedCollection(
+  collectionRef: any,
+  options: OrderedCollectionOptions,
+  callback: (snapshot: any) => void
+) {
+  if (realDb) {
+    const direction = options.direction === "asc" ? "asc" : "desc";
+    const collectionQuery = options.limitTo
+      ? query(collectionRef, orderBy(options.orderByField, direction), limit(options.limitTo))
+      : query(collectionRef, orderBy(options.orderByField, direction));
+    return onSnapshot(collectionQuery, callback);
+  }
+
+  const path = collectionRef.path;
+  const listenerKey = `${path}?orderBy=${options.orderByField}&dir=${options.direction ?? "desc"}`;
+  if (!dbListeners[listenerKey]) dbListeners[listenerKey] = [];
+  dbListeners[listenerKey].push(callback);
+
+  setTimeout(() => {
+    const dbData = getLocalDb();
+    const results: any[] = [];
+    Object.entries(dbData).forEach(([key, value]) => {
+      if (key.startsWith(path + "/") && key.split("/").length === path.split("/").length + 1) {
+        results.push({
+          id: key.split("/").pop(),
+          data: () => value,
+          exists: () => true,
+        });
+      }
+    });
+
+    const direction = options.direction === "asc" ? 1 : -1;
+    results.sort((a, b) => {
+      const aValue = a.data()?.[options.orderByField] ?? "";
+      const bValue = b.data()?.[options.orderByField] ?? "";
+      if (aValue < bValue) return -1 * direction;
+      if (aValue > bValue) return 1 * direction;
+      return 0;
+    });
+
+    const limitedResults = options.limitTo ? results.slice(0, options.limitTo) : results;
+
+    callback({
+      docs: limitedResults,
+      forEach: (cb: any) => limitedResults.forEach(cb),
+      empty: limitedResults.length === 0,
+      size: limitedResults.length,
+    });
+  }, 0);
+
+  return () => {
+    dbListeners[listenerKey] = dbListeners[listenerKey].filter((cb) => cb !== callback);
   };
 }
