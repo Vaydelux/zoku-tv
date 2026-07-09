@@ -7,6 +7,7 @@ import { useSessionStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { TitleCard } from "@/components/TitleCard";
 import { discoverMedia, getGenres, TMDBTitle, TMDBGenre } from "@/lib/tmdb";
+import { AnimeDiscoverContent } from "./AnimeDiscover";
 
 import { Suspense } from "react";
 
@@ -26,6 +27,10 @@ function DiscoverPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentProfile } = useSessionStore();
+
+  if ((currentProfile?.catalogMode ?? "tmdb") === "anime") {
+    return <AnimeDiscoverContent />;
+  }
 
   // Load genres list
   const [availableGenres, setAvailableGenres] = useState<TMDBGenre[]>([]);

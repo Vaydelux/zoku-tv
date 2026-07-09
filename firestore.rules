@@ -20,6 +20,7 @@ service cloud.firestore {
         && (!('kidMode' in data) || data.kidMode is bool)
         && (!('themePreference' in data) || data.themePreference is string)
         && (!('iframeModePreference' in data) || data.iframeModePreference in ['Strict', 'Compatibility'])
+        && (!('catalogMode' in data) || data.catalogMode in ['tmdb', 'anime'])
         && (!('homeGenreRailPreferences' in data)
           || (data.homeGenreRailPreferences is list && data.homeGenreRailPreferences.size() <= 6))
         && (!('createdAt' in data) || data.createdAt is string)
@@ -36,10 +37,13 @@ service cloud.firestore {
 
     function validWatchlistItem() {
       let data = request.resource.data;
-      return data.keys().hasAll(['tmdbId', 'media_type', 'added_at'])
-        && data.tmdbId is int
-        && data.media_type in ['movie', 'tv']
+      return data.keys().hasAll(['media_type', 'added_at'])
+        && data.media_type in ['movie', 'tv', 'anime']
         && data.added_at is string
+        && (
+          (data.media_type == 'anime' && data.keys().hasAll(['anilistId']) && data.anilistId is int)
+          || (data.media_type in ['movie', 'tv'] && data.keys().hasAll(['tmdbId']) && data.tmdbId is int)
+        )
         && (!('title' in data) || data.title is string)
         && (!('poster_path' in data) || data.poster_path == null || data.poster_path is string)
         && (!('backdrop_path' in data) || data.backdrop_path == null || data.backdrop_path is string)
@@ -52,6 +56,26 @@ service cloud.firestore {
         && data.history.size() <= 10
         && (data.keys().hasOnly(['history'])
           || (data.keys().hasOnly(['history', 'updatedAt']) && data.updatedAt is string));
+    }
+
+    function validContinueWatchingItem() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['media_type', 'title', 'last_watched_at'])
+        && data.media_type in ['movie', 'tv', 'anime']
+        && data.title is string
+        && data.last_watched_at is string
+        && (
+          (data.media_type == 'anime' && 'anilistId' in data && data.anilistId is int)
+          || (data.media_type in ['movie', 'tv'] && 'tmdbId' in data && data.tmdbId is int)
+        )
+        && (!('season' in data) || data.season == null || data.season is int)
+        && (!('episode' in data) || data.episode == null || data.episode is int)
+        && (!('poster_path' in data) || data.poster_path == null || data.poster_path is string)
+        && (!('backdrop_path' in data) || data.backdrop_path == null || data.backdrop_path is string)
+        && (!('progress_percent' in data) || data.progress_percent == null
+          || (data.progress_percent is number && data.progress_percent >= 0 && data.progress_percent <= 100))
+        && (!('current_time_sec' in data) || data.current_time_sec == null || data.current_time_sec is number)
+        && (!('duration_sec' in data) || data.duration_sec == null || data.duration_sec is number);
     }
 
     match /users/{userId} {
@@ -72,6 +96,12 @@ service cloud.firestore {
         match /searchHistory/{docId} {
           allow read: if isOwner(userId);
           allow create, update: if isOwner(userId) && validSearchHistory();
+          allow delete: if isOwner(userId);
+        }
+
+        match /continueWatching/{entryKey} {
+          allow read: if isOwner(userId);
+          allow create, update: if isOwner(userId) && validContinueWatchingItem();
           allow delete: if isOwner(userId);
         }
       }

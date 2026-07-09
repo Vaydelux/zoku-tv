@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSessionStore, useWatchlistStore } from "@/stores";
+import { useSessionStore, useWatchlistStore, useContinueWatchingStore } from "@/stores";
 import {
   DEFAULT_PROFILE_AVATAR_COLOR,
   preloadProfileAvatars,
@@ -13,6 +13,7 @@ import { applyTheme } from "@/lib/themes";
 export function ClientInitializer() {
   const initSession = useSessionStore((state) => state.initSession);
   const initWatchlist = useWatchlistStore((state) => state.initWatchlist);
+  const initContinueWatching = useContinueWatchingStore((state) => state.initContinueWatching);
   const user = useSessionStore((state) => state.user);
   const currentProfile = useSessionStore((state) => state.currentProfile);
 
@@ -65,11 +66,13 @@ export function ClientInitializer() {
   useEffect(() => {
     if (user && currentProfile) {
       const unsubscribeWatchlist = initWatchlist();
+      const unsubscribeContinueWatching = initContinueWatching();
       return () => {
         unsubscribeWatchlist();
+        unsubscribeContinueWatching();
       };
     }
-  }, [user, currentProfile, initWatchlist]);
+  }, [user, currentProfile, initWatchlist, initContinueWatching]);
 
   return null;
 }

@@ -13,9 +13,12 @@ import {
   Check, 
   Eye,
   AlertTriangle,
-  Trash2
+  Trash2,
+  Tv,
+  Clapperboard
 } from "lucide-react";
 import { useSessionStore, useEmbedStore } from "@/stores";
+import type { CatalogMode } from "@/lib/media-types";
 import { Navbar } from "@/components/Navbar";
 import { FirebaseStatusIndicator } from "@/components/FirebaseStatusIndicator";
 import { LoadingBanner } from "@/components/LoadingBanner";
@@ -43,17 +46,18 @@ function SettingsPageContent() {
   const { user, currentProfile, updateProfile } = useSessionStore();
   const { iframeMode, setIframeMode } = useEmbedStore();
 
-  const [activeTab, setActiveTab] = useState<"theme" | "iframe-mode" | "genre-rails" | "cache">("theme");
+  const [activeTab, setActiveTab] = useState<"theme" | "iframe-mode" | "genre-rails" | "catalog" | "cache">("theme");
   const [availableGenres, setAvailableGenres] = useState<TMDBGenre[]>([]);
   const [selectedGenreIds, setSelectedGenreIds] = useState<number[]>([]);
   const [localIframeMode, setLocalIframeMode] = useState<"Strict" | "Compatibility">("Strict");
+  const [localCatalogMode, setLocalCatalogMode] = useState<CatalogMode>("tmdb");
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
   // Parse URL if they navigated to subroutes via query
   useEffect(() => {
     const section = searchParams.get("section");
-    if (section === "theme" || section === "iframe-mode" || section === "genre-rails" || section === "cache") {
+    if (section === "theme" || section === "iframe-mode" || section === "genre-rails" || section === "catalog" || section === "cache") {
       setActiveTab(section as any);
     }
   }, [searchParams]);
@@ -74,6 +78,7 @@ function SettingsPageContent() {
         setAvailableGenres(combined);
         setSelectedGenreIds(currentProfile?.homeGenreRailPreferences || [28, 12, 35, 18]);
         setLocalIframeMode(currentProfile?.iframeModePreference || iframeMode || "Strict");
+        setLocalCatalogMode(currentProfile?.catalogMode || "tmdb");
       } catch (err) {
         console.error("Failed to load settings data:", err);
       }
@@ -185,6 +190,25 @@ function SettingsPageContent() {
     }
   };
 
+  const handleCatalogModeChange = async (mode: CatalogMode) => {
+    setLocalCatalogMode(mode);
+    setSaving(true);
+    try {
+      await updateProfile(currentProfile.id, { catalogMode: mode });
+      setSuccessMsg(`Content catalog switched to ${mode === "anime" ? "Anime" : "Movies & TV"}!`);
+      setTimeout(() => {
+        setSuccessMsg("");
+        router.push("/home");
+      }, 1200);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isAnimeCatalog = localCatalogMode === "anime";
+
   return (
     <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">
       {saving && <LoadingBanner message="Saving your settings..." />}
@@ -246,10 +270,21 @@ function SettingsPageContent() {
             </button>
 
             <button
+              onClick={() => { setActiveTab("catalog"); applyFiltersQuery("catalog"); }}
+              className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
+                activeTab === "catalog" ? "bg-primary text-primary-contrast" : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
+              }`}
+            >
+              <Clapperboard className="h-4.5 w-4.5" />
+              <span>Content Catalog</span>
+            </button>
+
+            <button
               onClick={() => { setActiveTab("genre-rails"); applyFiltersQuery("genre-rails"); }}
+              disabled={isAnimeCatalog}
               className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
                 activeTab === "genre-rails" ? "bg-primary text-primary-contrast" : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
-              }`}
+              } ${isAnimeCatalog ? "opacity-40 cursor-not-allowed" : ""}`}
             >
               <LayoutGrid className="h-4.5 w-4.5" />
               <span>Home Genre Rails</span>
@@ -360,6 +395,63 @@ function SettingsPageContent() {
                       </div>
                       <p className="text-xs text-on-surface-variant leading-relaxed">
                         Removes HTML5 sandboxing containment. Best for legacy devices or servers that fail to load scripts inside contained spaces, but allows popup ads and tracking cookies. Highly advised to use with standard browser ad blockers.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "catalog" && (
+              <div className="space-y-6">
+                <div className="space-y-1">
+                  <h2 className="text-base font-semibold text-on-surface">Content Catalog Mode</h2>
+                  <p className="text-xs text-on-surface-variant">
+                    Choose which catalog this profile browses. Only one catalog is active at a time to keep Home, Discover, and Search focused.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div
+                    onClick={() => handleCatalogModeChange("tmdb")}
+                    className={`p-5 rounded-xl border cursor-pointer transition-all flex items-start gap-4 ${
+                      localCatalogMode === "tmdb"
+                        ? "border-primary bg-primary/5"
+                        : "border-border-custom hover:border-white/20 bg-background/40"
+                    }`}
+                  >
+                    <Tv className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-xs text-on-surface">Movies & TV (TMDB)</h3>
+                        {localCatalogMode === "tmdb" && (
+                          <span className="text-[9px] bg-primary text-primary-contrast font-bold px-1.5 rounded">Active</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                        Browse trending movies and TV series from TMDB with multi-server embed playback.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => handleCatalogModeChange("anime")}
+                    className={`p-5 rounded-xl border cursor-pointer transition-all flex items-start gap-4 ${
+                      localCatalogMode === "anime"
+                        ? "border-primary bg-primary/5"
+                        : "border-border-custom hover:border-white/20 bg-background/40"
+                    }`}
+                  >
+                    <Clapperboard className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-xs text-on-surface">Anime (AniList)</h3>
+                        {localCatalogMode === "anime" && (
+                          <span className="text-[9px] bg-primary text-primary-contrast font-bold px-1.5 rounded">Active</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                        Browse anime from AniList with Filmu embed playback. Seasons and episodes are sourced from AniList metadata.
                       </p>
                     </div>
                   </div>

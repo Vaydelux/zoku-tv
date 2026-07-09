@@ -7,6 +7,8 @@ import { useSessionStore, useSearchHistoryStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { TitleCard } from "@/components/TitleCard";
 import { searchMulti, TMDBTitle } from "@/lib/tmdb";
+import { searchAnime, type AniListMedia } from "@/lib/anilist";
+import { AnimeCard } from "@/components/anime/AnimeCard";
 
 import { Suspense } from "react";
 
@@ -29,8 +31,10 @@ function SearchPageContent() {
   const { history, loadHistory, addQuery, clearHistory } = useSearchHistoryStore();
 
   const queryParam = searchParams.get("q") || "";
+  const catalogMode = currentProfile?.catalogMode ?? "tmdb";
   const [inputValue, setInputValue] = useState(queryParam);
   const [results, setResults] = useState<TMDBTitle[]>([]);
+  const [animeResults, setAnimeResults] = useState<AniListMedia[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
@@ -74,6 +78,7 @@ function SearchPageContent() {
   useEffect(() => {
     if (!queryParam.trim()) {
       setResults([]);
+      setAnimeResults([]);
       return;
     }
 
@@ -84,22 +89,35 @@ function SearchPageContent() {
         setLoadingMore(true);
       }
       try {
-        const searchResults = await searchMulti(queryParam, page);
-        
-        // Apply kidMode filtering if active
-        const filtered = currentProfile?.kidMode 
-          ? searchResults.filter(title => (title.vote_average || 0) < 7.5) // basic pg filter
-          : searchResults;
-
-        if (page === 1) {
-          setResults(filtered);
-          addQuery(queryParam.trim());
+        if (catalogMode === "anime") {
+          const data = await searchAnime(queryParam, page, 20);
+          if (page === 1) {
+            setAnimeResults(data.media);
+            addQuery(queryParam.trim());
+          } else {
+            setAnimeResults((prev) => {
+              const existingIds = new Set(prev.map((p) => p.id));
+              const newItems = data.media.filter((f) => !existingIds.has(f.id));
+              return [...prev, ...newItems];
+            });
+          }
         } else {
-          setResults(prev => {
-            const existingIds = new Set(prev.map(p => p.id));
-            const newItems = filtered.filter(f => !existingIds.has(f.id));
-            return [...prev, ...newItems];
-          });
+          const searchResults = await searchMulti(queryParam, page);
+
+          const filtered = currentProfile?.kidMode
+            ? searchResults.filter((title) => (title.vote_average || 0) < 7.5)
+            : searchResults;
+
+          if (page === 1) {
+            setResults(filtered);
+            addQuery(queryParam.trim());
+          } else {
+            setResults((prev) => {
+              const existingIds = new Set(prev.map((p) => p.id));
+              const newItems = filtered.filter((f) => !existingIds.has(f.id));
+              return [...prev, ...newItems];
+            });
+          }
         }
       } catch (err) {
         console.error("Search failed:", err);
@@ -109,7 +127,7 @@ function SearchPageContent() {
       }
     }
     performSearch();
-  }, [queryParam, page, currentProfile, addQuery]);
+  }, [queryParam, page, currentProfile, addQuery, catalogMode]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,13 +156,15 @@ function SearchPageContent() {
             Infinite Search Channel
           </h1>
           <p className="text-xs text-on-surface-variant max-w-md">
-            Scan across millions of movies, television series, cast, crew, and catalogs in real-time.
+            {catalogMode === "anime"
+              ? "Search the AniList anime catalog in real-time."
+              : "Scan across millions of movies, television series, cast, crew, and catalogs in real-time."}
           </p>
 
           <form onSubmit={handleSearchSubmit} className="relative w-full mt-2">
             <input
               type="text"
-              placeholder="Search movies, tv shows, franchises..."
+              placeholder={catalogMode === "anime" ? "Search anime titles..." : "Search movies, tv shows, franchises..."}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               className="w-full rounded-2xl border border-border-custom bg-surface py-3.5 pl-5 pr-12 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
@@ -206,20 +226,43 @@ function SearchPageContent() {
                 Search Results for <span className="text-primary font-bold lowercase font-sans">“{queryParam}”</span>
               </p>
               <p className="text-xs font-mono text-on-surface-variant">
-                Found {results.length} results
+                Found {catalogMode === "anime" ? animeResults.length : results.length} results
               </p>
             </div>
 
             {loading ? (
-              /* Loading Grid */
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                 {[1, 2, 3, 4, 5, 6].map((idx) => (
-                  <div 
-                    key={idx} 
-                    className="aspect-[2/3] rounded-xl bg-surface border border-border-custom animate-pulse" 
+                  <div
+                    key={idx}
+                    className="aspect-[2/3] rounded-xl bg-surface border border-border-custom animate-pulse"
                   />
                 ))}
               </div>
+            ) : catalogMode === "anime" ? (
+              animeResults.length > 0 ? (
+                <div className="space-y-8">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                    {animeResults.map((anime) => (
+                      <AnimeCard key={anime.id} anime={anime} />
+                    ))}
+                  </div>
+                  <div className="flex justify-center pt-4">
+                    <button
+                      onClick={() => setPage((p) => p + 1)}
+                      disabled={loadingMore}
+                      className="flex items-center gap-2 rounded-xl bg-surface hover:bg-surface-hover border border-border-custom py-3 px-8 text-xs font-semibold disabled:opacity-50"
+                    >
+                      {loadingMore ? "Loading More..." : "Load More Results"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+                  <Film className="h-12 w-12 text-on-surface-variant" />
+                  <p className="font-semibold text-sm">No anime results found.</p>
+                </div>
+              )
             ) : results.length > 0 ? (
               <div className="space-y-8">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">

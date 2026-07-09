@@ -1,13 +1,21 @@
 {
-  "indexes": [
+  "indexes": [],
+  "fieldOverrides": [
     {
       "collectionGroup": "watchlist",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "media_type", "order": "ASCENDING" },
-        { "fieldPath": "added_at", "order": "DESCENDING" }
+      "fieldPath": "added_at",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" }
+      ]
+    },
+    {
+      "collectionGroup": "continueWatching",
+      "fieldPath": "last_watched_at",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" }
       ]
     }
-  ],
-  "fieldOverrides": []
+  ]
 }

@@ -13,7 +13,8 @@ import {
   Grid, 
   ChevronDown, 
   ShieldAlert, 
-  FolderHeart 
+  FolderHeart,
+  Clapperboard
 } from "lucide-react";
 import { useSessionStore, logout } from "@/stores";
 import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
@@ -66,6 +67,9 @@ export function Navbar() {
     { name: "Watchlist", href: "/watchlist" },
   ];
 
+  const catalogMode = currentProfile?.catalogMode ?? "tmdb";
+  const catalogLabel = catalogMode === "anime" ? "Anime" : "Movies & TV";
+
   return (
     <nav className="sticky top-0 z-40 w-full border-b border-border-custom bg-background/80 backdrop-blur-md transition-colors duration-300">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -73,10 +77,15 @@ export function Navbar() {
           
           {/* Logo & Main Nav */}
           <div className="flex items-center gap-8">
-            <Link href="/home" className="flex items-center gap-2 text-primary focus:outline-none">
-              <Tv className="h-6 w-6 animate-pulse" />
-              <span className="font-display text-xl font-bold tracking-wider text-on-surface">
-                ZOKU<span className="text-primary font-mono text-sm ml-0.5">TV</span>
+            <Link href="/home" className="flex flex-col gap-0.5 text-primary focus:outline-none">
+              <span className="flex items-center gap-2">
+                <Tv className="h-6 w-6 animate-pulse" />
+                <span className="font-display text-xl font-bold tracking-wider text-on-surface">
+                  ZOKU<span className="text-primary font-mono text-sm ml-0.5">TV</span>
+                </span>
+              </span>
+              <span className="text-[9px] font-mono uppercase tracking-widest text-primary pl-8">
+                {catalogLabel}
               </span>
             </Link>
 
@@ -105,7 +114,7 @@ export function Navbar() {
             <form onSubmit={handleSearchSubmit} className="relative hidden sm:block">
               <input
                 type="text"
-                placeholder="Titles, people, genres..."
+                placeholder={catalogMode === "anime" ? "Search anime..." : "Titles, people, genres..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-48 lg:w-64 rounded-full border border-border-custom bg-surface py-1.5 pl-4 pr-10 text-xs text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300"
@@ -148,6 +157,7 @@ export function Navbar() {
                     <div className="px-3 py-2 border-b border-border-custom">
                       <p className="text-xs text-on-surface-variant">Active Profile</p>
                       <p className="text-sm font-bold text-on-surface truncate">{currentProfile.name}</p>
+                      <p className="text-[10px] font-mono text-primary mt-0.5">{catalogLabel} catalog</p>
                     </div>
 
                     {/* Profiles Selection */}
@@ -184,6 +194,14 @@ export function Navbar() {
                       >
                         <User className="h-4 w-4" />
                         <span>Manage Profiles</span>
+                      </Link>
+                      <Link
+                        href="/settings?section=catalog"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs text-on-surface hover:bg-surface-hover hover:text-primary rounded-lg transition-colors"
+                      >
+                        <Clapperboard className="h-4 w-4" />
+                        <span>Switch Catalog</span>
                       </Link>
                       <Link
                         href="/settings"

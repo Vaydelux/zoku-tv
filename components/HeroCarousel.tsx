@@ -105,21 +105,21 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
   const heroMediaType = current?.media_type || "movie";
   const heroRating = current?.vote_average ? current.vote_average.toFixed(1) : "N/A";
   const heroYear = (current?.release_date || current?.first_air_date || "").split("-")[0];
-  const isInWatchlist = current ? hasItem(current.id, heroMediaType) : false;
+  const isInWatchlist = current ? hasItem(heroMediaType, current.id) : false;
 
   const handleWatchlistToggle = () => {
     if (!current) return;
     if (isInWatchlist) {
-      removeItem(current.id, heroMediaType);
+      removeItem(heroMediaType, current.id);
     } else {
-      addItem(
-        current.id,
-        heroMediaType,
-        heroName,
-        current.poster_path,
-        current.backdrop_path,
-        current.vote_average
-      );
+      addItem({
+        media_type: heroMediaType,
+        tmdbId: current.id,
+        title: heroName,
+        poster_path: current.poster_path,
+        backdrop_path: current.backdrop_path,
+        vote_average: current.vote_average,
+      });
     }
   };
 

@@ -246,6 +246,13 @@ export async function runFirestoreHealthCheck(
         limit(1)
       );
       await getDocs(watchlistQuery);
+
+      const continueWatchingQuery = query(
+        collection(realDb, `users/${userId}/profiles/${profileId}/continueWatching`),
+        orderBy("last_watched_at", "desc"),
+        limit(1)
+      );
+      await getDocs(continueWatchingQuery);
     }
 
     return {

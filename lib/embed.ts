@@ -387,7 +387,8 @@ export function getEmbedUrl(
   type: "movie" | "tv",
   tmdbId: number | string,
   season?: number | string,
-  episode?: number | string
+  episode?: number | string,
+  options?: { startAtSec?: number }
 ): string {
   const template = type === "movie" ? server.movieTemplate : server.tvTemplate;
   let url = template
@@ -400,14 +401,21 @@ export function getEmbedUrl(
       .replace("{episode}", String(episode || 1));
   }
 
-  // Append default params if specified
+  const parsedUrl = new URL(url);
+
   if (server.defaultParams) {
-    const parsedUrl = new URL(url);
     Object.entries(server.defaultParams).forEach(([k, v]) => {
       parsedUrl.searchParams.set(k, v);
     });
-    url = parsedUrl.toString();
   }
 
-  return url;
+  if (
+    options?.startAtSec != null &&
+    options.startAtSec > 0 &&
+    (server.id === "vidfast" || server.id === "peachify" || server.id === "primesrc")
+  ) {
+    parsedUrl.searchParams.set("startAt", String(Math.floor(options.startAtSec)));
+  }
+
+  return parsedUrl.toString();
 }

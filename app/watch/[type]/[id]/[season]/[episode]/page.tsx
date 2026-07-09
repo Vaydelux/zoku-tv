@@ -15,6 +15,8 @@ import {
 import { useSessionStore, useEmbedStore } from "@/stores";
 import { EMBED_SERVER_CATALOG, getEmbedUrl } from "@/lib/embed";
 import { getTitleDetails, getSeasonDetails, TMDBTitle, TMDBSeasonDetail } from "@/lib/tmdb";
+import { useWatchProgress } from "@/hooks/useWatchProgress";
+import { ResumePrompt } from "@/components/watch/ResumePrompt";
 
 interface TVWatchPageProps {
   params: Promise<{ type: string; id: string; season: string; episode: string }>;
@@ -87,26 +89,6 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
     loadSeasonData();
   }, [currentProfile, titleId, seasonNum, episodeNum]);
 
-  useEffect(() => {
-    if (!details || typeof window === "undefined") return;
-
-    localStorage.setItem(
-      "zoku_last_viewed",
-      JSON.stringify({
-        id: details.id,
-        title: details.name || details.title,
-        overview: details.overview,
-        poster_path: details.poster_path,
-        backdrop_path: details.backdrop_path,
-        media_type: "tv",
-        vote_average: details.vote_average,
-        season: seasonNum,
-        episode: episodeNum,
-        viewedAt: new Date().toISOString(),
-      })
-    );
-  }, [details, seasonNum, episodeNum]);
-
   // Overlay mousemove fade control
   const resetOverlayTimer = () => {
     setShowOverlay(true);
@@ -141,6 +123,31 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
     };
   }, [selectedServerId, seasonNum, episodeNum, loadAttempts]);
 
+  const selectedServer = EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) || EMBED_SERVER_CATALOG[0];
+  const name = details?.name || details?.title || "TV Series";
+
+  const {
+    showResumePrompt,
+    savedProgress,
+    startAtSec,
+    handleResume,
+    handleStartOver,
+  } = useWatchProgress({
+    tmdbId: titleId,
+    mediaType: "tv",
+    season: seasonNum,
+    episode: episodeNum,
+    title: name,
+    poster_path: details?.poster_path,
+    backdrop_path: details?.backdrop_path,
+    selectedServerId,
+    ready: !!details && !loading,
+  });
+
+  const embedUrl = details
+    ? getEmbedUrl(selectedServer, "tv", titleId, seasonNum, episodeNum, { startAtSec })
+    : "";
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-black text-white">
@@ -159,9 +166,6 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
       </div>
     );
   }
-
-  const selectedServer = EMBED_SERVER_CATALOG.find(s => s.id === selectedServerId) || EMBED_SERVER_CATALOG[0];
-  const embedUrl = getEmbedUrl(selectedServer, "tv", titleId, seasonNum, episodeNum);
 
   const handleServerChange = (serverId: string) => {
     setServerId(serverId);
@@ -215,7 +219,6 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
   };
 
   const activeEpisode = seasonDetail.episodes?.find(e => e.episode_number === episodeNum);
-  const name = details.name || details.title || "TV Series";
   const availableSeasons = details.seasons ?? [];
 
   const handleSeasonChange = (newSeason: number) => {
@@ -290,7 +293,7 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
       <div className="relative w-full aspect-[16/9] md:h-[65dvh] lg:h-[70dvh] bg-neutral-950 shrink-0">
         
         {/* Loader status */}
-        {!iframeLoaded && (
+        {!iframeLoaded && !showResumePrompt && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950 p-6 text-center gap-3">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <p className="text-xs font-mono text-white/60">Launching broadcast tunnel to server {selectedServer.name}...</p>
@@ -304,15 +307,26 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
         )}
 
         {/* Sandboxed player element */}
-        <iframe
-          key={`${selectedServerId}_tv_${seasonNum}_${episodeNum}_${loadAttempts}`}
-          src={embedUrl}
-          onLoad={() => setIframeLoaded(true)}
-          className="w-full h-full border-0 absolute inset-0 z-0 bg-black"
-          allowFullScreen
-          sandbox={iframeMode === "Strict" ? selectedServer.sandboxPolicy : undefined}
-          referrerPolicy="no-referrer"
-        />
+        {!showResumePrompt && (
+          <iframe
+            key={`${selectedServerId}_tv_${seasonNum}_${episodeNum}_${loadAttempts}_${startAtSec ?? 0}`}
+            src={embedUrl}
+            onLoad={() => setIframeLoaded(true)}
+            className="w-full h-full border-0 absolute inset-0 z-0 bg-black"
+            allowFullScreen
+            sandbox={iframeMode === "Strict" ? selectedServer.sandboxPolicy : undefined}
+            referrerPolicy="no-referrer"
+          />
+        )}
+
+        {showResumePrompt && savedProgress && (
+          <ResumePrompt
+            progressPercent={savedProgress.progress_percent ?? 0}
+            currentTimeSec={savedProgress.current_time_sec ?? 0}
+            onResume={handleResume}
+            onStartOver={handleStartOver}
+          />
+        )}
 
         {/* Auto-fading HUD overlay */}
         {showOverlay && iframeLoaded && (

@@ -26,21 +26,21 @@ export function TitleCard({ title, mediaType }: TitleCardProps) {
   const rating = title.vote_average ? title.vote_average.toFixed(1) : "N/A";
   const releaseYear = (title.release_date || title.first_air_date || "").split("-")[0] || "N/A";
 
-  const isInWatchlist = hasItem(title.id, actualMediaType);
+  const isInWatchlist = hasItem(actualMediaType, title.id);
 
   const handleWatchlistToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isInWatchlist) {
-      removeItem(title.id, actualMediaType);
+      removeItem(actualMediaType, title.id);
     } else {
-      addItem(
-        title.id, 
-        actualMediaType, 
-        name, 
-        title.poster_path, 
-        title.backdrop_path, 
-        title.vote_average
-      );
+      addItem({
+        media_type: actualMediaType,
+        tmdbId: title.id,
+        title: name,
+        poster_path: title.poster_path,
+        backdrop_path: title.backdrop_path,
+        vote_average: title.vote_average,
+      });
     }
   };
 

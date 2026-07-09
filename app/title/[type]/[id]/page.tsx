@@ -126,20 +126,20 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
 
   const rating = details.vote_average ? details.vote_average.toFixed(1) : "N/A";
   const releaseYear = (details.release_date || details.first_air_date || "").split("-")[0];
-  const isInWatchlist = hasItem(details.id, mediaType);
+  const isInWatchlist = hasItem(mediaType, details.id);
 
   const handleWatchlistToggle = () => {
     if (isInWatchlist) {
-      removeItem(details.id, mediaType);
+      removeItem(mediaType, details.id);
     } else {
-      addItem(
-        details.id,
-        mediaType,
-        name,
-        details.poster_path,
-        details.backdrop_path,
-        details.vote_average
-      );
+      addItem({
+        media_type: mediaType,
+        tmdbId: details.id,
+        title: name,
+        poster_path: details.poster_path,
+        backdrop_path: details.backdrop_path,
+        vote_average: details.vote_average,
+      });
     }
   };
 

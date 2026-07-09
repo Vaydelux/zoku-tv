@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import { useSessionStore, useEmbedStore } from "@/stores";
 import { EMBED_SERVER_CATALOG, getEmbedUrl } from "@/lib/embed";
-import { getTitleDetails, getSeasonDetails, TMDBTitle, TMDBSeasonDetail } from "@/lib/tmdb";
+import { getTitleDetails, TMDBTitle } from "@/lib/tmdb";
+import { useWatchProgress } from "@/hooks/useWatchProgress";
+import { ResumePrompt } from "@/components/watch/ResumePrompt";
 
 interface WatchPageProps {
   params: Promise<{ type: string; id: string }>;
@@ -55,18 +57,6 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
       try {
         const data = await getTitleDetails(mediaType, titleId);
         setDetails(data);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("zoku_last_viewed", JSON.stringify({
-            id: data.id,
-            title: data.title || data.name,
-            overview: data.overview,
-            poster_path: data.poster_path,
-            backdrop_path: data.backdrop_path,
-            media_type: mediaType,
-            vote_average: data.vote_average,
-            viewedAt: new Date().toISOString()
-          }));
-        }
       } catch (err) {
         console.error("Failed to load watcher details", err);
       } finally {
@@ -112,6 +102,29 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
     };
   }, [selectedServerId, loadAttempts]);
 
+  const selectedServer = EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) || EMBED_SERVER_CATALOG[0];
+  const name = details?.title || details?.name || "Untitled";
+
+  const {
+    showResumePrompt,
+    savedProgress,
+    startAtSec,
+    handleResume,
+    handleStartOver,
+  } = useWatchProgress({
+    tmdbId: titleId,
+    mediaType,
+    title: name,
+    poster_path: details?.poster_path,
+    backdrop_path: details?.backdrop_path,
+    selectedServerId,
+    ready: !!details && !loading,
+  });
+
+  const embedUrl = details
+    ? getEmbedUrl(selectedServer, mediaType, titleId, 1, 1, { startAtSec })
+    : "";
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-black text-white">
@@ -130,11 +143,6 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
       </div>
     );
   }
-
-  const selectedServer = EMBED_SERVER_CATALOG.find(s => s.id === selectedServerId) || EMBED_SERVER_CATALOG[0];
-  
-  // Build standard embed URL (default to S1E1 if TV accessed via standard watch page)
-  const embedUrl = getEmbedUrl(selectedServer, mediaType, titleId, 1, 1);
 
   const handleServerChange = (serverId: string) => {
     setServerId(serverId);
@@ -162,8 +170,6 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
     setServerId(EMBED_SERVER_CATALOG[nextIndex].id);
     setLoadAttempts(prev => prev + 1);
   };
-
-  const name = details.title || details.name || "Untitled";
 
   return (
     <div className="relative w-screen h-screen bg-black overflow-hidden flex flex-col justify-between">
@@ -231,7 +237,7 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
       <div className="relative flex-1 w-full bg-black">
         
         {/* Connection status overlay */}
-        {!iframeLoaded && (
+        {!iframeLoaded && !showResumePrompt && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950 p-6 text-center gap-3">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <p className="text-xs font-mono text-white/60">Tuning cinematic feed to {selectedServer.name}...</p>
@@ -245,16 +251,26 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
         )}
 
         {/* The Sandboxed IFrame element */}
-        <iframe
-          key={`${selectedServerId}_${mediaType}_${loadAttempts}`}
-          src={embedUrl}
-          onLoad={() => setIframeLoaded(true)}
-          className="w-full h-full border-0 absolute inset-0 z-0 bg-black"
-          allowFullScreen
-          // Apply strict sandbox policy or fallback
-          sandbox={iframeMode === "Strict" ? selectedServer.sandboxPolicy : undefined}
-          referrerPolicy="no-referrer"
-        />
+        {!showResumePrompt && (
+          <iframe
+            key={`${selectedServerId}_${mediaType}_${loadAttempts}_${startAtSec ?? 0}`}
+            src={embedUrl}
+            onLoad={() => setIframeLoaded(true)}
+            className="w-full h-full border-0 absolute inset-0 z-0 bg-black"
+            allowFullScreen
+            sandbox={iframeMode === "Strict" ? selectedServer.sandboxPolicy : undefined}
+            referrerPolicy="no-referrer"
+          />
+        )}
+
+        {showResumePrompt && savedProgress && (
+          <ResumePrompt
+            progressPercent={savedProgress.progress_percent ?? 0}
+            currentTimeSec={savedProgress.current_time_sec ?? 0}
+            onResume={handleResume}
+            onStartOver={handleStartOver}
+          />
+        )}
 
         {/* Auto-fading HUD title bar overlay */}
         {showOverlay && iframeLoaded && (
