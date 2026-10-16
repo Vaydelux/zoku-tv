@@ -40,9 +40,9 @@
 /* Default token values — Crimson Cinema dark (overridden at runtime by applyTheme) */
 :root,
 [data-theme="theme-crimson"] {
-  --background: #0a0a0b;
-  --surface: #111112;
-  --surface-hover: #1b1b1c;
+  --background: #1a1a1e;
+  --surface: #242428;
+  --surface-hover: #2e2e33;
   --primary: #e11d48;
   --primary-contrast: #ffffff;
   --primary-glow: rgba(225, 29, 72, 0.4);
@@ -51,12 +51,13 @@
   --on-surface: #ffffff;
   --on-surface-variant: rgba(255, 255, 255, 0.68);
   --border-color: rgba(255, 255, 255, 0.1);
-  --background-gradient: linear-gradient(
-    160deg,
-    #0a0a0b 0%,
-    color-mix(in srgb, #e11d48 16%, #0a0a0b) 46%,
-    #0a0a0b 100%
-  );
+  --shadow-glow: 0 10px 28px color-mix(in srgb, #e11d48 28%, transparent);
+  --shadow-elevated: 0 14px 36px rgba(0, 0, 0, 0.45);
+  --background-gradient:
+    radial-gradient(ellipse 110% 70% at 12% -8%, color-mix(in srgb, #e11d48 32%, transparent), transparent 55%),
+    radial-gradient(ellipse 90% 55% at 92% 8%, color-mix(in srgb, #fb7185 22%, transparent), transparent 50%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, color-mix(in srgb, #e11d48 14%, transparent), transparent 55%),
+    linear-gradient(165deg, #1a1a1e 0%, color-mix(in srgb, #e11d48 20%, #1a1a1e) 45%, color-mix(in srgb, #1a1a1e 75%, #2a2a32) 100%);
 }
 
 html, body {
@@ -293,5 +294,110 @@ html, body {
     right: 0;
     left: auto;
     width: min(92vw, 16.5rem);
+  }
+}
+
+/* Global buttons: pointer + hover elevation */
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+[role="button"] {
+  cursor: pointer;
+  transition:
+    box-shadow 0.22s ease,
+    transform 0.22s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+button:hover:not(:disabled),
+input[type="button"]:hover:not(:disabled),
+input[type="submit"]:hover:not(:disabled),
+input[type="reset"]:hover:not(:disabled),
+[role="button"]:hover:not([aria-disabled="true"]) {
+  box-shadow: var(--shadow-glow, 0 10px 28px color-mix(in srgb, var(--primary) 28%, transparent));
+}
+
+button:disabled,
+input[type="button"]:disabled,
+input[type="submit"]:disabled,
+input[type="reset"]:disabled {
+  cursor: not-allowed;
+}
+
+/* Ambient atmosphere (CSS particles + soft orbs) */
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  opacity: 0.45;
+  will-change: transform;
+  animation: ambient-drift 28s ease-in-out infinite alternate;
+}
+
+.ambient-orb--a {
+  top: -12%;
+  left: -8%;
+  width: min(55vw, 420px);
+  height: min(55vw, 420px);
+  background: color-mix(in srgb, var(--primary) 42%, transparent);
+}
+
+.ambient-orb--b {
+  top: 35%;
+  right: -10%;
+  width: min(48vw, 360px);
+  height: min(48vw, 360px);
+  background: color-mix(in srgb, var(--accent) 36%, transparent);
+  animation-duration: 34s;
+  animation-delay: -8s;
+}
+
+.ambient-orb--c {
+  bottom: -18%;
+  left: 28%;
+  width: min(60vw, 480px);
+  height: min(60vw, 480px);
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  animation-duration: 40s;
+  animation-delay: -14s;
+}
+
+.ambient-particles {
+  position: absolute;
+  inset: 0;
+}
+
+.ambient-dot {
+  --i: 0;
+  position: absolute;
+  left: calc(4% + (var(--i) * 4.1%));
+  top: calc(8% + ((var(--i) * 17) % 78) * 1%);
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--on-surface) 55%, transparent);
+  opacity: 0.35;
+  animation: ambient-float calc(12s + (var(--i) * 0.45s)) ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.55s);
+}
+
+@keyframes ambient-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(4%, 6%, 0) scale(1.08); }
+}
+
+@keyframes ambient-float {
+  0%, 100% { transform: translateY(0); opacity: 0.2; }
+  50% { transform: translateY(-18px); opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-orb,
+  .ambient-dot {
+    animation: none;
   }
 }

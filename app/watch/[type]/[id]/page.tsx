@@ -118,6 +118,7 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
     mediaType,
     title: name,
     overview: details?.overview,
+    vote_average: details?.vote_average,
     poster_path: details?.poster_path,
     backdrop_path: details?.backdrop_path,
     selectedServerId,

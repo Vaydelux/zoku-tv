@@ -141,6 +141,7 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
     episode: episodeNum,
     title: name,
     overview: details?.overview,
+    vote_average: details?.vote_average,
     poster_path: details?.poster_path,
     backdrop_path: details?.backdrop_path,
     selectedServerId,

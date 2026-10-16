@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ClientInitializer } from "@/components/ClientInitializer";
 import { AuthGate } from "@/components/AuthGate";
+import { SiteChrome } from "@/components/SiteChrome";
 import { DEFAULT_THEME_ID } from "@/lib/themes";
 import { getPwaIconUrl } from "@/lib/pwa-brand";
 
@@ -75,7 +76,9 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full`} data-theme="theme-crimson">
       <body className="antialiased min-h-full bg-background text-on-surface">
         <ClientInitializer />
-        <AuthGate>{children}</AuthGate>
+        <AuthGate>
+          <SiteChrome>{children}</SiteChrome>
+        </AuthGate>
       </body>
     </html>
   );

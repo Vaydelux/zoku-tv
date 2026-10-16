@@ -105,12 +105,40 @@ function contrastOn(color: string): string {
   return luminance > 0.45 ? "#141418" : "#ffffff";
 }
 
+/** Lift near-black dark shells so pages feel less crushed */
+function liftHex(hex: string, amount = 0.14): string {
+  const rgb = parseHex(hex);
+  if (!rgb) return hex;
+  const lifted = rgb.map((c) => Math.min(255, Math.round(c + (255 - c) * amount)));
+  return `#${lifted.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function softenDarkTokens(tokens: SolidTokens): SolidTokens {
+  return {
+    ...tokens,
+    background: liftHex(tokens.background, 0.16),
+    surface: liftHex(tokens.surface, 0.12),
+    surfaceHover: liftHex(tokens.surfaceHover, 0.1),
+  };
+}
+
 function withGradient(tokens: SolidTokens, mode: AppearanceMode): ThemeTokens {
-  const mix = mode === "dark" ? 16 : 12;
+  const bg = tokens.background;
+  const primary = tokens.primary;
+  const accent = tokens.accent;
   const backgroundGradient =
     mode === "dark"
-      ? `linear-gradient(160deg, ${tokens.background} 0%, color-mix(in srgb, ${tokens.primary} ${mix}%, ${tokens.background}) 46%, ${tokens.background} 100%)`
-      : `linear-gradient(165deg, ${tokens.background} 0%, color-mix(in srgb, ${tokens.primary} ${mix}%, ${tokens.background}) 48%, ${tokens.surface} 100%)`;
+      ? [
+          `radial-gradient(ellipse 110% 70% at 12% -8%, color-mix(in srgb, ${primary} 32%, transparent), transparent 55%)`,
+          `radial-gradient(ellipse 90% 55% at 92% 8%, color-mix(in srgb, ${accent} 22%, transparent), transparent 50%)`,
+          `radial-gradient(ellipse 70% 50% at 50% 100%, color-mix(in srgb, ${primary} 14%, transparent), transparent 55%)`,
+          `linear-gradient(165deg, ${bg} 0%, color-mix(in srgb, ${primary} 20%, ${bg}) 45%, color-mix(in srgb, ${bg} 75%, #2a2a32) 100%)`,
+        ].join(", ")
+      : [
+          `radial-gradient(ellipse 100% 60% at 10% 0%, color-mix(in srgb, ${primary} 18%, transparent), transparent 50%)`,
+          `radial-gradient(ellipse 80% 50% at 100% 20%, color-mix(in srgb, ${accent} 12%, transparent), transparent 45%)`,
+          `linear-gradient(165deg, ${bg} 0%, color-mix(in srgb, ${primary} 10%, ${bg}) 48%, ${tokens.surface} 100%)`,
+        ].join(", ");
 
   return { ...tokens, backgroundGradient };
 }
@@ -291,7 +319,7 @@ const THEME_SEEDS: ThemeSeed[] = [
 ];
 
 function enrichTheme(seed: ThemeSeed): ThemeOption {
-  const dark = withGradient(seed.tokens, "dark");
+  const dark = withGradient(softenDarkTokens(seed.tokens), "dark");
   return {
     id: seed.id,
     name: seed.name,
@@ -421,6 +449,17 @@ export function applyTheme(
   for (const [key, cssVar] of Object.entries(TOKEN_CSS_MAP) as [keyof ThemeTokens, string][]) {
     root.style.setProperty(cssVar, tokens[key]);
   }
+
+  root.style.setProperty(
+    "--shadow-glow",
+    `0 10px 28px color-mix(in srgb, ${tokens.primary} 28%, transparent)`
+  );
+  root.style.setProperty(
+    "--shadow-elevated",
+    mode === "light"
+      ? "0 12px 32px rgba(20, 20, 24, 0.12)"
+      : "0 14px 36px rgba(0, 0, 0, 0.45)"
+  );
 
   if (typeof localStorage !== "undefined") {
     localStorage.setItem(APPEARANCE_STORAGE_KEY, mode);

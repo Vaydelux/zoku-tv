@@ -44,6 +44,7 @@ export default function AnimeWatchPage({ params }: AnimeWatchPageProps) {
   const [title, setTitle] = useState("");
   const [overview, setOverview] = useState<string | null>(null);
   const [poster, setPoster] = useState<string | null>(null);
+  const [voteAverage, setVoteAverage] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [selectedServerId, setSelectedServerId] = useState(DEFAULT_ANIME_SERVER_ID);
@@ -68,6 +69,7 @@ export default function AnimeWatchPage({ params }: AnimeWatchPageProps) {
           setTitle(getAnimeDisplayTitle(data));
           setOverview(data.description ?? null);
           setPoster(getAnimePoster(data));
+          setVoteAverage(data.averageScore ? data.averageScore / 10 : null);
         }
       } catch (err) {
         console.error("Failed to load anime watch metadata", err);
@@ -92,9 +94,10 @@ export default function AnimeWatchPage({ params }: AnimeWatchPageProps) {
       episode: episodeNum,
       title,
       overview,
+      vote_average: voteAverage,
       poster_path: poster,
     });
-  }, [title, overview, poster, anilistId, seasonNum, episodeNum, recordWatching]);
+  }, [title, overview, voteAverage, poster, anilistId, seasonNum, episodeNum, recordWatching]);
 
   useEffect(() => {
     if (!title) return;

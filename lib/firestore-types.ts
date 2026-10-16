@@ -40,6 +40,7 @@ export type ContinueWatchingDoc = {
   episode?: number | null;
   title: string;
   overview?: string | null;
+  vote_average?: number | null;
   poster_path?: string | null;
   backdrop_path?: string | null;
   last_watched_at: string;

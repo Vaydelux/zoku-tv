@@ -79,7 +79,7 @@ export function TitleCard({ title, mediaType }: TitleCardProps) {
       onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="group relative flex-shrink-0 w-[128px] sm:w-[160px] md:w-[180px] lg:w-[200px] aspect-[2/3] rounded-xl bg-surface overflow-hidden cursor-pointer shadow-md border border-border-custom hover:border-primary hover:-translate-y-1 hover:scale-[1.03] hover:shadow-xl transition-all duration-300 select-none"
+      className="group/card relative flex-shrink-0 w-[128px] sm:w-[160px] md:w-[180px] lg:w-[200px] aspect-[2/3] rounded-xl bg-surface overflow-hidden cursor-pointer shadow-md border border-border-custom hover:border-primary hover:-translate-y-1 hover:scale-[1.03] hover:shadow-xl transition-all duration-300 select-none"
     >
       {imageLoading && (
         <div className="absolute inset-0 bg-neutral-900/90 animate-pulse flex items-center justify-center">
@@ -91,7 +91,7 @@ export function TitleCard({ title, mediaType }: TitleCardProps) {
         src={posterPath}
         alt={name}
         onLoad={() => setImageLoading(false)}
-        className={`h-full w-full object-cover transition-all duration-500 group-hover:scale-105 ${
+        className={`h-full w-full object-cover transition-all duration-500 group-hover/card:scale-105 ${
           imageLoading ? "opacity-0 scale-95 blur-md" : "opacity-100 scale-100 blur-0"
         }`}
         loading="lazy"

@@ -75,7 +75,7 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
   if (items.length === 0) return null;
 
   return (
-    <div className="relative space-y-2 sm:space-y-3 group py-2 sm:py-3">
+    <div className="relative space-y-2 sm:space-y-3 group/rail py-2 sm:py-3">
       <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <h2 className="text-xs sm:text-sm font-display font-semibold tracking-wide text-on-surface uppercase border-l-2 border-primary pl-2">
           Continue Watching
@@ -86,7 +86,7 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
         {showLeftArrow && (
           <button
             onClick={() => handleScroll("left")}
-            className="absolute left-0 top-0 bottom-0 z-10 w-10 sm:w-12 flex items-center justify-center bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm border-r border-border-custom hover:text-primary transition-all opacity-0 group-hover:opacity-100 duration-300"
+            className="absolute left-0 top-0 bottom-0 z-10 w-10 sm:w-12 flex items-center justify-center bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm border-r border-border-custom hover:text-primary transition-all opacity-0 group-hover/rail:opacity-100 duration-300"
           >
             <ChevronLeft className="h-6 w-6 sm:h-8 sm:w-8" />
           </button>
@@ -113,7 +113,7 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
         {showRightArrow && (
           <button
             onClick={() => handleScroll("right")}
-            className="absolute right-0 top-0 bottom-0 z-10 w-10 sm:w-12 flex items-center justify-center bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm border-l border-border-custom hover:text-primary transition-all opacity-0 group-hover:opacity-100 duration-300"
+            className="absolute right-0 top-0 bottom-0 z-10 w-10 sm:w-12 flex items-center justify-center bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm border-l border-border-custom hover:text-primary transition-all opacity-0 group-hover/rail:opacity-100 duration-300"
           >
             <ChevronRight className="h-6 w-6 sm:h-8 sm:w-8" />
           </button>

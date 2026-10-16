@@ -368,6 +368,7 @@ type ContinueWatchingRecordInput = {
   episode?: number;
   title: string;
   overview?: string | null;
+  vote_average?: number | null;
   poster_path?: string | null;
   backdrop_path?: string | null;
   progress_percent?: number;
@@ -430,6 +431,7 @@ async function flushContinueWatchingRecord(
     episode: input.episode ?? null,
     title: input.title,
     overview: input.overview ?? previous?.overview ?? null,
+    vote_average: input.vote_average ?? previous?.vote_average ?? null,
     poster_path: input.poster_path ?? previous?.poster_path ?? null,
     backdrop_path: input.backdrop_path ?? previous?.backdrop_path ?? null,
     last_watched_at: now,
