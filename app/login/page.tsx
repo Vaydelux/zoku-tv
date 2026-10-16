@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Tv, Mail, Lock, ShieldCheck, ArrowRight } from "lucide-react";
-import { loginWithEmail, loginWithGoogle } from "@/stores";
+import { loginWithEmail, loginWithGoogle } from "@/lib/firebase";
 import { Spinner } from "@/components/Spinner";
 import { resolvePostLoginPath } from "@/lib/auth-routes";
 
-export default function LoginPage() {
+const LOGIN_BG =
+  "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1200&auto=format&fit=crop";
+
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -49,23 +53,29 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-black">
-      {/* Immersive Cinematic Background */}
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center opacity-30" 
-        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1920')" }}
-      />
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <Image
+          src={LOGIN_BG}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          quality={65}
+          className="object-cover opacity-30"
+        />
+      </div>
       <div className="absolute inset-0 z-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
 
-      {/* Login Card */}
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-border-custom bg-surface/70 p-8 shadow-2xl backdrop-blur-xl animate-slide-up">
+      {/* Stable LCP surface — solid card, not the remote background */}
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-border-custom bg-surface p-8 shadow-2xl backdrop-blur-xl animate-slide-up">
         <div className="flex flex-col items-center text-center">
           <Link href="/" className="flex items-center gap-2 text-primary focus:outline-none mb-6">
-            <Tv className="h-10 w-10 animate-bounce" />
+            <Tv className="h-10 w-10" />
             <span className="font-display text-2xl font-bold tracking-wider text-on-surface">
               ZOKU<span className="text-primary font-mono text-sm ml-0.5">TV</span>
             </span>
           </Link>
-          <h2 className="text-2xl font-display font-semibold tracking-tight text-on-surface">Welcome Back</h2>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-on-surface">Welcome Back</h1>
           <p className="mt-2 text-xs text-on-surface-variant max-w-xs">
             Connect your streaming dashboard, customize your space, and start watching.
           </p>
@@ -134,7 +144,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Divider */}
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-border-custom" />
@@ -144,7 +153,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Google Authentication */}
         <button
           onClick={handleGoogleLogin}
           disabled={loading}
@@ -181,5 +189,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-black">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }

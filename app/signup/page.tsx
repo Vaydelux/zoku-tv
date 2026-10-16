@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Tv, Mail, Lock, User, ShieldCheck, ArrowRight } from "lucide-react";
-import { signupWithEmail, loginWithGoogle } from "@/stores";
+import { signupWithEmail, loginWithGoogle } from "@/lib/firebase";
 import { Spinner } from "@/components/Spinner";
 import { resolvePostLoginPath } from "@/lib/auth-routes";
 
-export default function SignupPage() {
+const SIGNUP_BG =
+  "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1200&auto=format&fit=crop";
+
+function SignupPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [name, setName] = useState("");
@@ -50,23 +54,28 @@ export default function SignupPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-black">
-      {/* Immersive Cinematic Background */}
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center opacity-30" 
-        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1920')" }}
-      />
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <Image
+          src={SIGNUP_BG}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          quality={65}
+          className="object-cover opacity-30"
+        />
+      </div>
       <div className="absolute inset-0 z-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
 
-      {/* Signup Card */}
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-border-custom bg-surface/70 p-8 shadow-2xl backdrop-blur-xl animate-slide-up">
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-border-custom bg-surface p-8 shadow-2xl backdrop-blur-xl animate-slide-up">
         <div className="flex flex-col items-center text-center">
           <Link href="/" className="flex items-center gap-2 text-primary focus:outline-none mb-6">
-            <Tv className="h-10 w-10 animate-bounce" />
+            <Tv className="h-10 w-10" />
             <span className="font-display text-2xl font-bold tracking-wider text-on-surface">
               ZOKU<span className="text-primary font-mono text-sm ml-0.5">TV</span>
             </span>
           </Link>
-          <h2 className="text-2xl font-display font-semibold tracking-tight text-on-surface">Create Streaming Account</h2>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-on-surface">Create Streaming Account</h1>
           <p className="mt-2 text-xs text-on-surface-variant max-w-xs">
             Begin exploring cinematic masterpieces and custom dashboard layouts.
           </p>
@@ -150,7 +159,6 @@ export default function SignupPage() {
           </button>
         </form>
 
-        {/* Divider */}
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-border-custom" />
@@ -160,7 +168,6 @@ export default function SignupPage() {
           </div>
         </div>
 
-        {/* Google Authentication */}
         <button
           onClick={handleGoogleLogin}
           disabled={loading}
@@ -197,5 +204,19 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-black">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      }
+    >
+      <SignupPageContent />
+    </Suspense>
   );
 }

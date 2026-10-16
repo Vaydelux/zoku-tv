@@ -3,12 +3,6 @@
 import { useEffect } from "react";
 import { useSessionStore, useWatchlistStore, useContinueWatchingStore } from "@/stores";
 import {
-  DEFAULT_PROFILE_AVATAR_COLOR,
-  preloadProfileAvatars,
-  PROFILE_PRESET_AVATAR_OPTIONS,
-} from "@/lib/profile-avatars";
-import { preloadPresetSvgAssets } from "@/components/PresetSvgAvatar";
-import {
   applyTheme,
   DEFAULT_APPEARANCE,
   normalizeAppearance,
@@ -37,35 +31,26 @@ export function ClientInitializer() {
     );
   }, [currentProfile?.themePreference, currentProfile?.appearancePreference]);
 
-  // Preload local avatar artwork during idle time so the picker opens instantly
+  // Register service worker for offline asset and request caching (deferred until load)
   useEffect(() => {
-    preloadProfileAvatars();
-    preloadPresetSvgAssets(
-      PROFILE_PRESET_AVATAR_OPTIONS.map((option) => option.src),
-      DEFAULT_PROFILE_AVATAR_COLOR
-    );
-  }, []);
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
-  // Register service worker for offline asset and request caching
-  useEffect(() => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      const registerSW = () => {
-        navigator.serviceWorker
-          .register("/sw.js")
-          .then((reg) => {
-            console.log("Zoku TV Service Worker registered successfully:", reg.scope);
-          })
-          .catch((err) => {
-            console.error("Zoku TV Service Worker registration failed:", err);
-          });
-      };
+    const registerSW = () => {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          console.log("Zoku TV Service Worker registered successfully:", reg.scope);
+        })
+        .catch((err) => {
+          console.error("Zoku TV Service Worker registration failed:", err);
+        });
+    };
 
-      if (document.readyState === "complete") {
-        registerSW();
-      } else {
-        window.addEventListener("load", registerSW);
-        return () => window.removeEventListener("load", registerSW);
-      }
+    if (document.readyState === "complete") {
+      registerSW();
+    } else {
+      window.addEventListener("load", registerSW);
+      return () => window.removeEventListener("load", registerSW);
     }
   }, []);
 

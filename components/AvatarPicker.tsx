@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { Crown } from "lucide-react";
 import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
+import { preloadPresetSvgAssets } from "@/components/PresetSvgAvatar";
 import {
   DEFAULT_PROFILE_AVATAR,
   DEFAULT_PROFILE_AVATAR_COLOR,
@@ -9,6 +11,7 @@ import {
   PROFILE_PREMIUM_AVATAR_OPTIONS,
   PROFILE_PREMIUM_COLLECTIONS,
   PROFILE_PRESET_AVATAR_OPTIONS,
+  preloadAvatarCollection,
   type AvatarGroup,
   type ProfileAvatarOption,
 } from "@/lib/profile-avatars";
@@ -37,6 +40,17 @@ export function AvatarPicker({
 }: Props) {
   const activeTab: AvatarGroup = selectedAvatarId.startsWith("premium-") ? "premium" : "presets";
   const showColorPicker = activeTab === "presets";
+
+  // Only warm the active collection when the picker is open — never all avatars globally
+  useEffect(() => {
+    preloadAvatarCollection(activeTab);
+    if (activeTab === "presets") {
+      preloadPresetSvgAssets(
+        PROFILE_PRESET_AVATAR_OPTIONS.map((option) => option.src),
+        selectedColor || DEFAULT_PROFILE_AVATAR_COLOR
+      );
+    }
+  }, [activeTab, selectedColor]);
 
   const renderOption = (option: ProfileAvatarOption) => {
     const isActive = selectedAvatarId === option.id;

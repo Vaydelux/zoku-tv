@@ -121,19 +121,30 @@ export function randomProfileAvatarColor(): string {
   return PROFILE_AVATAR_COLORS[Math.floor(Math.random() * PROFILE_AVATAR_COLORS.length)];
 }
 
-let preloadStarted = false;
+const preloadedCollections = new Set<string>();
 
-export function preloadProfileAvatars(): void {
-  if (typeof window === "undefined" || preloadStarted) return;
-  preloadStarted = true;
+/** Preload a single avatar collection when the picker opens — never all ~26MB at once. */
+export function preloadAvatarCollection(group: AvatarGroup): void {
+  if (typeof window === "undefined" || preloadedCollections.has(group)) return;
+  preloadedCollections.add(group);
+
+  const urls =
+    group === "presets"
+      ? PROFILE_PRESET_AVATAR_OPTIONS.map((option) => option.src)
+      : PROFILE_PREMIUM_AVATAR_OPTIONS.map((option) => option.src);
 
   const run = () => {
-    for (const url of PROFILE_AVATAR_PRELOAD_URLS) {
+    for (const url of urls) {
       fetch(url, { cache: "force-cache" }).catch(() => undefined);
     }
   };
 
-  const idle = window.requestIdleCallback?.(run, { timeout: 2500 });
+  const idle = window.requestIdleCallback?.(run, { timeout: 1500 });
   if (idle !== undefined) return;
-  window.setTimeout(run, 400);
+  window.setTimeout(run, 200);
+}
+
+/** @deprecated Prefer preloadAvatarCollection — kept for any leftover callers */
+export function preloadProfileAvatars(): void {
+  preloadAvatarCollection("presets");
 }
