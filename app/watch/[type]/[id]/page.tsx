@@ -117,6 +117,7 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
     tmdbId: titleId,
     mediaType,
     title: name,
+    overview: details?.overview,
     poster_path: details?.poster_path,
     backdrop_path: details?.backdrop_path,
     selectedServerId,

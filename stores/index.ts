@@ -13,7 +13,12 @@ import {
   updateDocument,
   deleteDocument
 } from "@/lib/firebase";
-import { applyTheme, DEFAULT_THEME_ID } from "@/lib/themes";
+import {
+  applyTheme,
+  DEFAULT_APPEARANCE,
+  DEFAULT_THEME_ID,
+  normalizeAppearance,
+} from "@/lib/themes";
 import { canAddProfile, MAX_PROFILES } from "@/lib/profile-limits";
 import {
   COMPLETION_THRESHOLD_PERCENT,
@@ -39,6 +44,7 @@ export interface Profile {
   avatarColor?: string;
   kidMode: boolean;
   themePreference: string;
+  appearancePreference?: "dark" | "light";
   iframeModePreference: "Strict" | "Compatibility";
   catalogMode: CatalogMode;
   homeGenreRailPreferences: number[];
@@ -83,7 +89,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ currentProfile: profile });
     if (profile && typeof window !== "undefined") {
       localStorage.setItem(`zoku_active_profile_${get().user?.uid}`, JSON.stringify(profile));
-      applyTheme(profile.themePreference);
+      applyTheme(
+        profile.themePreference,
+        normalizeAppearance(profile.appearancePreference ?? DEFAULT_APPEARANCE)
+      );
     }
   },
 
@@ -110,6 +119,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         avatarColor,
         kidMode,
         themePreference: DEFAULT_THEME_ID,
+        appearancePreference: DEFAULT_APPEARANCE,
         iframeModePreference: "Strict",
         catalogMode: "tmdb",
         homeGenreRailPreferences: [28, 12, 35, 18], // Action, Adventure, Comedy, Drama
@@ -143,8 +153,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         set({ currentProfile: updated });
         if (typeof window !== "undefined") {
           localStorage.setItem(`zoku_active_profile_${user.uid}`, JSON.stringify(updated));
-          if (updates.themePreference) {
-            applyTheme(updates.themePreference);
+          if (updates.themePreference !== undefined || updates.appearancePreference !== undefined) {
+            applyTheme(
+              updated.themePreference,
+              normalizeAppearance(updated.appearancePreference ?? DEFAULT_APPEARANCE)
+            );
           }
         }
       }
@@ -198,6 +211,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           const normalizedProfiles = profilesList.map((p) => ({
             ...p,
             catalogMode: p.catalogMode ?? "tmdb",
+            appearancePreference: normalizeAppearance(
+              p.appearancePreference ?? DEFAULT_APPEARANCE
+            ),
           }));
 
           set({ profiles: normalizedProfiles });
@@ -207,11 +223,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
             const matched = stored ? normalizedProfiles.find(p => p.id === JSON.parse(stored).id) : null;
             if (matched) {
               set({ currentProfile: { ...matched, catalogMode: matched.catalogMode ?? "tmdb" } });
-              applyTheme(matched.themePreference);
+              applyTheme(matched.themePreference, matched.appearancePreference);
             } else if (!get().currentProfile) {
               if (normalizedProfiles.length === 1) {
                 set({ currentProfile: { ...normalizedProfiles[0], catalogMode: normalizedProfiles[0].catalogMode ?? "tmdb" } });
-                applyTheme(normalizedProfiles[0].themePreference);
+                applyTheme(
+                  normalizedProfiles[0].themePreference,
+                  normalizedProfiles[0].appearancePreference
+                );
               }
             }
           } else {
@@ -220,7 +239,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         });
       } else {
         set({ user: null, profiles: [], currentProfile: null, initializing: false });
-        applyTheme(DEFAULT_THEME_ID);
+        applyTheme(DEFAULT_THEME_ID, DEFAULT_APPEARANCE);
       }
     });
 
@@ -348,6 +367,7 @@ type ContinueWatchingRecordInput = {
   season?: number;
   episode?: number;
   title: string;
+  overview?: string | null;
   poster_path?: string | null;
   backdrop_path?: string | null;
   progress_percent?: number;
@@ -409,6 +429,7 @@ async function flushContinueWatchingRecord(
     season: input.season ?? null,
     episode: input.episode ?? null,
     title: input.title,
+    overview: input.overview ?? previous?.overview ?? null,
     poster_path: input.poster_path ?? previous?.poster_path ?? null,
     backdrop_path: input.backdrop_path ?? previous?.backdrop_path ?? null,
     last_watched_at: now,

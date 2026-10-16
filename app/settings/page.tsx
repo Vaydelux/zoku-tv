@@ -15,7 +15,9 @@ import {
   AlertTriangle,
   Trash2,
   Tv,
-  Clapperboard
+  Clapperboard,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { useSessionStore, useEmbedStore } from "@/stores";
 import type { CatalogMode } from "@/lib/media-types";
@@ -24,7 +26,15 @@ import { FirebaseStatusIndicator } from "@/components/FirebaseStatusIndicator";
 import { LoadingBanner } from "@/components/LoadingBanner";
 import { getGenres, TMDBGenre } from "@/lib/tmdb";
 import { getGenreIcon } from "@/lib/genreIcons";
-import { applyTheme, getThemeOption, normalizeThemeId, THEME_OPTIONS } from "@/lib/themes";
+import {
+  applyTheme,
+  DEFAULT_APPEARANCE,
+  getThemeOption,
+  normalizeAppearance,
+  normalizeThemeId,
+  THEME_OPTIONS,
+  type AppearanceMode,
+} from "@/lib/themes";
 
 import { Suspense } from "react";
 
@@ -47,6 +57,7 @@ function SettingsPageContent() {
   const { iframeMode, setIframeMode } = useEmbedStore();
 
   const [activeTab, setActiveTab] = useState<"theme" | "iframe-mode" | "genre-rails" | "catalog" | "cache">("theme");
+  const [localAppearance, setLocalAppearance] = useState<AppearanceMode>(DEFAULT_APPEARANCE);
   const [availableGenres, setAvailableGenres] = useState<TMDBGenre[]>([]);
   const [selectedGenreIds, setSelectedGenreIds] = useState<number[]>([]);
   const [localIframeMode, setLocalIframeMode] = useState<"Strict" | "Compatibility">("Strict");
@@ -79,6 +90,9 @@ function SettingsPageContent() {
         setSelectedGenreIds(currentProfile?.homeGenreRailPreferences || [28, 12, 35, 18]);
         setLocalIframeMode(currentProfile?.iframeModePreference || iframeMode || "Strict");
         setLocalCatalogMode(currentProfile?.catalogMode || "tmdb");
+        setLocalAppearance(
+          normalizeAppearance(currentProfile?.appearancePreference ?? DEFAULT_APPEARANCE)
+        );
       } catch (err) {
         console.error("Failed to load settings data:", err);
       }
@@ -98,9 +112,26 @@ function SettingsPageContent() {
       await updateProfile(currentProfile.id, {
         themePreference: normalized,
       });
-      applyTheme(normalized);
+      applyTheme(normalized, localAppearance);
 
       setSuccessMsg(`Applied ${getThemeOption(normalized).name} theme!`);
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAppearanceChange = async (mode: AppearanceMode) => {
+    setLocalAppearance(mode);
+    setSaving(true);
+    try {
+      await updateProfile(currentProfile.id, {
+        appearancePreference: mode,
+      });
+      applyTheme(currentProfile.themePreference, mode);
+      setSuccessMsg(`Switched to ${mode === "light" ? "light" : "dark"} mode`);
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err) {
       console.error(err);
@@ -309,13 +340,57 @@ function SettingsPageContent() {
                 <div className="space-y-1">
                   <h2 className="text-base font-semibold text-on-surface">Cinema Colors Presets</h2>
                   <p className="text-xs text-on-surface-variant">
-                    Pick from 18 bespoke cinematic stylesheets. Applies instantly to your active profile.
+                    Pick a palette, then choose light or dark. Gradients tint the page while text stays high-contrast.
                   </p>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
+                    Appearance
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 max-w-md">
+                    <button
+                      type="button"
+                      onClick={() => handleAppearanceChange("dark")}
+                      disabled={saving}
+                      className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
+                        localAppearance === "dark"
+                          ? "border-primary bg-primary/10 ring-1 ring-primary"
+                          : "border-border-custom bg-background/40 hover:border-primary/50"
+                      }`}
+                    >
+                      <Moon className="h-4 w-4 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-on-surface">Dark</p>
+                        <p className="text-[10px] text-on-surface-variant">Cinematic night shell</p>
+                      </div>
+                      {localAppearance === "dark" && <Check className="h-3.5 w-3.5 text-primary ml-auto shrink-0" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAppearanceChange("light")}
+                      disabled={saving}
+                      className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
+                        localAppearance === "light"
+                          ? "border-primary bg-primary/10 ring-1 ring-primary"
+                          : "border-border-custom bg-background/40 hover:border-primary/50"
+                      }`}
+                    >
+                      <Sun className="h-4 w-4 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-on-surface">Light</p>
+                        <p className="text-[10px] text-on-surface-variant">Bright day shell</p>
+                      </div>
+                      {localAppearance === "light" && <Check className="h-3.5 w-3.5 text-primary ml-auto shrink-0" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                   {THEME_OPTIONS.map((theme) => {
                     const isActive = normalizeThemeId(currentProfile.themePreference) === theme.id;
+                    const previewTokens =
+                      localAppearance === "light" ? theme.lightTokens : theme.tokens;
                     return (
                       <button
                         key={theme.id}
@@ -327,7 +402,11 @@ function SettingsPageContent() {
                             : "border-border-custom hover:border-primary bg-background/40 hover:bg-background/65"
                         }`}
                       >
-                        <div className={`absolute inset-x-0 top-0 h-1.5 ${theme.preview}`} aria-hidden />
+                        <div
+                          className="absolute inset-x-0 top-0 h-1.5"
+                          style={{ backgroundImage: previewTokens.backgroundGradient }}
+                          aria-hidden
+                        />
                         <div className="flex items-center justify-between w-full gap-2 pt-2">
                           <span className="text-xs sm:text-sm font-semibold text-on-surface">{theme.name}</span>
                           {isActive && <Check className="h-4 w-4 text-primary shrink-0" />}
@@ -335,10 +414,10 @@ function SettingsPageContent() {
                         <p className="text-[10px] sm:text-xs text-on-surface-variant mt-1 leading-relaxed line-clamp-2">
                           {theme.hint}
                         </p>
-                        <div className="flex gap-1 mt-3 w-full h-2 rounded overflow-hidden bg-black/20">
-                          <div className="flex-[2]" style={{ backgroundColor: theme.tokens.primary }} />
-                          <div className="flex-[2]" style={{ backgroundColor: theme.tokens.background }} />
-                          <div className="flex-[3]" style={{ backgroundColor: theme.tokens.onSurface }} />
+                        <div className="flex gap-1 mt-3 w-full h-2 rounded overflow-hidden bg-black/10">
+                          <div className="flex-[2]" style={{ backgroundColor: previewTokens.primary }} />
+                          <div className="flex-[2]" style={{ backgroundColor: previewTokens.background }} />
+                          <div className="flex-[3]" style={{ backgroundColor: previewTokens.onSurface }} />
                         </div>
                       </button>
                     );
@@ -363,7 +442,7 @@ function SettingsPageContent() {
                     className={`p-5 rounded-xl border cursor-pointer transition-all space-y-2 flex items-start gap-4 ${
                       localIframeMode === "Strict" 
                         ? "border-emerald-500 bg-emerald-500/5" 
-                        : "border-border-custom hover:border-white/20 bg-background/40"
+                        : "border-border-custom hover:border-primary/40 bg-background/40"
                     }`}
                   >
                     <ShieldCheck className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
@@ -384,7 +463,7 @@ function SettingsPageContent() {
                     className={`p-5 rounded-xl border cursor-pointer transition-all space-y-2 flex items-start gap-4 ${
                       localIframeMode === "Compatibility" 
                         ? "border-amber-500 bg-amber-500/5" 
-                        : "border-border-custom hover:border-white/20 bg-background/40"
+                        : "border-border-custom hover:border-primary/40 bg-background/40"
                     }`}
                   >
                     <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
@@ -417,7 +496,7 @@ function SettingsPageContent() {
                     className={`p-5 rounded-xl border cursor-pointer transition-all flex items-start gap-4 ${
                       localCatalogMode === "tmdb"
                         ? "border-primary bg-primary/5"
-                        : "border-border-custom hover:border-white/20 bg-background/40"
+                        : "border-border-custom hover:border-primary/40 bg-background/40"
                     }`}
                   >
                     <Tv className="h-5 w-5 text-primary shrink-0 mt-0.5" />
@@ -439,7 +518,7 @@ function SettingsPageContent() {
                     className={`p-5 rounded-xl border cursor-pointer transition-all flex items-start gap-4 ${
                       localCatalogMode === "anime"
                         ? "border-primary bg-primary/5"
-                        : "border-border-custom hover:border-white/20 bg-background/40"
+                        : "border-border-custom hover:border-primary/40 bg-background/40"
                     }`}
                   >
                     <Clapperboard className="h-5 w-5 text-primary shrink-0 mt-0.5" />

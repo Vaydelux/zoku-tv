@@ -12,6 +12,7 @@ type WatchProgressInput = {
   season?: number;
   episode?: number;
   title: string;
+  overview?: string | null;
   poster_path?: string | null;
   backdrop_path?: string | null;
   selectedServerId: string;
@@ -24,6 +25,7 @@ export function useWatchProgress({
   season,
   episode,
   title,
+  overview,
   poster_path,
   backdrop_path,
   selectedServerId,
@@ -71,10 +73,11 @@ export function useWatchProgress({
       season,
       episode,
       title,
+      overview,
       poster_path,
       backdrop_path,
     });
-  }, [ready, tmdbId, mediaType, season, episode, title, poster_path, backdrop_path, recordWatching]);
+  }, [ready, tmdbId, mediaType, season, episode, title, overview, poster_path, backdrop_path, recordWatching]);
 
   const handleResume = useCallback(() => {
     setStartAtSec(savedProgress?.current_time_sec ?? undefined);
@@ -96,6 +99,7 @@ export function useWatchProgress({
         season,
         episode,
         title,
+        overview,
         poster_path,
         backdrop_path,
         progress_percent: progressPercent,
@@ -103,7 +107,7 @@ export function useWatchProgress({
         duration_sec: durationSec,
       });
     },
-    [tmdbId, mediaType, season, episode, title, poster_path, backdrop_path, recordProgress]
+    [tmdbId, mediaType, season, episode, title, overview, poster_path, backdrop_path, recordProgress]
   );
 
   const selectedServer = EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) || EMBED_SERVER_CATALOG[0];

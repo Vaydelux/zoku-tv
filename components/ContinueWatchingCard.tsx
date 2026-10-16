@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Play } from "lucide-react";
 import type { ContinueWatchingItem } from "@/lib/continue-watching";
 import { buildWatchUrl } from "@/lib/continue-watching";
+import { getTitleDetails } from "@/lib/tmdb";
+import { getAnimeDetails } from "@/lib/anilist";
 
 interface ContinueWatchingCardProps {
   item: ContinueWatchingItem;
@@ -13,6 +15,8 @@ interface ContinueWatchingCardProps {
 export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
   const router = useRouter();
   const [imageLoading, setImageLoading] = useState(true);
+  const [hovered, setHovered] = useState(false);
+  const [overview, setOverview] = useState(item.overview?.trim() || "");
 
   const posterPath = item.poster_path?.startsWith("http")
     ? item.poster_path
@@ -28,9 +32,47 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
       ? `S${item.season} · E${item.episode}`
       : item.media_type.toUpperCase();
 
+  useEffect(() => {
+    setOverview(item.overview?.trim() || "");
+  }, [item.overview, item.tmdbId, item.anilistId, item.media_type]);
+
+  useEffect(() => {
+    if (!hovered || overview) return;
+
+    let cancelled = false;
+
+    async function loadOverview() {
+      try {
+        if (item.media_type === "anime" && item.anilistId) {
+          const data = await getAnimeDetails(item.anilistId);
+          if (!cancelled && data?.description) {
+            setOverview(data.description);
+          }
+          return;
+        }
+
+        if ((item.media_type === "movie" || item.media_type === "tv") && item.tmdbId) {
+          const data = await getTitleDetails(item.media_type, item.tmdbId);
+          if (!cancelled && data?.overview) {
+            setOverview(data.overview);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load continue-watching synopsis", err);
+      }
+    }
+
+    void loadOverview();
+    return () => {
+      cancelled = true;
+    };
+  }, [hovered, overview, item.media_type, item.tmdbId, item.anilistId]);
+
   return (
     <div
       onClick={() => router.push(buildWatchUrl(item))}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       className="group relative flex-shrink-0 w-[128px] sm:w-[160px] md:w-[180px] lg:w-[200px] aspect-[2/3] rounded-xl bg-surface overflow-hidden cursor-pointer shadow-md border border-border-custom hover:border-primary hover:-translate-y-1 hover:scale-[1.03] hover:shadow-xl transition-all duration-300 select-none"
     >
       {imageLoading && (
@@ -50,7 +92,7 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
       />
 
       {progress > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
+        <div className="absolute bottom-0 left-0 right-0 z-20 h-1 bg-white/20">
           <div
             className="h-full bg-primary transition-all"
             style={{ width: `${Math.min(progress, 100)}%` }}
@@ -58,12 +100,32 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
         </div>
       )}
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3.5">
+      {/* Always-visible title shell */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/70 to-transparent px-3 pb-3.5 pt-10">
         <span className="text-[9px] font-mono text-white/60 uppercase">{episodeLabel}</span>
-        <h3 className="font-semibold text-xs text-white line-clamp-2 leading-tight mt-0.5">
+        <h3 className="mt-0.5 line-clamp-2 text-xs font-semibold leading-tight text-white break-words">
           {item.title}
         </h3>
-        <span className="inline-flex items-center gap-1 text-[10px] text-primary font-semibold mt-1.5">
+        <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
+          <Play className="h-2.5 w-2.5 fill-primary" />
+          Resume
+        </span>
+      </div>
+
+      {/* Hover synopsis */}
+      <div
+        className={`absolute inset-0 z-20 flex flex-col justify-end bg-gradient-to-t from-black via-black/88 to-black/40 p-3.5 transition-opacity duration-300 ${
+          hovered ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <span className="text-[9px] font-mono uppercase text-white/60">{episodeLabel}</span>
+        <h3 className="mt-0.5 line-clamp-2 break-words text-xs font-semibold leading-tight text-white">
+          {item.title}
+        </h3>
+        <p className="mt-1.5 max-h-[42%] overflow-hidden text-[10px] leading-snug text-white/80 break-words whitespace-normal hyphens-auto line-clamp-5">
+          {overview || "Synopsis unavailable."}
+        </p>
+        <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
           <Play className="h-2.5 w-2.5 fill-primary" />
           Resume
         </span>

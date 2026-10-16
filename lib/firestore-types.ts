@@ -7,6 +7,8 @@ export type ProfileDoc = {
   avatarColor?: string;
   kidMode: boolean;
   themePreference: string;
+  /** Light or dark shell for the selected color theme */
+  appearancePreference?: "dark" | "light";
   iframeModePreference: "Strict" | "Compatibility";
   catalogMode: CatalogMode;
   homeGenreRailPreferences: number[];
@@ -37,6 +39,7 @@ export type ContinueWatchingDoc = {
   season?: number | null;
   episode?: number | null;
   title: string;
+  overview?: string | null;
   poster_path?: string | null;
   backdrop_path?: string | null;
   last_watched_at: string;

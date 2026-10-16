@@ -140,6 +140,7 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
     season: seasonNum,
     episode: episodeNum,
     title: name,
+    overview: details?.overview,
     poster_path: details?.poster_path,
     backdrop_path: details?.backdrop_path,
     selectedServerId,

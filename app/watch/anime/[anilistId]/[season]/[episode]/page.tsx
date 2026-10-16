@@ -42,6 +42,7 @@ export default function AnimeWatchPage({ params }: AnimeWatchPageProps) {
   const { recordWatching } = useContinueWatchingStore();
 
   const [title, setTitle] = useState("");
+  const [overview, setOverview] = useState<string | null>(null);
   const [poster, setPoster] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [iframeLoaded, setIframeLoaded] = useState(false);
@@ -65,6 +66,7 @@ export default function AnimeWatchPage({ params }: AnimeWatchPageProps) {
         const data = await getAnimeDetails(anilistId);
         if (data) {
           setTitle(getAnimeDisplayTitle(data));
+          setOverview(data.description ?? null);
           setPoster(getAnimePoster(data));
         }
       } catch (err) {
@@ -89,9 +91,10 @@ export default function AnimeWatchPage({ params }: AnimeWatchPageProps) {
       season: seasonNum,
       episode: episodeNum,
       title,
+      overview,
       poster_path: poster,
     });
-  }, [title, poster, anilistId, seasonNum, episodeNum, recordWatching]);
+  }, [title, overview, poster, anilistId, seasonNum, episodeNum, recordWatching]);
 
   useEffect(() => {
     if (!title) return;

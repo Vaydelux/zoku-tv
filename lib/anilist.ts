@@ -171,6 +171,7 @@ const BROWSE_MEDIA_FIELDS = `
   title { romaji english native }
   coverImage { large extraLarge color }
   bannerImage
+  description(asHtml: false)
   genres
   averageScore
   popularity

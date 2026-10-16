@@ -18,6 +18,8 @@ export type ThemeId =
   | "theme-sage"
   | "theme-solar";
 
+export type AppearanceMode = "dark" | "light";
+
 export type ThemeTokens = {
   background: string;
   surface: string;
@@ -30,6 +32,7 @@ export type ThemeTokens = {
   onSurface: string;
   onSurfaceVariant: string;
   borderColor: string;
+  backgroundGradient: string;
 };
 
 export type ThemeOption = {
@@ -38,8 +41,13 @@ export type ThemeOption = {
   hint: string;
   desc: string;
   preview: string;
+  /** Dark appearance tokens (default) */
   tokens: ThemeTokens;
+  /** Light appearance tokens derived from the same palette */
+  lightTokens: ThemeTokens;
 };
+
+type SolidTokens = Omit<ThemeTokens, "backgroundGradient">;
 
 const token = (
   background: string,
@@ -53,7 +61,7 @@ const token = (
   onSurface: string,
   onSurfaceVariant: string,
   borderColor: string
-): ThemeTokens => ({
+): SolidTokens => ({
   background,
   surface,
   surfaceHover,
@@ -67,7 +75,75 @@ const token = (
   borderColor,
 });
 
-export const THEME_OPTIONS: ThemeOption[] = [
+function parseHex(hex: string): [number, number, number] | null {
+  const clean = hex.replace("#", "").trim();
+  if (clean.length === 3) {
+    const r = parseInt(clean[0] + clean[0], 16);
+    const g = parseInt(clean[1] + clean[1], 16);
+    const b = parseInt(clean[2] + clean[2], 16);
+    return [r, g, b];
+  }
+  if (clean.length === 6) {
+    return [
+      parseInt(clean.slice(0, 2), 16),
+      parseInt(clean.slice(2, 4), 16),
+      parseInt(clean.slice(4, 6), 16),
+    ];
+  }
+  return null;
+}
+
+/** Pick readable text on a filled primary/accent surface */
+function contrastOn(color: string): string {
+  const rgb = parseHex(color);
+  if (!rgb) return "#ffffff";
+  const [r, g, b] = rgb.map((c) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance > 0.45 ? "#141418" : "#ffffff";
+}
+
+function withGradient(tokens: SolidTokens, mode: AppearanceMode): ThemeTokens {
+  const mix = mode === "dark" ? 16 : 12;
+  const backgroundGradient =
+    mode === "dark"
+      ? `linear-gradient(160deg, ${tokens.background} 0%, color-mix(in srgb, ${tokens.primary} ${mix}%, ${tokens.background}) 46%, ${tokens.background} 100%)`
+      : `linear-gradient(165deg, ${tokens.background} 0%, color-mix(in srgb, ${tokens.primary} ${mix}%, ${tokens.background}) 48%, ${tokens.surface} 100%)`;
+
+  return { ...tokens, backgroundGradient };
+}
+
+function toLightTokens(dark: ThemeTokens): ThemeTokens {
+  const primaryContrast = contrastOn(dark.primary);
+  const accentContrast = contrastOn(dark.accent);
+  const rgb = parseHex(dark.primary);
+  const glow = rgb
+    ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.28)`
+    : dark.primaryGlow;
+
+  return withGradient(
+    {
+      background: "#f5f3f0",
+      surface: "#ffffff",
+      surfaceHover: "#eceae6",
+      primary: dark.primary,
+      primaryContrast,
+      primaryGlow: glow,
+      accent: dark.accent,
+      accentContrast,
+      onSurface: "#141418",
+      onSurfaceVariant: "rgba(20, 20, 24, 0.62)",
+      borderColor: "rgba(20, 20, 24, 0.12)",
+    },
+    "light"
+  );
+}
+
+type ThemeSeed = Omit<ThemeOption, "tokens" | "lightTokens"> & { tokens: SolidTokens };
+
+const THEME_SEEDS: ThemeSeed[] = [
   {
     id: "theme-sunset",
     name: "Sunset Graphite",
@@ -214,7 +290,24 @@ export const THEME_OPTIONS: ThemeOption[] = [
   },
 ];
 
+function enrichTheme(seed: ThemeSeed): ThemeOption {
+  const dark = withGradient(seed.tokens, "dark");
+  return {
+    id: seed.id,
+    name: seed.name,
+    hint: seed.hint,
+    desc: seed.desc,
+    preview: seed.preview,
+    tokens: dark,
+    lightTokens: toLightTokens(dark),
+  };
+}
+
+export const THEME_OPTIONS: ThemeOption[] = THEME_SEEDS.map(enrichTheme);
+
 export const DEFAULT_THEME_ID: ThemeId = "theme-crimson";
+export const DEFAULT_APPEARANCE: AppearanceMode = "dark";
+export const APPEARANCE_STORAGE_KEY = "zoku_appearance";
 
 const THEME_MAP = new Map<ThemeId, ThemeOption>(THEME_OPTIONS.map((theme) => [theme.id, theme]));
 
@@ -278,8 +371,20 @@ export function normalizeThemeId(value: unknown): ThemeId {
   return DEFAULT_THEME_ID;
 }
 
+export function normalizeAppearance(value: unknown): AppearanceMode {
+  return value === "light" ? "light" : "dark";
+}
+
 export function getThemeOption(id: unknown): ThemeOption {
   return THEME_MAP.get(normalizeThemeId(id)) ?? THEME_MAP.get(DEFAULT_THEME_ID)!;
+}
+
+export function resolveThemeTokens(
+  themeId: unknown,
+  appearance: unknown = DEFAULT_APPEARANCE
+): ThemeTokens {
+  const theme = getThemeOption(themeId);
+  return normalizeAppearance(appearance) === "light" ? theme.lightTokens : theme.tokens;
 }
 
 const TOKEN_CSS_MAP: Record<keyof ThemeTokens, string> = {
@@ -294,24 +399,36 @@ const TOKEN_CSS_MAP: Record<keyof ThemeTokens, string> = {
   onSurface: "--on-surface",
   onSurfaceVariant: "--on-surface-variant",
   borderColor: "--border-color",
+  backgroundGradient: "--background-gradient",
 };
 
-export function applyTheme(themeId: unknown): ThemeId {
+export function applyTheme(
+  themeId: unknown,
+  appearance: unknown = DEFAULT_APPEARANCE
+): ThemeId {
   const id = normalizeThemeId(themeId);
-  const theme = getThemeOption(id);
+  const mode = normalizeAppearance(appearance);
+  const tokens = resolveThemeTokens(id, mode);
 
   if (typeof document === "undefined") return id;
 
   const root = document.documentElement;
   root.setAttribute("data-theme", id);
+  root.setAttribute("data-appearance", mode);
+  root.classList.toggle("appearance-light", mode === "light");
+  root.classList.toggle("appearance-dark", mode === "dark");
 
   for (const [key, cssVar] of Object.entries(TOKEN_CSS_MAP) as [keyof ThemeTokens, string][]) {
-    root.style.setProperty(cssVar, theme.tokens[key]);
+    root.style.setProperty(cssVar, tokens[key]);
+  }
+
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, mode);
   }
 
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute("content", theme.tokens.primary);
+    meta.setAttribute("content", mode === "light" ? tokens.background : tokens.primary);
   }
 
   void import("@/lib/pwa-brand").then(({ applyPwaBranding }) => applyPwaBranding(id));

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Check, Star, Play } from "lucide-react";
 import { useWatchlistStore } from "@/stores";
 import type { AniListMedia } from "@/lib/anilist";
-import { getAnimeDisplayTitle, getAnimePoster } from "@/lib/anilist";
+import { getAnimeDetails, getAnimeDisplayTitle, getAnimePoster } from "@/lib/anilist";
 
 interface AnimeCardProps {
   anime: AniListMedia;
@@ -16,12 +16,38 @@ export function AnimeCard({ anime }: AnimeCardProps) {
   const { addItem, removeItem, hasItem } = useWatchlistStore();
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [synopsis, setSynopsis] = useState(anime.description?.trim() || "");
 
   const name = getAnimeDisplayTitle(anime);
   const posterPath = getAnimePoster(anime) || "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=500";
   const rating = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : "N/A";
   const year = anime.seasonYear ? String(anime.seasonYear) : "N/A";
   const isInWatchlist = hasItem("anime", anime.id);
+
+  useEffect(() => {
+    setSynopsis(anime.description?.trim() || "");
+  }, [anime.id, anime.description]);
+
+  useEffect(() => {
+    if (!isHovered || synopsis) return;
+    let cancelled = false;
+
+    async function loadOverview() {
+      try {
+        const data = await getAnimeDetails(anime.id);
+        if (!cancelled && data?.description) {
+          setSynopsis(data.description);
+        }
+      } catch (err) {
+        console.error("Failed to load anime synopsis", err);
+      }
+    }
+
+    void loadOverview();
+    return () => {
+      cancelled = true;
+    };
+  }, [isHovered, synopsis, anime.id]);
 
   const handleWatchlistToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -62,23 +88,36 @@ export function AnimeCard({ anime }: AnimeCardProps) {
         loading="lazy"
       />
 
+      {/* Always-visible title */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/70 to-transparent px-3 pb-3.5 pt-10">
+        <div className="flex items-center gap-2 text-[9px] font-mono text-white/60">
+          <span>{year}</span>
+          <span className="h-1 w-1 rounded-full bg-white/40" />
+          <span className="uppercase">anime</span>
+        </div>
+        <h3 className="mt-0.5 line-clamp-2 break-words text-xs font-semibold leading-tight text-white">
+          {name}
+        </h3>
+      </div>
+
+      {/* Hover: actions + synopsis */}
       <div
-        className={`absolute inset-0 bg-gradient-to-t from-black via-black/85 to-black/30 flex flex-col justify-between p-3.5 transition-opacity duration-300 ${
-          isHovered ? "opacity-100" : "opacity-0"
+        className={`absolute inset-0 z-20 flex flex-col justify-between bg-gradient-to-t from-black via-black/88 to-black/40 p-3.5 transition-opacity duration-300 ${
+          isHovered ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
         <div className="flex justify-between items-start">
-          <span className="bg-black/70 backdrop-blur-md text-[9px] font-mono px-2 py-0.5 rounded border border-border-custom text-on-surface flex items-center gap-1">
+          <span className="bg-black/70 backdrop-blur-md text-[9px] font-mono px-2 py-0.5 rounded border border-border-custom text-white flex items-center gap-1">
             <Star className="h-2.5 w-2.5 text-yellow-500 fill-yellow-500" />
             <span>{rating}</span>
           </span>
 
           <button
             onClick={handleWatchlistToggle}
-            className={`p-1.5 rounded-full border transition-colors ${
+            className={`p-1.5 rounded-full border transition-colors pointer-events-auto ${
               isInWatchlist
                 ? "bg-primary border-primary text-white"
-                : "bg-black/60 border-border-custom hover:bg-primary hover:border-primary text-on-surface"
+                : "bg-black/60 border-border-custom hover:bg-primary hover:border-primary text-white"
             }`}
             title={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
           >
@@ -86,17 +125,23 @@ export function AnimeCard({ anime }: AnimeCardProps) {
           </button>
         </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2 text-[9px] font-mono text-on-surface-variant">
+        <div className="space-y-1.5 min-w-0">
+          <div className="flex items-center gap-2 text-[9px] font-mono text-white/60">
             <span>{year}</span>
-            <span className="h-1 w-1 rounded-full bg-border-custom" />
+            <span className="h-1 w-1 rounded-full bg-white/40" />
             <span className="uppercase">anime</span>
           </div>
 
-          <h3 className="font-semibold text-xs text-on-surface line-clamp-2 leading-tight">{name}</h3>
+          <h3 className="font-semibold text-xs text-white line-clamp-2 leading-tight break-words">
+            {name}
+          </h3>
 
-          <div className="pt-1">
-            <span className="inline-flex items-center gap-1 text-[10px] text-primary font-semibold hover:underline">
+          <p className="text-[10px] leading-snug text-white/80 break-words whitespace-normal hyphens-auto line-clamp-5 overflow-hidden">
+            {synopsis || "Synopsis unavailable."}
+          </p>
+
+          <div className="pt-0.5">
+            <span className="inline-flex items-center gap-1 text-[10px] text-primary font-semibold">
               <Play className="h-2.5 w-2.5 fill-primary" />
               <span>Details & Watch</span>
             </span>

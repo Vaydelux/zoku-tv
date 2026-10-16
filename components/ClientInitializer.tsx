@@ -8,7 +8,11 @@ import {
   PROFILE_PRESET_AVATAR_OPTIONS,
 } from "@/lib/profile-avatars";
 import { preloadPresetSvgAssets } from "@/components/PresetSvgAvatar";
-import { applyTheme } from "@/lib/themes";
+import {
+  applyTheme,
+  DEFAULT_APPEARANCE,
+  normalizeAppearance,
+} from "@/lib/themes";
 
 export function ClientInitializer() {
   const initSession = useSessionStore((state) => state.initSession);
@@ -25,10 +29,13 @@ export function ClientInitializer() {
     };
   }, [initSession]);
 
-  // Apply active profile theme tokens on load / profile switch
+  // Apply active profile theme + appearance on load / profile switch
   useEffect(() => {
-    applyTheme(currentProfile?.themePreference);
-  }, [currentProfile?.themePreference]);
+    applyTheme(
+      currentProfile?.themePreference,
+      normalizeAppearance(currentProfile?.appearancePreference ?? DEFAULT_APPEARANCE)
+    );
+  }, [currentProfile?.themePreference, currentProfile?.appearancePreference]);
 
   // Preload local avatar artwork during idle time so the picker opens instantly
   useEffect(() => {
