@@ -1,4 +1,6 @@
 // Zoku TV - Embed servers configuration and utilities
+export type EmbedServerCategory = "default" | "new";
+
 export interface EmbedServer {
   id: string;
   name: string;
@@ -8,6 +10,7 @@ export interface EmbedServer {
   tvTemplate: string;    // e.g. "https://vidsrc.to/embed/tv/{tmdbId}/{season}/{episode}"
   defaultParams?: Record<string, string>;
   docs?: string;
+  category?: EmbedServerCategory;
   sandboxPolicy: string; // sandbox value
   supportsSandbox: boolean;
   allowsPopups: boolean;
@@ -21,6 +24,23 @@ type EmbedServerInput = Omit<
   "sandboxPolicy" | "supportsSandbox" | "allowsPopups" | "allowsFullscreen" | "testedOnAndroidTV" | "isAdHeavy"
 > &
   Partial<Pick<EmbedServer, "sandboxPolicy" | "supportsSandbox" | "allowsPopups" | "allowsFullscreen" | "testedOnAndroidTV" | "isAdHeavy">>;
+
+const CINEZO_PLAYER_PARAMS: Record<string, string> = {
+  autoplay: "true",
+  poster: "true",
+  chromecast: "true",
+  servericon: "true",
+  setting: "true",
+  pip: "true",
+  download: "true",
+  font: "Roboto",
+  fontcolor: "6f63ff",
+  fontsize: "20",
+  opacity: "0.5",
+  primarycolor: "e8b86d",
+  secondarycolor: "0a0a12",
+  iconcolor: "ffffff",
+};
 
 const COMPATIBILITY_ONLY_SERVERS = new Set(["2embed", "superembed", "vidsrc", "vidup", "smashystream"]);
 
@@ -367,6 +387,160 @@ const EMBED_SERVER_INPUTS: EmbedServerInput[] = [
     tvTemplate: "https://embed.filmu.in/tv/{tmdbId}/{season}/{episode}",
     testedOnAndroidTV: true,
   },
+  // --- New servers ---
+  {
+    id: "ovidads",
+    name: "OVIDADS",
+    domains: ["0vidads.top"],
+    idTypes: ["tmdb"],
+    movieTemplate: "https://0vidads.top/embed/movie/{tmdbId}",
+    tvTemplate: "https://0vidads.top/embed/tv/{tmdbId}/{season}/{episode}",
+    defaultParams: {
+      branding: "bousy",
+      server: "orion",
+      subtitle: "English",
+      color: "FF0000",
+      loading: "2",
+      back: "true",
+    },
+    category: "new",
+  },
+  {
+    id: "atlantic",
+    name: "Atlantic",
+    domains: ["atlantic.st"],
+    idTypes: ["tmdb"],
+    movieTemplate: "https://atlantic.st/embed/movie/{tmdbId}",
+    tvTemplate: "https://atlantic.st/embed/tv/{tmdbId}/{season}/{episode}",
+    category: "new",
+  },
+  {
+    id: "cinetaro",
+    name: "Cinetaro",
+    domains: ["cinextream.cc"],
+    idTypes: ["tmdb"],
+    movieTemplate: "https://cinextream.cc/api/embed/movie/{tmdbId}",
+    tvTemplate: "https://cinextream.cc/api/embed/tv/{tmdbId}/{season}/{episode}",
+    defaultParams: { color: "e91e63" },
+    category: "new",
+  },
+  {
+    id: "cinezo",
+    name: "Cinezo",
+    domains: ["player.cinezo.live"],
+    idTypes: ["tmdb"],
+    movieTemplate: "https://player.cinezo.live/embed/movie/{tmdbId}",
+    tvTemplate: "https://player.cinezo.live/embed/tv/{tmdbId}/{season}/{episode}",
+    defaultParams: CINEZO_PLAYER_PARAMS,
+    category: "new",
+  },
+  {
+    id: "fmov",
+    name: "FMOV",
+    domains: ["fmov.my"],
+    idTypes: ["tmdb"],
+    movieTemplate: "https://fmov.my/embed/movie/{tmdbId}",
+    tvTemplate: "https://fmov.my/embed/tv/{tmdbId}/{season}/{episode}",
+    category: "new",
+  },
+  {
+    id: "framextv",
+    name: "FrameXTV",
+    domains: ["framextv.xyz"],
+    idTypes: ["tmdb"],
+    movieTemplate: "https://framextv.xyz/embed/{tmdbId}",
+    tvTemplate: "https://framextv.xyz/embed/{tmdbId}/{season}/{episode}",
+    defaultParams: { autoplay: "1", muted: "0" },
+    category: "new",
+  },
+  {
+    id: "stellar",
+    name: "Stellar",
+    domains: ["stellar.rip"],
+    idTypes: ["tmdb"],
+    movieTemplate: "https://stellar.rip/en/watch/embed/movie/{tmdbId}",
+    tvTemplate: "https://stellar.rip/en/watch/embed/tv/{tmdbId}-{season}-{episode}",
+    defaultParams: {
+      theme: "9B8CFF",
+      title: "true",
+      poster: "true",
+      autoPlay: "false",
+      startAt: "0",
+      nextButton: "true",
+      autoNext: "false",
+    },
+    category: "new",
+  },
+  {
+    id: "velarium",
+    name: "Velarium",
+    domains: ["velarium.cc"],
+    idTypes: ["tmdb"],
+    movieTemplate: "https://velarium.cc/en/watch/movie/{tmdbId}",
+    tvTemplate: "https://velarium.cc/en/watch/tv/{tmdbId}-{season}-{episode}",
+    defaultParams: {
+      autoPlay: "false",
+      theme: "A8E6CF",
+      title: "true",
+      poster: "true",
+      startAt: "0",
+      nextButton: "true",
+      autoNext: "false",
+      autoSkipIntro: "false",
+      autoSkipOutro: "false",
+    },
+    category: "new",
+  },
+  {
+    id: "viduki-1",
+    name: "Viduki (Multi Server)",
+    domains: ["viduki.net"],
+    idTypes: ["tmdb", "imdb"],
+    movieTemplate: "https://viduki.net/1/movie/{id}",
+    tvTemplate: "https://viduki.net/1/tv/{id}/{season}/{episode}",
+    defaultParams: { color: "DC2626" },
+    category: "new",
+  },
+  {
+    id: "viduki-2",
+    name: "Viduki (Multi Language)",
+    domains: ["viduki.net"],
+    idTypes: ["tmdb", "imdb"],
+    movieTemplate: "https://viduki.net/2/movie/{id}",
+    tvTemplate: "https://viduki.net/2/tv/{id}/{season}/{episode}",
+    defaultParams: { color: "DC2626" },
+    category: "new",
+  },
+  {
+    id: "viduki-3",
+    name: "Viduki (Multi Embeds)",
+    domains: ["viduki.net"],
+    idTypes: ["tmdb", "imdb"],
+    movieTemplate: "https://viduki.net/3/movie/{id}",
+    tvTemplate: "https://viduki.net/3/tv/{id}/{season}/{episode}",
+    defaultParams: { color: "DC2626" },
+    category: "new",
+  },
+  {
+    id: "viduki-4",
+    name: "Viduki (Premium)",
+    domains: ["viduki.net"],
+    idTypes: ["tmdb", "imdb"],
+    movieTemplate: "https://viduki.net/4/movie/{id}",
+    tvTemplate: "https://viduki.net/4/tv/{id}/{season}/{episode}",
+    defaultParams: { color: "DC2626" },
+    category: "new",
+  },
+  {
+    id: "vidy",
+    name: "Vidy",
+    domains: ["vidy.st"],
+    idTypes: ["tmdb"],
+    movieTemplate: "https://vidy.st/movie/{tmdbId}",
+    tvTemplate: "https://vidy.st/tv/{tmdbId}/{season}/{episode}",
+    defaultParams: { color: "DC2626" },
+    category: "new",
+  },
 ];
 
 export const EMBED_SERVER_CATALOG: EmbedServer[] = EMBED_SERVER_INPUTS.map((server) => {
@@ -378,9 +552,30 @@ export const EMBED_SERVER_CATALOG: EmbedServer[] = EMBED_SERVER_INPUTS.map((serv
     allowsFullscreen: true,
     testedOnAndroidTV: false,
     isAdHeavy: compatibilityOnly,
+    category: "default",
     ...server,
   };
 });
+
+export function getServersByCategory(category: EmbedServerCategory): EmbedServer[] {
+  return EMBED_SERVER_CATALOG.filter((s) => (s.category ?? "default") === category);
+}
+
+export function groupEmbedServers(servers: EmbedServer[] = EMBED_SERVER_CATALOG): {
+  newServers: EmbedServer[];
+  defaultServers: EmbedServer[];
+} {
+  const newServers: EmbedServer[] = [];
+  const defaultServers: EmbedServer[] = [];
+  for (const server of servers) {
+    if ((server.category ?? "default") === "new") {
+      newServers.push(server);
+    } else {
+      defaultServers.push(server);
+    }
+  }
+  return { newServers, defaultServers };
+}
 
 export function getEmbedUrl(
   server: EmbedServer,

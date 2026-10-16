@@ -13,10 +13,11 @@ import {
   AlertTriangle 
 } from "lucide-react";
 import { useSessionStore, useEmbedStore } from "@/stores";
-import { EMBED_SERVER_CATALOG, getEmbedUrl } from "@/lib/embed";
+import { EMBED_SERVER_CATALOG, getEmbedUrl, groupEmbedServers } from "@/lib/embed";
 import { getTitleDetails, TMDBTitle } from "@/lib/tmdb";
 import { useWatchProgress } from "@/hooks/useWatchProgress";
 import { ResumePrompt } from "@/components/watch/ResumePrompt";
+import { ServerSelect } from "@/components/watch/ServerSelect";
 
 interface WatchPageProps {
   params: Promise<{ type: string; id: string }>;
@@ -103,6 +104,7 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
   }, [selectedServerId, loadAttempts]);
 
   const selectedServer = EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) || EMBED_SERVER_CATALOG[0];
+  const { newServers, defaultServers } = groupEmbedServers();
   const name = details?.title || details?.name || "Untitled";
 
   const {
@@ -191,22 +193,13 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
 
         {/* Server Selection Controls */}
         <div className="flex items-center gap-3">
-          
-          {/* Server Select */}
-          <div className="flex items-center gap-1.5 bg-white/5 rounded-xl border border-white/10 px-2 py-1">
-            <span className="text-[9px] font-mono uppercase tracking-wider text-white/60 hidden sm:inline px-1">Server:</span>
-            <select
-              value={selectedServerId}
-              onChange={(e) => handleServerChange(e.target.value)}
-              className="bg-transparent text-xs text-white font-semibold focus:outline-none cursor-pointer pr-1"
-            >
-              {EMBED_SERVER_CATALOG.map((server) => (
-                <option key={server.id} value={server.id} className="bg-neutral-900 text-white text-xs">
-                  {server.name} {serverHealth[server.id]?.status === "failing" ? "⚠️" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ServerSelect
+            value={selectedServerId}
+            onChange={handleServerChange}
+            newServers={newServers}
+            defaultServers={defaultServers}
+            serverHealth={serverHealth}
+          />
 
           {/* IFrame containment controller */}
           <button
@@ -233,53 +226,54 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
         </div>
       </div>
 
-      {/* 2. Embedded Video Container (Full Height 100dvh) */}
-      <div className="relative flex-1 w-full bg-black">
-        
-        {/* Connection status overlay */}
-        {!iframeLoaded && !showResumePrompt && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950 p-6 text-center gap-3">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-xs font-mono text-white/60">Tuning cinematic feed to {selectedServer.name}...</p>
-            <button 
-              onClick={triggerNextServer}
-              className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] text-white transition-all font-semibold"
-            >
-              <span>Cycle Server Fallback</span>
-            </button>
-          </div>
-        )}
+      {/* 2. Dedicated player shell — iframe fills this box only */}
+      <div className="relative flex-1 w-full min-h-0 bg-black overflow-hidden isolate">
+        <div className="absolute inset-0 bg-neutral-950">
+          {/* Connection status overlay */}
+          {!iframeLoaded && !showResumePrompt && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950 p-6 text-center gap-3">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <p className="text-xs font-mono text-white/60">Tuning cinematic feed to {selectedServer.name}...</p>
+              <button 
+                onClick={triggerNextServer}
+                className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] text-white transition-all font-semibold"
+              >
+                <span>Cycle Server Fallback</span>
+              </button>
+            </div>
+          )}
 
-        {/* The Sandboxed IFrame element */}
-        {!showResumePrompt && (
-          <iframe
-            key={`${selectedServerId}_${mediaType}_${loadAttempts}_${startAtSec ?? 0}`}
-            src={embedUrl}
-            onLoad={() => setIframeLoaded(true)}
-            className="w-full h-full border-0 absolute inset-0 z-0 bg-black"
-            allowFullScreen
-            sandbox={iframeMode === "Strict" ? selectedServer.sandboxPolicy : undefined}
-            referrerPolicy="no-referrer"
-          />
-        )}
+          {/* The Sandboxed IFrame element */}
+          {!showResumePrompt && (
+            <iframe
+              key={`${selectedServerId}_${mediaType}_${loadAttempts}_${startAtSec ?? 0}`}
+              src={embedUrl}
+              onLoad={() => setIframeLoaded(true)}
+              className="w-full h-full border-0 absolute inset-0 z-0 bg-black"
+              allowFullScreen
+              sandbox={iframeMode === "Strict" ? selectedServer.sandboxPolicy : undefined}
+              referrerPolicy="no-referrer"
+              title={`${selectedServer.name} player`}
+            />
+          )}
 
-        {showResumePrompt && savedProgress && (
-          <ResumePrompt
-            progressPercent={savedProgress.progress_percent ?? 0}
-            currentTimeSec={savedProgress.current_time_sec ?? 0}
-            onResume={handleResume}
-            onStartOver={handleStartOver}
-          />
-        )}
+          {showResumePrompt && savedProgress && (
+            <ResumePrompt
+              progressPercent={savedProgress.progress_percent ?? 0}
+              currentTimeSec={savedProgress.current_time_sec ?? 0}
+              onResume={handleResume}
+              onStartOver={handleStartOver}
+            />
+          )}
 
-        {/* Auto-fading HUD title bar overlay */}
-        {showOverlay && iframeLoaded && (
-          <div className="absolute top-4 left-4 sm:left-6 z-20 pointer-events-none transition-opacity duration-500 bg-black/70 backdrop-blur-md border border-white/5 px-4 py-2 rounded-xl text-white">
-            <span className="text-[9px] font-mono text-primary font-bold uppercase tracking-widest">{selectedServer.name}</span>
-            <h3 className="text-xs font-semibold leading-tight mt-0.5">{name}</h3>
-          </div>
-        )}
-
+          {/* Auto-fading HUD title bar overlay */}
+          {showOverlay && iframeLoaded && (
+            <div className="absolute top-4 left-4 sm:left-6 z-20 pointer-events-none transition-opacity duration-500 bg-black/70 backdrop-blur-md border border-white/5 px-4 py-2 rounded-xl text-white">
+              <span className="text-[9px] font-mono text-primary font-bold uppercase tracking-widest">{selectedServer.name}</span>
+              <h3 className="text-xs font-semibold leading-tight mt-0.5">{name}</h3>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 3. Movie Layout Spacer */}

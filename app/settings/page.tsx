@@ -451,7 +451,7 @@ function SettingsPageContent() {
                         )}
                       </div>
                       <p className="text-xs text-on-surface-variant leading-relaxed">
-                        Browse anime from AniList with Filmu embed playback. Seasons and episodes are sourced from AniList metadata.
+                        Browse anime from AniList with multi-server anime embeds (Filmu default). Seasons and episodes are sourced from AniList metadata.
                       </p>
                     </div>
                   </div>

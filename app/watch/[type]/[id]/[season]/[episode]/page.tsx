@@ -13,10 +13,11 @@ import {
   MonitorPlay,
 } from "lucide-react";
 import { useSessionStore, useEmbedStore } from "@/stores";
-import { EMBED_SERVER_CATALOG, getEmbedUrl } from "@/lib/embed";
+import { EMBED_SERVER_CATALOG, getEmbedUrl, groupEmbedServers } from "@/lib/embed";
 import { getTitleDetails, getSeasonDetails, TMDBTitle, TMDBSeasonDetail } from "@/lib/tmdb";
 import { useWatchProgress } from "@/hooks/useWatchProgress";
 import { ResumePrompt } from "@/components/watch/ResumePrompt";
+import { ServerSelect } from "@/components/watch/ServerSelect";
 
 interface TVWatchPageProps {
   params: Promise<{ type: string; id: string; season: string; episode: string }>;
@@ -124,6 +125,7 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
   }, [selectedServerId, seasonNum, episodeNum, loadAttempts]);
 
   const selectedServer = EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) || EMBED_SERVER_CATALOG[0];
+  const { newServers, defaultServers } = groupEmbedServers();
   const name = details?.name || details?.title || "TV Series";
 
   const {
@@ -247,22 +249,13 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          
-          {/* Server Selector */}
-          <div className="flex items-center gap-1.5 bg-white/5 rounded-xl border border-white/10 px-2 py-1">
-            <span className="text-[9px] font-mono uppercase tracking-wider text-white/60 hidden sm:inline px-1">Server:</span>
-            <select
-              value={selectedServerId}
-              onChange={(e) => handleServerChange(e.target.value)}
-              className="bg-transparent text-xs text-white font-semibold focus:outline-none cursor-pointer pr-1"
-            >
-              {EMBED_SERVER_CATALOG.map((server) => (
-                <option key={server.id} value={server.id} className="bg-neutral-900 text-white text-xs">
-                  {server.name} {serverHealth[server.id]?.status === "failing" ? "⚠️" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ServerSelect
+            value={selectedServerId}
+            onChange={handleServerChange}
+            newServers={newServers}
+            defaultServers={defaultServers}
+            serverHealth={serverHealth}
+          />
 
           {/* IFrame mode controller */}
           <button
@@ -289,53 +282,54 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
         </div>
       </div>
 
-      {/* 2. Primary Embedded Player (Strictly formatted height) */}
-      <div className="relative w-full aspect-[16/9] md:h-[65dvh] lg:h-[70dvh] bg-neutral-950 shrink-0">
-        
-        {/* Loader status */}
-        {!iframeLoaded && !showResumePrompt && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950 p-6 text-center gap-3">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-xs font-mono text-white/60">Launching broadcast tunnel to server {selectedServer.name}...</p>
-            <button 
-              onClick={triggerNextServer}
-              className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] text-white transition-all font-semibold"
-            >
-              <span>Switch Server Fallback</span>
-            </button>
-          </div>
-        )}
+      {/* 2. Dedicated player shell — iframe fills this box only */}
+      <div className="relative w-full aspect-[16/9] md:h-[65dvh] lg:h-[70dvh] bg-neutral-950 shrink-0 overflow-hidden isolate">
+        <div className="absolute inset-0">
+          {/* Loader status */}
+          {!iframeLoaded && !showResumePrompt && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950 p-6 text-center gap-3">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <p className="text-xs font-mono text-white/60">Launching broadcast tunnel to server {selectedServer.name}...</p>
+              <button 
+                onClick={triggerNextServer}
+                className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] text-white transition-all font-semibold"
+              >
+                <span>Switch Server Fallback</span>
+              </button>
+            </div>
+          )}
 
-        {/* Sandboxed player element */}
-        {!showResumePrompt && (
-          <iframe
-            key={`${selectedServerId}_tv_${seasonNum}_${episodeNum}_${loadAttempts}_${startAtSec ?? 0}`}
-            src={embedUrl}
-            onLoad={() => setIframeLoaded(true)}
-            className="w-full h-full border-0 absolute inset-0 z-0 bg-black"
-            allowFullScreen
-            sandbox={iframeMode === "Strict" ? selectedServer.sandboxPolicy : undefined}
-            referrerPolicy="no-referrer"
-          />
-        )}
+          {/* Sandboxed player element */}
+          {!showResumePrompt && (
+            <iframe
+              key={`${selectedServerId}_tv_${seasonNum}_${episodeNum}_${loadAttempts}_${startAtSec ?? 0}`}
+              src={embedUrl}
+              onLoad={() => setIframeLoaded(true)}
+              className="w-full h-full border-0 absolute inset-0 z-0 bg-black"
+              allowFullScreen
+              sandbox={iframeMode === "Strict" ? selectedServer.sandboxPolicy : undefined}
+              referrerPolicy="no-referrer"
+              title={`${selectedServer.name} player`}
+            />
+          )}
 
-        {showResumePrompt && savedProgress && (
-          <ResumePrompt
-            progressPercent={savedProgress.progress_percent ?? 0}
-            currentTimeSec={savedProgress.current_time_sec ?? 0}
-            onResume={handleResume}
-            onStartOver={handleStartOver}
-          />
-        )}
+          {showResumePrompt && savedProgress && (
+            <ResumePrompt
+              progressPercent={savedProgress.progress_percent ?? 0}
+              currentTimeSec={savedProgress.current_time_sec ?? 0}
+              onResume={handleResume}
+              onStartOver={handleStartOver}
+            />
+          )}
 
-        {/* Auto-fading HUD overlay */}
-        {showOverlay && iframeLoaded && (
-          <div className="absolute top-4 left-4 sm:left-6 z-20 pointer-events-none transition-opacity duration-500 bg-black/70 backdrop-blur-md border border-white/5 px-4 py-2 rounded-xl text-white">
-            <span className="text-[9px] font-mono text-primary font-bold uppercase tracking-widest">{selectedServer.name}</span>
-            <h3 className="text-xs font-semibold leading-tight mt-0.5">S{seasonNum} : E{episodeNum} {activeEpisode?.name ? `- ${activeEpisode.name}` : ""}</h3>
-          </div>
-        )}
-
+          {/* Auto-fading HUD overlay */}
+          {showOverlay && iframeLoaded && (
+            <div className="absolute top-4 left-4 sm:left-6 z-20 pointer-events-none transition-opacity duration-500 bg-black/70 backdrop-blur-md border border-white/5 px-4 py-2 rounded-xl text-white">
+              <span className="text-[9px] font-mono text-primary font-bold uppercase tracking-widest">{selectedServer.name}</span>
+              <h3 className="text-xs font-semibold leading-tight mt-0.5">S{seasonNum} : E{episodeNum} {activeEpisode?.name ? `- ${activeEpisode.name}` : ""}</h3>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 3. Season & Episode Navigation Control Panel (Positioned cleanly below player) */}
