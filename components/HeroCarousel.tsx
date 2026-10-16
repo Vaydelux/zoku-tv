@@ -141,7 +141,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
         }
       }}
     >
-      <div className="pointer-events-none absolute inset-0 overflow-hidden bg-black">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden bg-background">
         <AnimatePresence initial={false}>
           {current && (
             <motion.div
@@ -156,9 +156,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
             />
           )}
         </AnimatePresence>
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/20" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/35 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-transparent to-transparent" />
+        <div className="hero-media-scrim" aria-hidden />
       </div>
 
       <div className="relative z-[1] mx-auto flex w-full max-w-7xl min-h-[clamp(340px,52dvh,680px)] flex-col justify-end px-4 pb-10 pt-20 sm:px-6 sm:pb-12 sm:pt-24 lg:px-8 lg:pb-14">
@@ -180,9 +178,9 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: reducedMotion ? 0 : -8 }}
               transition={{ duration: reducedMotion ? 0 : 0.45, ease: "easeOut" }}
-              className="flex w-full max-w-3xl flex-col items-start gap-3 sm:gap-4"
+              className="hero-copy flex w-full max-w-3xl flex-col items-start gap-3 sm:gap-4"
             >
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] sm:text-xs md:text-sm font-mono text-on-surface-variant bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-border-custom">
+              <div className="hero-meta-chip flex flex-wrap items-center gap-2 sm:gap-3 rounded-full px-3 py-1 text-[10px] sm:text-xs md:text-sm font-mono text-on-surface-variant">
                 <span className="text-primary font-bold uppercase">{heroMediaType}</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-border-custom" />
                 <span>{heroYear}</span>
@@ -194,28 +192,28 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
               </div>
 
               <h1
-                className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight text-on-surface drop-shadow-lg leading-[1.05] line-clamp-3 sm:line-clamp-none"
+                className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight text-on-surface leading-[1.05] line-clamp-3 sm:line-clamp-none"
                 aria-live="polite"
               >
                 {heroName}
               </h1>
 
-              <p className="text-xs sm:text-sm text-on-surface-variant max-w-2xl line-clamp-2 sm:line-clamp-3 md:line-clamp-4 leading-relaxed drop-shadow">
+              <p className="hero-overview text-xs sm:text-sm text-on-surface-variant max-w-2xl line-clamp-2 sm:line-clamp-3 md:line-clamp-4 leading-relaxed">
                 {current.overview}
               </p>
 
               <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 pt-1 sm:pt-2">
                 <button
                   onClick={() => router.push(`/watch/${heroMediaType}/${current.id}`)}
-                  className="flex items-center gap-2 rounded-xl bg-primary hover:bg-opacity-90 py-2.5 px-5 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-white shadow-lg active:scale-95 transition-all duration-300"
+                  className="flex items-center gap-2 rounded-xl bg-primary py-2.5 px-5 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-primary-contrast active:scale-95 transition-all duration-300"
                 >
-                  <Play className="h-4 w-4 fill-white" />
+                  <Play className="h-4 w-4 fill-current" />
                   <span>{heroMediaType === "tv" ? "Play Show" : "Play Movie"}</span>
                 </button>
 
                 <button
                   onClick={() => router.push(`/title/${heroMediaType}/${current.id}`)}
-                  className="flex items-center gap-2 rounded-xl bg-surface/80 hover:bg-surface-hover border border-border-custom py-2.5 px-5 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-on-surface hover:text-primary active:scale-95 transition-all duration-300"
+                  className="flex items-center gap-2 rounded-xl bg-surface hover:bg-surface-hover border border-border-custom py-2.5 px-5 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-on-surface hover:text-primary active:scale-95 transition-all duration-300"
                 >
                   <Info className="h-4 w-4" />
                   <span>More Info</span>
@@ -226,7 +224,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
                   className={`p-2.5 sm:p-3 rounded-xl border transition-all duration-300 ${
                     isInWatchlist
                       ? "bg-primary/20 border-primary text-primary"
-                      : "bg-surface/60 border-border-custom hover:border-primary text-on-surface"
+                      : "bg-surface border-border-custom hover:border-primary text-on-surface"
                   }`}
                   title="Add/Remove Watchlist"
                   aria-label={isInWatchlist ? "Remove from watchlist" : "Add to watchlist"}

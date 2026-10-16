@@ -7,6 +7,7 @@ import {
   getDocument, 
   getCollectionRef, 
   getDocRef,
+  getCollectionDocs,
   listenToCollection,
   listenToOrderedCollection,
   listenToDoc,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/firebase";
 import {
   applyTheme,
+  BRAND_THEME_ID,
   DEFAULT_APPEARANCE,
   DEFAULT_THEME_ID,
   normalizeAppearance,
@@ -65,12 +67,72 @@ export interface WatchlistItem {
 
 // === 1. SESSION & PROFILE STORE ===
 
+const profilesCacheKey = (uid: string) => `zoku_profiles_cache_${uid}`;
+
+function normalizeProfile(p: Profile): Profile {
+  return {
+    ...p,
+    catalogMode: p.catalogMode ?? "tmdb",
+    appearancePreference: normalizeAppearance(
+      p.appearancePreference ?? DEFAULT_APPEARANCE
+    ),
+  };
+}
+
+function readProfilesCache(uid: string): Profile[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(profilesCacheKey(uid));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Profile[];
+    if (!Array.isArray(parsed)) return null;
+    return parsed.map(normalizeProfile);
+  } catch {
+    return null;
+  }
+}
+
+function writeProfilesCache(uid: string, profiles: Profile[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(profilesCacheKey(uid), JSON.stringify(profiles));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function readStoredActiveProfileId(uid: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(`zoku_active_profile_${uid}`);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as { id?: string };
+    return parsed?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function profilesFromSnapshot(snapshot: { forEach: (cb: (doc: any) => void) => void }): Profile[] {
+  const profilesList: Profile[] = [];
+  snapshot.forEach((docSnap: any) => {
+    profilesList.push({ id: docSnap.id, ...docSnap.data() } as Profile);
+  });
+  profilesList.sort((a, b) => {
+    const aTime = a.createdAt ?? "";
+    const bTime = b.createdAt ?? "";
+    return aTime.localeCompare(bTime);
+  });
+  return profilesList.map(normalizeProfile);
+}
+
 interface SessionState {
   user: any | null;
   profiles: Profile[];
   currentProfile: Profile | null;
   loading: boolean;
   initializing: boolean;
+  profilesReady: boolean;
   setProfile: (profile: Profile | null) => void;
   createProfile: (name: string, avatar: string, kidMode: boolean, avatarColor?: string) => Promise<{ success: boolean; error?: string }>;
   updateProfile: (profileId: string, updates: Partial<Profile>) => Promise<void>;
@@ -84,6 +146,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   currentProfile: null,
   loading: false,
   initializing: true,
+  profilesReady: false,
 
   setProfile: (profile) => {
     set({ currentProfile: profile });
@@ -185,6 +248,49 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   initSession: () => {
     let unsubscribeProfiles: (() => void) | null = null;
+    let profilesBootGeneration = 0;
+
+    const applyProfilesList = (
+      uid: string,
+      normalizedProfiles: Profile[],
+      options?: { persistCache?: boolean; finishBoot?: boolean }
+    ) => {
+      const persistCache = options?.persistCache !== false;
+      const finishBoot = options?.finishBoot !== false;
+
+      if (persistCache) {
+        writeProfilesCache(uid, normalizedProfiles);
+      }
+
+      const storedId = readStoredActiveProfileId(uid);
+      const matched = storedId
+        ? normalizedProfiles.find((p) => p.id === storedId)
+        : null;
+
+      // Restore currentProfile for routing only — do NOT applyTheme here.
+      // Brand routes stay on Crimson; ClientInitializer applies profile theme in-app.
+      let nextCurrent = get().currentProfile;
+      if (matched) {
+        nextCurrent = matched;
+      } else if (normalizedProfiles.length === 0) {
+        nextCurrent = null;
+      } else if (
+        nextCurrent &&
+        !normalizedProfiles.some((p) => p.id === nextCurrent!.id)
+      ) {
+        nextCurrent = null;
+      } else if (!nextCurrent && normalizedProfiles.length === 1) {
+        nextCurrent = normalizedProfiles[0];
+      }
+
+      set({
+        profiles: normalizedProfiles,
+        currentProfile: nextCurrent,
+        ...(finishBoot
+          ? { initializing: false, profilesReady: true }
+          : { profilesReady: true }),
+      });
+    };
 
     const unsubscribeAuth = onAuthChanged((firebaseUser) => {
       if (unsubscribeProfiles) {
@@ -192,54 +298,80 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         unsubscribeProfiles = null;
       }
 
+      profilesBootGeneration += 1;
+      const bootId = profilesBootGeneration;
+
       if (firebaseUser) {
-        set({ user: firebaseUser, initializing: false });
+        const uid = firebaseUser.uid;
+        const cached = readProfilesCache(uid);
 
-        const colRef = getCollectionRef(`users/${firebaseUser.uid}/profiles`);
-        unsubscribeProfiles = listenToCollection(colRef, (snapshot) => {
-          const profilesList: Profile[] = [];
-          snapshot.forEach((docSnap: any) => {
-            profilesList.push({ id: docSnap.id, ...docSnap.data() } as Profile);
+        if (cached) {
+          // Instant paint from last visit — no empty "Add Profile" flash
+          applyProfilesList(uid, cached, { persistCache: false, finishBoot: true });
+          set({ user: firebaseUser });
+        } else {
+          // Hold splash until first Firestore profiles result
+          set({
+            user: firebaseUser,
+            profiles: [],
+            currentProfile: null,
+            profilesReady: false,
+            initializing: true,
           });
+        }
 
-          profilesList.sort((a, b) => {
-            const aTime = a.createdAt ?? "";
-            const bTime = b.createdAt ?? "";
-            return aTime.localeCompare(bTime);
-          });
+        const colRef = getCollectionRef(`users/${uid}/profiles`);
 
-          const normalizedProfiles = profilesList.map((p) => ({
-            ...p,
-            catalogMode: p.catalogMode ?? "tmdb",
-            appearancePreference: normalizeAppearance(
-              p.appearancePreference ?? DEFAULT_APPEARANCE
-            ),
-          }));
+        const ingestSnapshot = (snapshot: any) => {
+          if (bootId !== profilesBootGeneration) return;
+          applyProfilesList(uid, profilesFromSnapshot(snapshot));
+        };
 
-          set({ profiles: normalizedProfiles });
-
-          if (normalizedProfiles.length > 0) {
-            const stored = localStorage.getItem(`zoku_active_profile_${firebaseUser.uid}`);
-            const matched = stored ? normalizedProfiles.find(p => p.id === JSON.parse(stored).id) : null;
-            if (matched) {
-              set({ currentProfile: { ...matched, catalogMode: matched.catalogMode ?? "tmdb" } });
-              applyTheme(matched.themePreference, matched.appearancePreference);
-            } else if (!get().currentProfile) {
-              if (normalizedProfiles.length === 1) {
-                set({ currentProfile: { ...normalizedProfiles[0], catalogMode: normalizedProfiles[0].catalogMode ?? "tmdb" } });
-                applyTheme(
-                  normalizedProfiles[0].themePreference,
-                  normalizedProfiles[0].appearancePreference
-                );
-              }
-            }
-          } else {
-            set({ currentProfile: null });
+        // Don't hang forever if Firestore is slow/offline
+        const bootTimeout = window.setTimeout(() => {
+          if (bootId !== profilesBootGeneration) return;
+          if (get().initializing) {
+            set({ initializing: false, profilesReady: true });
           }
+        }, 8000);
+
+        // Race a one-shot getDocs with the live listener for faster cold start
+        void getCollectionDocs(colRef)
+          .then((snapshot) => {
+            if (bootId !== profilesBootGeneration) return;
+            window.clearTimeout(bootTimeout);
+            ingestSnapshot(snapshot);
+          })
+          .catch((err) => {
+            console.error("Failed to prefetch profiles", err);
+            if (bootId !== profilesBootGeneration) return;
+            if (!get().profilesReady) {
+              window.clearTimeout(bootTimeout);
+              set({ initializing: false, profilesReady: true });
+            }
+          });
+
+        unsubscribeProfiles = listenToCollection(colRef, (snapshot) => {
+          window.clearTimeout(bootTimeout);
+          ingestSnapshot(snapshot);
         });
       } else {
-        set({ user: null, profiles: [], currentProfile: null, initializing: false });
-        applyTheme(DEFAULT_THEME_ID, DEFAULT_APPEARANCE);
+        const previousUid = get().user?.uid as string | undefined;
+        if (previousUid && typeof window !== "undefined") {
+          try {
+            localStorage.removeItem(profilesCacheKey(previousUid));
+          } catch {
+            /* ignore */
+          }
+        }
+        set({
+          user: null,
+          profiles: [],
+          currentProfile: null,
+          initializing: false,
+          profilesReady: true,
+        });
+        applyTheme(BRAND_THEME_ID, "dark");
       }
     });
 

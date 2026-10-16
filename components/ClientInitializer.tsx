@@ -1,19 +1,24 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useSessionStore, useWatchlistStore, useContinueWatchingStore } from "@/stores";
+import { isBrandRoute } from "@/lib/auth-routes";
 import {
   applyTheme,
+  BRAND_THEME_ID,
   DEFAULT_APPEARANCE,
   normalizeAppearance,
 } from "@/lib/themes";
 
 export function ClientInitializer() {
+  const pathname = usePathname();
   const initSession = useSessionStore((state) => state.initSession);
   const initWatchlist = useWatchlistStore((state) => state.initWatchlist);
   const initContinueWatching = useContinueWatchingStore((state) => state.initContinueWatching);
   const user = useSessionStore((state) => state.user);
   const currentProfile = useSessionStore((state) => state.currentProfile);
+  const initializing = useSessionStore((state) => state.initializing);
 
   // Initialize auth & profile listener
   useEffect(() => {
@@ -23,13 +28,29 @@ export function ClientInitializer() {
     };
   }, [initSession]);
 
-  // Apply active profile theme + appearance on load / profile switch
+  // Brand lock on splash / login / signup / profiles; profile theme only in-app
   useEffect(() => {
-    applyTheme(
-      currentProfile?.themePreference,
-      normalizeAppearance(currentProfile?.appearancePreference ?? DEFAULT_APPEARANCE)
-    );
-  }, [currentProfile?.themePreference, currentProfile?.appearancePreference]);
+    if (initializing || isBrandRoute(pathname)) {
+      applyTheme(BRAND_THEME_ID, "dark");
+      return;
+    }
+
+    if (currentProfile) {
+      applyTheme(
+        currentProfile.themePreference,
+        normalizeAppearance(currentProfile.appearancePreference ?? DEFAULT_APPEARANCE)
+      );
+      return;
+    }
+
+    applyTheme(BRAND_THEME_ID, "dark");
+  }, [
+    pathname,
+    initializing,
+    currentProfile?.themePreference,
+    currentProfile?.appearancePreference,
+    currentProfile,
+  ]);
 
   // Register service worker for offline asset and request caching (deferred until load)
   useEffect(() => {
@@ -56,7 +77,7 @@ export function ClientInitializer() {
 
   // Initialize watchlist listener whenever user or profile changes
   useEffect(() => {
-    if (user && currentProfile) {
+    if (user && currentProfile && !isBrandRoute(pathname)) {
       const unsubscribeWatchlist = initWatchlist();
       const unsubscribeContinueWatching = initContinueWatching();
       return () => {
@@ -64,7 +85,7 @@ export function ClientInitializer() {
         unsubscribeContinueWatching();
       };
     }
-  }, [user, currentProfile, initWatchlist, initContinueWatching]);
+  }, [user, currentProfile, pathname, initWatchlist, initContinueWatching]);
 
   return null;
 }

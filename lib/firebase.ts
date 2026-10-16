@@ -476,6 +476,31 @@ export function listenToDoc(docRef: any, callback: (snapshot: any) => void) {
   };
 }
 
+/** One-shot collection fetch — faster first paint than waiting only on onSnapshot */
+export async function getCollectionDocs(collectionRef: any) {
+  if (realDb) {
+    return getDocs(collectionRef);
+  }
+  const path = collectionRef.path as string;
+  const dbData = getLocalDb();
+  const results: any[] = [];
+  Object.entries(dbData).forEach(([key, value]) => {
+    if (key.startsWith(path + "/") && key.split("/").length === path.split("/").length + 1) {
+      results.push({
+        id: key.split("/").pop(),
+        data: () => value,
+        exists: () => true,
+      });
+    }
+  });
+  return {
+    docs: results,
+    forEach: (cb: any) => results.forEach(cb),
+    empty: results.length === 0,
+    size: results.length,
+  };
+}
+
 export function listenToCollection(collectionRef: any, callback: (snapshot: any) => void) {
   if (realDb) {
     return onSnapshot(collectionRef, callback);

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useTransition } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSessionStore } from "@/stores";
-import { Plus, Trash2, Edit2, Shield, Tv, Sparkles, X, Loader2 } from "lucide-react";
-import { AvatarPicker } from "@/components/AvatarPicker";
+import { Plus, Trash2, Edit2, Shield, Sparkles, X, Loader2 } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
+import { BrandShell } from "@/components/BrandShell";
 import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
 import { Toast, type ToastType } from "@/components/Toast";
 import { LoadingBanner } from "@/components/LoadingBanner";
@@ -21,6 +23,16 @@ import {
 import { canAddProfile, MAX_PROFILES } from "@/lib/profile-limits";
 import { sanitizeNextPath } from "@/lib/auth-routes";
 
+const AvatarPicker = dynamic(
+  () => import("@/components/AvatarPicker").then((m) => m.AvatarPicker),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-40 animate-pulse rounded-xl border border-border-custom bg-background/40" />
+    ),
+  }
+);
+
 type ToastState = {
   message: string;
   type: ToastType;
@@ -30,7 +42,8 @@ export default function ProfilesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isNavigating, startTransition] = useTransition();
-  const { profiles, setProfile, createProfile, deleteProfile, updateProfile } = useSessionStore();
+  const { profiles, profilesReady, setProfile, createProfile, deleteProfile, updateProfile } =
+    useSessionStore();
 
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -193,7 +206,8 @@ export default function ProfilesPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-black text-on-surface px-4 py-8 sm:py-12">
+    <BrandShell>
+      <div className="relative flex min-h-[100dvh] flex-col items-center justify-center px-4 py-8 text-on-surface sm:py-12">
       {(selectingProfileId || isNavigating) && (
         <LoadingBanner
           message={
@@ -210,14 +224,9 @@ export default function ProfilesPage() {
 
       {deletingProfileId && <LoadingBanner message="Removing profile..." />}
 
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-primary/10 via-transparent to-black" />
-
-      <div className="relative z-10 w-full max-w-5xl flex flex-col items-center">
-        <div className="flex items-center gap-2 mb-6 sm:mb-8 text-primary">
-          <Tv className="h-7 w-7 sm:h-8 sm:w-8" />
-          <span className="font-display text-xl sm:text-2xl font-bold tracking-wider text-on-surface">
-            ZOKU<span className="text-primary font-mono text-sm ml-0.5">TV</span>
-          </span>
+      <div className="relative z-10 flex w-full max-w-5xl flex-col items-center">
+        <div className="mb-6 sm:mb-8">
+          <BrandMark size="md" />
         </div>
 
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-medium tracking-tight text-center text-on-surface mb-2">
@@ -227,8 +236,21 @@ export default function ProfilesPage() {
           Select a profile or manage your active portals below.
         </p>
 
-        <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5 sm:gap-6 md:gap-8 justify-center w-full max-w-3xl ${isBusy ? "pointer-events-none opacity-60" : ""}`}>
-          {profiles.map((p) => {
+        <div
+          className={`grid w-full max-w-3xl grid-cols-2 justify-items-center gap-5 sm:grid-cols-3 sm:gap-6 md:grid-cols-4 md:gap-8 ${
+            isBusy ? "pointer-events-none opacity-60" : ""
+          }`}
+        >
+          {!profilesReady &&
+            Array.from({ length: 2 }, (_, i) => (
+              <div key={`skel-${i}`} className="flex flex-col items-center gap-3">
+                <div className="h-24 w-24 animate-pulse rounded-2xl bg-surface md:h-28 md:w-28" />
+                <div className="h-3 w-16 animate-pulse rounded bg-surface" />
+              </div>
+            ))}
+
+          {profilesReady &&
+            profiles.map((p) => {
             const isSelecting = selectingProfileId === p.id;
             const isDeleting = deletingProfileId === p.id;
 
@@ -298,7 +320,7 @@ export default function ProfilesPage() {
           );
           })}
 
-          {canAddProfile(profiles.length) && (
+          {profilesReady && canAddProfile(profiles.length) && (
             <div className="flex flex-col items-center gap-3">
               <button
                 type="button"
@@ -313,7 +335,7 @@ export default function ProfilesPage() {
           )}
         </div>
 
-        {!canAddProfile(profiles.length) && (
+        {profilesReady && !canAddProfile(profiles.length) && (
           <p className="mt-8 text-center text-xs text-on-surface-variant">
             You have reached the maximum of {MAX_PROFILES} profiles.
           </p>
@@ -422,6 +444,7 @@ export default function ProfilesPage() {
       {toast && (
         <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
       )}
-    </div>
+      </div>
+    </BrandShell>
   );
 }

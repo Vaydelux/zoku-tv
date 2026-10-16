@@ -2,11 +2,13 @@
 
 import type { CSSProperties } from "react";
 import { usePathname } from "next/navigation";
+import { isBrandRoute } from "@/lib/auth-routes";
 
 /** Soft gradient orbs + CSS particles — no external particles.js weight */
 export function AmbientBackground() {
   const pathname = usePathname();
-  if (pathname?.startsWith("/watch")) return null;
+  // BrandShell owns atmosphere on splash/auth/profiles; skip player too
+  if (pathname?.startsWith("/watch") || isBrandRoute(pathname)) return null;
 
   return (
     <div

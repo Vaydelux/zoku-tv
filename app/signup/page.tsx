@@ -1,16 +1,14 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Tv, Mail, Lock, User, ShieldCheck, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ShieldCheck, ArrowRight } from "lucide-react";
 import { signupWithEmail, loginWithGoogle } from "@/lib/firebase";
 import { Spinner } from "@/components/Spinner";
+import { BrandMark } from "@/components/BrandMark";
+import { BrandShell } from "@/components/BrandShell";
 import { resolvePostLoginPath } from "@/lib/auth-routes";
-
-const SIGNUP_BG =
-  "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1200&auto=format&fit=crop";
 
 function SignupPageContent() {
   const router = useRouter();
@@ -53,27 +51,12 @@ function SignupPageContent() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-black">
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        <Image
-          src={SIGNUP_BG}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          quality={65}
-          className="object-cover opacity-30"
-        />
-      </div>
-      <div className="absolute inset-0 z-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
-
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-border-custom bg-surface p-8 shadow-2xl backdrop-blur-xl animate-slide-up">
+    <BrandShell>
+      <div className="flex min-h-[100dvh] items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-border-custom bg-surface/95 p-8 shadow-2xl backdrop-blur-xl animate-slide-up">
         <div className="flex flex-col items-center text-center">
-          <Link href="/" className="flex items-center gap-2 text-primary focus:outline-none mb-6">
-            <Tv className="h-10 w-10" />
-            <span className="font-display text-2xl font-bold tracking-wider text-on-surface">
-              ZOKU<span className="text-primary font-mono text-sm ml-0.5">TV</span>
-            </span>
+          <Link href="/" className="mb-6 focus:outline-none">
+            <BrandMark size="lg" />
           </Link>
           <h1 className="text-2xl font-display font-semibold tracking-tight text-on-surface">Create Streaming Account</h1>
           <p className="mt-2 text-xs text-on-surface-variant max-w-xs">
@@ -203,7 +186,8 @@ function SignupPageContent() {
           </Link>
         </p>
       </div>
-    </div>
+      </div>
+    </BrandShell>
   );
 }
 
@@ -211,9 +195,11 @@ export default function SignupPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-black">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
+        <BrandShell>
+          <div className="flex min-h-[100dvh] items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </div>
+        </BrandShell>
       }
     >
       <SignupPageContent />

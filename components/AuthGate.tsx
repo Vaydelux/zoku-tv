@@ -2,19 +2,10 @@
 
 import { Suspense, useEffect, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Tv } from "lucide-react";
 import { useSessionStore } from "@/stores";
 import { getAuthRedirectTarget } from "@/lib/auth-routes";
-
-function SplashAtmosphere() {
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="ambient-orb ambient-orb--a" />
-      <div className="ambient-orb ambient-orb--b" />
-      <div className="ambient-orb ambient-orb--c" />
-    </div>
-  );
-}
+import { BrandMark } from "@/components/BrandMark";
+import { BrandShell } from "@/components/BrandShell";
 
 function AuthGateContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -46,15 +37,14 @@ function AuthGateContent({ children }: { children: React.ReactNode }) {
 
   if (initializing || redirectTarget) {
     return (
-      <div className="splash-shell">
-        <SplashAtmosphere />
-        <div className="relative z-[1] flex flex-col items-center gap-4 animate-pulse">
-          <Tv className="h-10 w-10 text-primary" />
-          <span className="font-display text-sm font-bold tracking-wider text-on-surface">
-            ZOKU<span className="text-primary font-mono text-xs ml-0.5">TV</span>
+      <BrandShell>
+        <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 animate-pulse px-4">
+          <BrandMark size="lg" pulse />
+          <span className="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">
+            {user ? "Loading profiles…" : "Starting…"}
           </span>
         </div>
-      </div>
+      </BrandShell>
     );
   }
 
@@ -65,10 +55,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   return (
     <Suspense
       fallback={
-        <div className="splash-shell">
-          <SplashAtmosphere />
-          <div className="relative z-[1] h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
+        <BrandShell>
+          <div className="flex min-h-[100dvh] items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </div>
+        </BrandShell>
       }
     >
       <AuthGateContent>{children}</AuthGateContent>

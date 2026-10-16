@@ -25,20 +25,20 @@ export function AnimeHeroBanner({ slides, loading = false }: AnimeHeroBannerProp
 
   return (
     <div
-      className="relative h-[45vh] min-h-[300px] bg-cover bg-center"
+      className="relative h-[45vh] min-h-[300px] overflow-hidden bg-background bg-cover bg-center"
       style={{ backgroundImage: banner ? `url(${banner})` : undefined }}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
-      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-full flex items-center">
-        <div className="max-w-xl space-y-4">
+      <div className="hero-media-scrim" aria-hidden />
+      <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
+        <div className="hero-copy max-w-xl space-y-4">
           <p className="text-[10px] font-mono uppercase tracking-widest text-primary">Featured Anime</p>
           <h2 className="text-3xl sm:text-5xl font-display font-bold text-on-surface">{title}</h2>
-          <p className="text-sm text-on-surface-variant line-clamp-3">{current.description}</p>
+          <p className="hero-overview text-sm text-on-surface-variant line-clamp-3">{current.description}</p>
           <button
             onClick={() => router.push(`/anime/${current.id}`)}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-contrast"
           >
-            <Play className="h-4 w-4 fill-white" />
+            <Play className="h-4 w-4 fill-current" />
             View Details
           </button>
         </div>

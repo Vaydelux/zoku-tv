@@ -162,17 +162,17 @@ function toLightTokens(dark: ThemeTokens): ThemeTokens {
 
   return withGradient(
     {
-      background: "#f5f3f0",
+      background: "#f0eef2",
       surface: "#ffffff",
-      surfaceHover: "#eceae6",
+      surfaceHover: "#e8e6ec",
       primary: dark.primary,
       primaryContrast,
       primaryGlow: glow,
       accent: dark.accent,
       accentContrast,
-      onSurface: "#141418",
-      onSurfaceVariant: "rgba(20, 20, 24, 0.62)",
-      borderColor: "rgba(20, 20, 24, 0.12)",
+      onSurface: "#121218",
+      onSurfaceVariant: "rgba(18, 18, 24, 0.72)",
+      borderColor: "rgba(18, 18, 24, 0.14)",
     },
     "light"
   );
@@ -367,6 +367,9 @@ function enrichTheme(seed: ThemeSeed): ThemeOption {
 export const THEME_OPTIONS: ThemeOption[] = THEME_SEEDS.map(enrichTheme);
 
 export const DEFAULT_THEME_ID: ThemeId = "theme-crimson";
+
+/** Product brand theme for splash / auth / profiles (locked crimson cinema) */
+export const BRAND_THEME_ID: ThemeId = DEFAULT_THEME_ID;
 export const DEFAULT_APPEARANCE: AppearanceMode = "dark";
 export const APPEARANCE_STORAGE_KEY = "zoku_appearance";
 
@@ -483,16 +486,41 @@ export function applyTheme(
     root.style.setProperty(cssVar, tokens[key]);
   }
 
-  root.style.setProperty(
-    "--shadow-glow",
-    `0 10px 28px color-mix(in srgb, ${tokens.primary} 22%, transparent)`
-  );
-  root.style.setProperty(
-    "--shadow-elevated",
-    mode === "light"
-      ? "0 12px 32px rgba(20, 20, 24, 0.12)"
-      : "0 14px 36px rgba(0, 0, 0, 0.45)"
-  );
+  if (mode === "light") {
+    root.style.setProperty(
+      "--shadow-glow",
+      `0 12px 32px color-mix(in srgb, ${tokens.primary} 38%, transparent)`
+    );
+    root.style.setProperty(
+      "--shadow-elevated",
+      "0 14px 36px rgba(20, 20, 24, 0.14)"
+    );
+    root.style.setProperty(
+      "--shadow-card",
+      "0 6px 18px rgba(20, 20, 24, 0.1), 0 2px 6px rgba(20, 20, 24, 0.06)"
+    );
+    root.style.setProperty(
+      "--shadow-card-hover",
+      `0 22px 48px color-mix(in srgb, ${tokens.primary} 32%, transparent), 0 12px 28px rgba(20, 20, 24, 0.16)`
+    );
+  } else {
+    root.style.setProperty(
+      "--shadow-glow",
+      `0 10px 28px color-mix(in srgb, ${tokens.primary} 28%, transparent)`
+    );
+    root.style.setProperty(
+      "--shadow-elevated",
+      "0 14px 36px rgba(0, 0, 0, 0.45)"
+    );
+    root.style.setProperty(
+      "--shadow-card",
+      "0 8px 22px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25)"
+    );
+    root.style.setProperty(
+      "--shadow-card-hover",
+      `0 24px 52px color-mix(in srgb, ${tokens.primary} 36%, transparent), 0 14px 32px rgba(0, 0, 0, 0.5)`
+    );
+  }
 
   if (typeof localStorage !== "undefined") {
     localStorage.setItem(APPEARANCE_STORAGE_KEY, mode);

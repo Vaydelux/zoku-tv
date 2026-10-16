@@ -2,6 +2,13 @@ export const PUBLIC_ROUTES = ["/login", "/signup"] as const;
 
 export const AUTH_ONLY_ROUTES = ["/profiles"] as const;
 
+/** Pre-app surfaces that always use product brand chrome (not profile themes) */
+export function isBrandRoute(pathname: string | null | undefined): boolean {
+  if (!pathname) return true;
+  if (pathname === "/") return true;
+  return isPublicRoute(pathname) || isAuthOnlyRoute(pathname);
+}
+
 export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)

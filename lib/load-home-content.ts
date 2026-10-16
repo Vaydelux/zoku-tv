@@ -3,12 +3,44 @@ import { discoverMedia, getGenres, getTrending, TMDBGenre, TMDBTitle } from "@/l
 export type GenreRail = { genre: TMDBGenre; titles: TMDBTitle[] };
 
 const HERO_SLIDE_COUNT = 6;
+const TRENDING_CACHE_KEY = "zoku_home_tmdb_trending_v1";
+const GENRE_CACHE_PREFIX = "zoku_home_tmdb_genres_v1_";
+const CACHE_TTL_MS = 10 * 60 * 1000;
+
+function readSessionCache<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { at: number; data: T };
+    if (!parsed?.at || Date.now() - parsed.at > CACHE_TTL_MS) return null;
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionCache<T>(key: string, data: T) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), data }));
+  } catch {
+    /* ignore */
+  }
+}
 
 export async function loadHomeTrending(): Promise<{
   heroSlides: TMDBTitle[];
   trendingMovies: TMDBTitle[];
   trendingTV: TMDBTitle[];
 }> {
+  const cached = readSessionCache<{
+    heroSlides: TMDBTitle[];
+    trendingMovies: TMDBTitle[];
+    trendingTV: TMDBTitle[];
+  }>(TRENDING_CACHE_KEY);
+  if (cached) return cached;
+
   const [trendingAll, movies, tv] = await Promise.all([
     getTrending("all", "week"),
     getTrending("movie", "day"),
@@ -23,14 +55,20 @@ export async function loadHomeTrending(): Promise<{
     heroSlides = fallback.slice(0, HERO_SLIDE_COUNT);
   }
 
-  return {
+  const result = {
     heroSlides,
     trendingMovies: movies,
     trendingTV: tv,
   };
+  writeSessionCache(TRENDING_CACHE_KEY, result);
+  return result;
 }
 
 export async function loadHomeGenreRails(prefGenreIds: number[]): Promise<GenreRail[]> {
+  const cacheKey = GENRE_CACHE_PREFIX + prefGenreIds.join(",");
+  const cached = readSessionCache<GenreRail[]>(cacheKey);
+  if (cached) return cached;
+
   const [movieGenres, tvGenres] = await Promise.all([getGenres("movie"), getGenres("tv")]);
   const allGenres = [...movieGenres, ...tvGenres].reduce((acc, genre) => {
     if (!acc.some((item) => item.id === genre.id)) acc.push(genre);
@@ -54,5 +92,7 @@ export async function loadHomeGenreRails(prefGenreIds: number[]): Promise<GenreR
     })
   );
 
-  return railResults.filter((rail): rail is GenreRail => rail !== null);
+  const rails = railResults.filter((rail): rail is GenreRail => rail !== null);
+  writeSessionCache(cacheKey, rails);
+  return rails;
 }
