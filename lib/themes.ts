@@ -105,39 +105,48 @@ function contrastOn(color: string): string {
   return luminance > 0.45 ? "#141418" : "#ffffff";
 }
 
-/** Lift near-black dark shells so pages feel less crushed */
-function liftHex(hex: string, amount = 0.14): string {
+/** Lift near-black shells slightly — keep cool, avoid washed mud */
+function liftHex(hex: string, amount = 0.1): string {
   const rgb = parseHex(hex);
   if (!rgb) return hex;
   const lifted = rgb.map((c) => Math.min(255, Math.round(c + (255 - c) * amount)));
   return `#${lifted.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
 }
 
+/** Nudge warm/muddy dark shells toward cool slate without killing theme hue */
+function coolMix(hex: string, slate = "#151922", amount = 0.35): string {
+  const a = parseHex(hex);
+  const b = parseHex(slate);
+  if (!a || !b) return hex;
+  const mixed = a.map((c, i) => Math.round(c * (1 - amount) + b[i] * amount));
+  return `#${mixed.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
 function softenDarkTokens(tokens: SolidTokens): SolidTokens {
   return {
     ...tokens,
-    background: liftHex(tokens.background, 0.16),
-    surface: liftHex(tokens.surface, 0.12),
-    surfaceHover: liftHex(tokens.surfaceHover, 0.1),
+    background: liftHex(coolMix(tokens.background, "#12151c", 0.4), 0.08),
+    surface: liftHex(coolMix(tokens.surface, "#1a1e28", 0.32), 0.06),
+    surfaceHover: liftHex(coolMix(tokens.surfaceHover, "#242a36", 0.28), 0.05),
   };
 }
 
 function withGradient(tokens: SolidTokens, mode: AppearanceMode): ThemeTokens {
   const bg = tokens.background;
   const primary = tokens.primary;
-  const accent = tokens.accent;
+  /** Cool slate atmosphere + whisper of primary — no muddy pink wash */
   const backgroundGradient =
     mode === "dark"
       ? [
-          `radial-gradient(ellipse 110% 70% at 12% -8%, color-mix(in srgb, ${primary} 32%, transparent), transparent 55%)`,
-          `radial-gradient(ellipse 90% 55% at 92% 8%, color-mix(in srgb, ${accent} 22%, transparent), transparent 50%)`,
-          `radial-gradient(ellipse 70% 50% at 50% 100%, color-mix(in srgb, ${primary} 14%, transparent), transparent 55%)`,
-          `linear-gradient(165deg, ${bg} 0%, color-mix(in srgb, ${primary} 20%, ${bg}) 45%, color-mix(in srgb, ${bg} 75%, #2a2a32) 100%)`,
+          `radial-gradient(ellipse 105% 70% at 6% -10%, color-mix(in srgb, #64748b 22%, transparent), transparent 58%)`,
+          `radial-gradient(ellipse 85% 55% at 98% 5%, color-mix(in srgb, ${primary} 9%, transparent), transparent 52%)`,
+          `radial-gradient(ellipse 75% 50% at 48% 108%, color-mix(in srgb, #334155 16%, transparent), transparent 58%)`,
+          `linear-gradient(175deg, ${bg} 0%, color-mix(in srgb, ${bg} 88%, #1c2230) 48%, color-mix(in srgb, ${bg} 78%, #0f1218) 100%)`,
         ].join(", ")
       : [
-          `radial-gradient(ellipse 100% 60% at 10% 0%, color-mix(in srgb, ${primary} 18%, transparent), transparent 50%)`,
-          `radial-gradient(ellipse 80% 50% at 100% 20%, color-mix(in srgb, ${accent} 12%, transparent), transparent 45%)`,
-          `linear-gradient(165deg, ${bg} 0%, color-mix(in srgb, ${primary} 10%, ${bg}) 48%, ${tokens.surface} 100%)`,
+          `radial-gradient(ellipse 100% 60% at 8% 0%, color-mix(in srgb, #94a3b8 14%, transparent), transparent 52%)`,
+          `radial-gradient(ellipse 80% 50% at 100% 18%, color-mix(in srgb, ${primary} 8%, transparent), transparent 48%)`,
+          `linear-gradient(170deg, ${bg} 0%, color-mix(in srgb, ${bg} 92%, #e8ecf2) 50%, ${tokens.surface} 100%)`,
         ].join(", ");
 
   return { ...tokens, backgroundGradient };
@@ -199,10 +208,22 @@ const THEME_SEEDS: ThemeSeed[] = [
   {
     id: "theme-crimson",
     name: "Crimson Cinema",
-    hint: "Deep red velvet",
-    desc: "Default dark cinematic crimson velvet branding",
-    preview: "bg-gradient-to-br from-red-500 to-rose-900",
-    tokens: token("#0a0a0b", "#111112", "#1b1b1c", "#e11d48", "#ffffff", "rgba(225,29,72,0.4)", "#fb7185", "#280307", "#ffffff", "rgba(255,255,255,0.68)", "rgba(255,255,255,0.1)"),
+    hint: "Cool charcoal + red",
+    desc: "Cool slate cinema shell with restrained crimson accents",
+    preview: "bg-gradient-to-br from-red-500 to-slate-900",
+    tokens: token(
+      "#12141a",
+      "#1a1d26",
+      "#252a36",
+      "#e11d48",
+      "#ffffff",
+      "rgba(225,29,72,0.35)",
+      "#f43f5e",
+      "#ffffff",
+      "#f4f4f5",
+      "rgba(228,228,231,0.62)",
+      "rgba(255,255,255,0.09)"
+    ),
   },
   {
     id: "theme-ocean",
@@ -223,10 +244,22 @@ const THEME_SEEDS: ThemeSeed[] = [
   {
     id: "theme-rose",
     name: "Rose Dusk",
-    hint: "Dusty pink plum",
-    desc: "Ethereal mauve dusky twilight romance",
-    preview: "bg-gradient-to-br from-rose-300 to-fuchsia-950",
-    tokens: token("#120910", "#1d1020", "#29152c", "#f9a8d4", "#2c0922", "rgba(249,168,212,0.4)", "#e879f9", "#2c0922", "#faeef0", "#c09eb2", "rgba(249,168,212,0.22)"),
+    hint: "Soft rose on slate",
+    desc: "Cool slate dusk with soft rose accents — no muddy plum wash",
+    preview: "bg-gradient-to-br from-rose-300 to-slate-900",
+    tokens: token(
+      "#13151c",
+      "#1c2030",
+      "#282e40",
+      "#fb7185",
+      "#1a0610",
+      "rgba(251,113,133,0.35)",
+      "#fda4af",
+      "#1a0610",
+      "#faf5f6",
+      "rgba(228,218,222,0.62)",
+      "rgba(255,255,255,0.09)"
+    ),
   },
   {
     id: "theme-sand",
@@ -452,7 +485,7 @@ export function applyTheme(
 
   root.style.setProperty(
     "--shadow-glow",
-    `0 10px 28px color-mix(in srgb, ${tokens.primary} 28%, transparent)`
+    `0 10px 28px color-mix(in srgb, ${tokens.primary} 22%, transparent)`
   );
   root.style.setProperty(
     "--shadow-elevated",

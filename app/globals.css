@@ -40,24 +40,24 @@
 /* Default token values — Crimson Cinema dark (overridden at runtime by applyTheme) */
 :root,
 [data-theme="theme-crimson"] {
-  --background: #1a1a1e;
-  --surface: #242428;
-  --surface-hover: #2e2e33;
+  --background: #12141a;
+  --surface: #1a1d26;
+  --surface-hover: #252a36;
   --primary: #e11d48;
   --primary-contrast: #ffffff;
-  --primary-glow: rgba(225, 29, 72, 0.4);
-  --accent: #fb7185;
-  --accent-contrast: #280307;
-  --on-surface: #ffffff;
-  --on-surface-variant: rgba(255, 255, 255, 0.68);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --shadow-glow: 0 10px 28px color-mix(in srgb, #e11d48 28%, transparent);
-  --shadow-elevated: 0 14px 36px rgba(0, 0, 0, 0.45);
+  --primary-glow: rgba(225, 29, 72, 0.35);
+  --accent: #f43f5e;
+  --accent-contrast: #ffffff;
+  --on-surface: #f4f4f5;
+  --on-surface-variant: rgba(228, 228, 231, 0.62);
+  --border-color: rgba(255, 255, 255, 0.09);
+  --shadow-glow: 0 10px 28px color-mix(in srgb, #e11d48 22%, transparent);
+  --shadow-elevated: 0 14px 36px rgba(0, 0, 0, 0.4);
   --background-gradient:
-    radial-gradient(ellipse 110% 70% at 12% -8%, color-mix(in srgb, #e11d48 32%, transparent), transparent 55%),
-    radial-gradient(ellipse 90% 55% at 92% 8%, color-mix(in srgb, #fb7185 22%, transparent), transparent 50%),
-    radial-gradient(ellipse 70% 50% at 50% 100%, color-mix(in srgb, #e11d48 14%, transparent), transparent 55%),
-    linear-gradient(165deg, #1a1a1e 0%, color-mix(in srgb, #e11d48 20%, #1a1a1e) 45%, color-mix(in srgb, #1a1a1e 75%, #2a2a32) 100%);
+    radial-gradient(ellipse 105% 70% at 6% -10%, color-mix(in srgb, #64748b 22%, transparent), transparent 58%),
+    radial-gradient(ellipse 85% 55% at 98% 5%, color-mix(in srgb, #e11d48 9%, transparent), transparent 52%),
+    radial-gradient(ellipse 75% 50% at 48% 108%, color-mix(in srgb, #334155 16%, transparent), transparent 58%),
+    linear-gradient(175deg, #12141a 0%, color-mix(in srgb, #12141a 88%, #1c2230) 48%, color-mix(in srgb, #12141a 78%, #0f1218) 100%);
 }
 
 html, body {
@@ -328,12 +328,12 @@ input[type="reset"]:disabled {
   cursor: not-allowed;
 }
 
-/* Ambient atmosphere (CSS particles + soft orbs) */
+/* Ambient atmosphere — cool slate orbs, whisper of primary */
 .ambient-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(64px);
-  opacity: 0.45;
+  filter: blur(72px);
+  opacity: 0.38;
   will-change: transform;
   animation: ambient-drift 28s ease-in-out infinite alternate;
 }
@@ -343,7 +343,7 @@ input[type="reset"]:disabled {
   left: -8%;
   width: min(55vw, 420px);
   height: min(55vw, 420px);
-  background: color-mix(in srgb, var(--primary) 42%, transparent);
+  background: color-mix(in srgb, #64748b 55%, transparent);
 }
 
 .ambient-orb--b {
@@ -351,7 +351,7 @@ input[type="reset"]:disabled {
   right: -10%;
   width: min(48vw, 360px);
   height: min(48vw, 360px);
-  background: color-mix(in srgb, var(--accent) 36%, transparent);
+  background: color-mix(in srgb, var(--primary) 18%, #475569);
   animation-duration: 34s;
   animation-delay: -8s;
 }
@@ -361,9 +361,24 @@ input[type="reset"]:disabled {
   left: 28%;
   width: min(60vw, 480px);
   height: min(60vw, 480px);
-  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  background: color-mix(in srgb, #334155 50%, transparent);
   animation-duration: 40s;
   animation-delay: -14s;
+}
+
+.splash-shell {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: var(--background);
+  background-image: var(--background-gradient);
+  background-attachment: fixed;
+  background-size: cover;
+  color: var(--on-surface);
 }
 
 .ambient-particles {

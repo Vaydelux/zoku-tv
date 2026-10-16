@@ -77,14 +77,14 @@ export function Navbar() {
           
           {/* Logo & Main Nav */}
           <div className="flex items-center gap-8">
-            <Link href="/home" className="flex flex-col gap-0.5 text-primary focus:outline-none">
+            <Link href="/home" className="flex flex-col gap-0.5 text-on-surface focus:outline-none">
               <span className="flex items-center gap-2">
-                <Tv className="h-6 w-6 animate-pulse" />
+                <Tv className="h-6 w-6 text-primary" />
                 <span className="font-display text-xl font-bold tracking-wider text-on-surface">
                   ZOKU<span className="text-primary font-mono text-sm ml-0.5">TV</span>
                 </span>
               </span>
-              <span className="text-[9px] font-mono uppercase tracking-widest text-primary pl-8">
+              <span className="pl-8 text-[9px] font-mono uppercase tracking-widest text-on-surface-variant">
                 {catalogLabel}
               </span>
             </Link>

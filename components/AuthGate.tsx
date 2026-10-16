@@ -6,6 +6,16 @@ import { Tv } from "lucide-react";
 import { useSessionStore } from "@/stores";
 import { getAuthRedirectTarget } from "@/lib/auth-routes";
 
+function SplashAtmosphere() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="ambient-orb ambient-orb--a" />
+      <div className="ambient-orb ambient-orb--b" />
+      <div className="ambient-orb ambient-orb--c" />
+    </div>
+  );
+}
+
 function AuthGateContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -36,10 +46,11 @@ function AuthGateContent({ children }: { children: React.ReactNode }) {
 
   if (initializing || redirectTarget) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background text-on-surface">
-        <div className="flex flex-col items-center gap-4 animate-pulse">
+      <div className="splash-shell">
+        <SplashAtmosphere />
+        <div className="relative z-[1] flex flex-col items-center gap-4 animate-pulse">
           <Tv className="h-10 w-10 text-primary" />
-          <span className="font-display text-sm font-bold tracking-wider text-on-surface-variant">
+          <span className="font-display text-sm font-bold tracking-wider text-on-surface">
             ZOKU<span className="text-primary font-mono text-xs ml-0.5">TV</span>
           </span>
         </div>
@@ -54,8 +65,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen w-screen items-center justify-center bg-background text-on-surface">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="splash-shell">
+          <SplashAtmosphere />
+          <div className="relative z-[1] h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
       }
     >
