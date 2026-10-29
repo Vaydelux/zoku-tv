@@ -142,6 +142,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
         poster_path: details.poster_path,
         backdrop_path: details.backdrop_path,
         vote_average: details.vote_average,
+        release_date: details.release_date || details.first_air_date || null,
       });
     }
   };

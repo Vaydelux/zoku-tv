@@ -11,6 +11,8 @@ import {
   RefreshCw, 
   AlertTriangle,
   MonitorPlay,
+  Play,
+  Crosshair,
 } from "lucide-react";
 import { useSessionStore, useEmbedStore, useEpisodeProgressStore } from "@/stores";
 import { EMBED_SERVER_CATALOG, getEmbedUrl, groupEmbedServers } from "@/lib/embed";
@@ -53,6 +55,7 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
 
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const overlayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const healthTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -110,10 +113,15 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
     };
   }, []);
 
-  // Server health timer
+  // Server health timer + unblock timer
   useEffect(() => {
     setIframeLoaded(false);
     if (healthTimerRef.current) clearTimeout(healthTimerRef.current);
+
+    // Auto-unblock after 2.2s so player is clickable immediately
+    const unblockTimer = setTimeout(() => {
+      setIframeLoaded(true);
+    }, 2200);
 
     healthTimerRef.current = setTimeout(() => {
       if (!iframeLoaded && details) {
@@ -122,6 +130,7 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
     }, 12000);
 
     return () => {
+      clearTimeout(unblockTimer);
       if (healthTimerRef.current) clearTimeout(healthTimerRef.current);
     };
   }, [selectedServerId, seasonNum, episodeNum, loadAttempts]);
@@ -274,6 +283,19 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
             <span className="hidden sm:inline">Containment: {iframeMode}</span>
           </button>
 
+          {/* Target / Focus Player Button */}
+          <button
+            onClick={() => {
+              setIframeLoaded(true);
+              iframeRef.current?.focus();
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-white/10 hover:border-primary/60 bg-white/5 hover:bg-white/10 text-white text-[10px] font-semibold transition-all"
+            title="Focus and target player directly for clicks and controls"
+          >
+            <Crosshair className="h-3.5 w-3.5 text-primary" />
+            <span className="hidden sm:inline">Target Player</span>
+          </button>
+
           {/* Force reload fallback */}
           <button
             onClick={triggerNextServer}
@@ -289,28 +311,56 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
       {/* 2. Dedicated player shell — iframe fills this box only */}
       <div className="relative w-full aspect-[16/9] md:h-[65dvh] lg:h-[70dvh] bg-neutral-950 shrink-0 overflow-hidden isolate">
         <div className="absolute inset-0">
-          {/* Loader status */}
+          {/* Loader status — clickable to dismiss and immediately target player */}
           {!iframeLoaded && !showResumePrompt && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950 p-6 text-center gap-3">
+            <div
+              onClick={() => {
+                setIframeLoaded(true);
+                iframeRef.current?.focus();
+              }}
+              className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950/90 p-6 text-center gap-3 cursor-pointer"
+              title="Click anywhere to dismiss and interact directly with player"
+            >
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               <p className="text-xs font-mono text-white/60">Launching broadcast tunnel to server {selectedServer.name}...</p>
-              <button 
-                onClick={triggerNextServer}
-                className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] text-white transition-all font-semibold"
-              >
-                <span>Switch Server Fallback</span>
-              </button>
+              <div className="flex items-center gap-2 mt-1">
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIframeLoaded(true);
+                    iframeRef.current?.focus();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-[11px] font-bold shadow-md active:scale-95 transition-all"
+                >
+                  <Play className="h-3 w-3 fill-current" />
+                  <span>Target & Play Stream</span>
+                </button>
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerNextServer();
+                  }}
+                  className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] text-white transition-all font-semibold"
+                >
+                  <span>Switch Server Fallback</span>
+                </button>
+              </div>
             </div>
           )}
 
           {/* Sandboxed player element */}
           {!showResumePrompt && (
             <iframe
+              ref={iframeRef}
               key={`${selectedServerId}_tv_${seasonNum}_${episodeNum}_${loadAttempts}_${startAtSec ?? 0}`}
               src={embedUrl}
               onLoad={() => setIframeLoaded(true)}
-              className="w-full h-full border-0 absolute inset-0 z-0 bg-black"
+              tabIndex={0}
+              className="w-full h-full border-0 absolute inset-0 z-0 bg-black focus:outline-none"
               allowFullScreen
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; screen-wake-lock; clipboard-write; web-share"
               sandbox={iframeMode === "Strict" ? selectedServer.sandboxPolicy : undefined}
               referrerPolicy="no-referrer"
               title={`${selectedServer.name} player`}

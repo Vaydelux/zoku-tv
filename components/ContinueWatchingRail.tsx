@@ -1,41 +1,25 @@
 "use client";
 
 import { motion } from "motion/react";
+import { Trash2 } from "lucide-react";
 import { ContinueWatchingCard } from "@/components/ContinueWatchingCard";
 import { RailNavButton } from "@/components/RailNavButton";
 import { useSmoothRailScroll } from "@/hooks/useSmoothRailScroll";
 import type { ContinueWatchingItem } from "@/lib/continue-watching";
+import { useContinueWatchingStore, useSessionStore } from "@/stores";
 
 interface ContinueWatchingRailProps {
   items: ContinueWatchingItem[];
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.04,
-      delayChildren: 0.05,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 8, scale: 0.98 },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      type: "spring",
-      stiffness: 110,
-      damping: 14,
-    },
-  },
-};
-
 export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
+  const clearContinueWatching = useContinueWatchingStore(
+    (state) => state.clearContinueWatching
+  );
+  const catalogMode = useSessionStore(
+    (state) => state.currentProfile?.catalogMode ?? "tmdb"
+  );
+
   const {
     rowRef,
     showLeftArrow,
@@ -60,17 +44,29 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
           </span>
         </div>
 
-        {(showLeftArrow || showRightArrow) && (
-          <div
-            className="hidden h-1 w-14 overflow-hidden rounded-full bg-surface sm:block"
-            aria-hidden
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void clearContinueWatching(catalogMode)}
+            className="inline-flex items-center gap-1 rounded-xl border border-border-custom bg-surface px-2.5 py-1 text-[11px] font-medium text-on-surface-variant transition-colors hover:border-red-500/60 hover:text-red-400"
+            title="Clear Continue Watching Queue"
           >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>Clear Queue</span>
+          </button>
+
+          {(showLeftArrow || showRightArrow) && (
             <div
-              className="h-full rounded-full bg-primary transition-all duration-300"
-              style={{ width: `${Math.max(16, Math.round(scrollProgress * 100))}%` }}
-            />
-          </div>
-        )}
+              className="hidden h-1 w-14 overflow-hidden rounded-full bg-surface sm:block"
+              aria-hidden
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${Math.max(16, Math.round(scrollProgress * 100))}%` }}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="relative mx-auto w-full max-w-7xl">

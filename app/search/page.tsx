@@ -1,24 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Trash2, History, Star, ArrowRight, Film } from "lucide-react";
+import { Search, Trash2, History, ArrowRight, Film, Tv, Sparkles, Layers } from "lucide-react";
 import { useSessionStore, useSearchHistoryStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { TitleCard } from "@/components/TitleCard";
 import { searchMulti, TMDBTitle } from "@/lib/tmdb";
 import { searchAnime, type AniListMedia } from "@/lib/anilist";
 import { AnimeCard } from "@/components/anime/AnimeCard";
+import { VoiceSearchButton } from "@/components/VoiceSearchButton";
+import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
 
-import { Suspense } from "react";
+type SearchFilterTab = "all" | "movies_tv" | "anime";
+
+type CombinedSearchResult =
+  | { kind: "movie" | "tv"; data: TMDBTitle }
+  | { kind: "anime"; data: AniListMedia };
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-background">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      }
+    >
       <SearchPageContent />
     </Suspense>
   );
@@ -31,10 +39,11 @@ function SearchPageContent() {
   const { history, loadHistory, addQuery, clearHistory } = useSearchHistoryStore();
 
   const queryParam = searchParams.get("q") || "";
-  const catalogMode = currentProfile?.catalogMode ?? "tmdb";
   const [inputValue, setInputValue] = useState(queryParam);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [results, setResults] = useState<TMDBTitle[]>([]);
   const [animeResults, setAnimeResults] = useState<AniListMedia[]>([]);
+  const [activeFilter, setActiveFilter] = useState<SearchFilterTab>("all");
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
@@ -46,7 +55,7 @@ function SearchPageContent() {
     }
   }, [currentProfile, loadHistory]);
 
-  // Sync input value when URL parameter changes externally (e.g. click history item)
+  // Sync input value when URL parameter changes externally
   useEffect(() => {
     if (queryParam !== inputValue) {
       setInputValue(queryParam);
@@ -74,7 +83,7 @@ function SearchPageContent() {
     setPage(1);
   }, [queryParam]);
 
-  // Handle URL query and pagination changes
+  // Fetch search results across both TMDB and AniList concurrently
   useEffect(() => {
     if (!queryParam.trim()) {
       setResults([]);
@@ -89,28 +98,19 @@ function SearchPageContent() {
         setLoadingMore(true);
       }
       try {
-        if (catalogMode === "anime") {
-          const data = await searchAnime(queryParam, page, 20);
-          if (page === 1) {
-            setAnimeResults(data.media);
-            addQuery(queryParam.trim());
-          } else {
-            setAnimeResults((prev) => {
-              const existingIds = new Set(prev.map((p) => p.id));
-              const newItems = data.media.filter((f) => !existingIds.has(f.id));
-              return [...prev, ...newItems];
-            });
-          }
-        } else {
-          const searchResults = await searchMulti(queryParam, page);
+        const [tmdbPromise, animePromise] = await Promise.allSettled([
+          searchMulti(queryParam, page),
+          searchAnime(queryParam, page, 18),
+        ]);
 
+        if (tmdbPromise.status === "fulfilled") {
+          const raw = tmdbPromise.value;
           const filtered = currentProfile?.kidMode
-            ? searchResults.filter((title) => (title.vote_average || 0) < 7.5)
-            : searchResults;
+            ? raw.filter((title) => (title.vote_average || 0) < 7.5)
+            : raw;
 
           if (page === 1) {
             setResults(filtered);
-            addQuery(queryParam.trim());
           } else {
             setResults((prev) => {
               const existingIds = new Set(prev.map((p) => p.id));
@@ -119,6 +119,23 @@ function SearchPageContent() {
             });
           }
         }
+
+        if (animePromise.status === "fulfilled") {
+          const data = animePromise.value;
+          if (page === 1) {
+            setAnimeResults(data.media || []);
+          } else {
+            setAnimeResults((prev) => {
+              const existingIds = new Set(prev.map((p) => p.id));
+              const newItems = (data.media || []).filter((f) => !existingIds.has(f.id));
+              return [...prev, ...newItems];
+            });
+          }
+        }
+
+        if (page === 1) {
+          addQuery(queryParam.trim());
+        }
       } catch (err) {
         console.error("Search failed:", err);
       } finally {
@@ -126,11 +143,13 @@ function SearchPageContent() {
         setLoadingMore(false);
       }
     }
+
     performSearch();
-  }, [queryParam, page, currentProfile, addQuery, catalogMode]);
+  }, [queryParam, page, currentProfile, addQuery]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowAutocomplete(false);
     const trimmed = inputValue.trim();
     if (trimmed) {
       router.push(`/search?q=${encodeURIComponent(trimmed)}`);
@@ -140,41 +159,92 @@ function SearchPageContent() {
   };
 
   const handleQueryClick = (q: string) => {
+    setShowAutocomplete(false);
     setInputValue(q);
     router.push(`/search?q=${encodeURIComponent(q)}`);
   };
+
+  // Interleave TMDB and Anime items for combined feed
+  const combinedItems: CombinedSearchResult[] = useMemo(() => {
+    const list: CombinedSearchResult[] = [];
+    const maxLen = Math.max(results.length, animeResults.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (i < results.length) {
+        const item = results[i];
+        list.push({ kind: (item.media_type as "movie" | "tv") || "movie", data: item });
+      }
+      if (i < animeResults.length) {
+        list.push({ kind: "anime", data: animeResults[i] });
+      }
+    }
+    return list;
+  }, [results, animeResults]);
+
+  const totalResultsCount = results.length + animeResults.length;
 
   return (
     <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
-        
         {/* Search Search Box */}
         <div className="flex flex-col items-center max-w-2xl mx-auto text-center gap-4 py-6">
           <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-on-surface">
             Infinite Search Channel
           </h1>
           <p className="text-xs text-on-surface-variant max-w-md">
-            {catalogMode === "anime"
-              ? "Search the AniList anime catalog in real-time."
-              : "Scan across millions of movies, television series, cast, crew, and catalogs in real-time."}
+            Scan across millions of movies, television series, and anime franchises in real-time.
           </p>
 
           <form onSubmit={handleSearchSubmit} className="relative w-full mt-2">
             <input
               type="text"
-              placeholder={catalogMode === "anime" ? "Search anime titles..." : "Search movies, tv shows, franchises..."}
+              placeholder="Search movies, TV shows, anime series, franchises..."
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              className="glass-panel w-full rounded-2xl py-3.5 pl-5 pr-12 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                setShowAutocomplete(true);
+              }}
+              onFocus={() => {
+                if (inputValue.trim().length >= 2) {
+                  setShowAutocomplete(true);
+                }
+              }}
+              className="glass-panel w-full rounded-2xl py-3.5 pl-5 pr-24 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
             />
-            <button 
-              type="submit" 
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-xl bg-primary text-primary-contrast hover:bg-opacity-95 transition-all"
-            >
-              <Search className="h-4 w-4" />
-            </button>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              <VoiceSearchButton
+                onTranscript={(text) => {
+                  setInputValue(text);
+                  setShowAutocomplete(false);
+                  router.push(`/search?q=${encodeURIComponent(text)}`);
+                }}
+              />
+              <button
+                type="submit"
+                className="p-1.5 rounded-xl bg-primary text-primary-contrast hover:bg-opacity-95 transition-all"
+                title="Search"
+              >
+                <Search className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Real-time TMDB + AniList Autocomplete Dropdown */}
+            <SearchAutocompleteDropdown
+              query={inputValue}
+              isOpen={showAutocomplete}
+              onClose={() => setShowAutocomplete(false)}
+              onSelectSuggestion={(suggestion) => {
+                setShowAutocomplete(false);
+                setInputValue(suggestion.title);
+                router.push(suggestion.href);
+              }}
+              onViewAll={(q) => {
+                setShowAutocomplete(false);
+                setInputValue(q);
+                router.push(`/search?q=${encodeURIComponent(q)}`);
+              }}
+            />
           </form>
         </div>
 
@@ -188,7 +258,7 @@ function SearchPageContent() {
                 <span>Search Portal History</span>
               </span>
               {history.length > 0 && (
-                <button 
+                <button
                   onClick={clearHistory}
                   className="text-[10px] text-red-500 hover:underline flex items-center gap-1 font-semibold"
                 >
@@ -221,13 +291,64 @@ function SearchPageContent() {
         ) : (
           /* Search results */
           <div className="space-y-6">
-            <div className="flex items-center justify-between px-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-2">
               <p className="text-xs font-mono uppercase tracking-wider text-on-surface-variant">
                 Search Results for <span className="text-primary font-bold lowercase font-sans">“{queryParam}”</span>
               </p>
               <p className="text-xs font-mono text-on-surface-variant">
-                Found {catalogMode === "anime" ? animeResults.length : results.length} results
+                Total Found: {totalResultsCount} results ({results.length} Movies/TV · {animeResults.length} Anime)
               </p>
+            </div>
+
+            {/* Filter Tabs for Combined / Category Partition */}
+            <div className="flex flex-wrap items-center gap-2 border-b border-border-custom pb-4">
+              <button
+                type="button"
+                onClick={() => setActiveFilter("all")}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  activeFilter === "all"
+                    ? "bg-primary text-primary-contrast shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface hover:bg-surface border border-transparent"
+                }`}
+              >
+                <Layers className="h-3.5 w-3.5" />
+                <span>All Results</span>
+                <span className="ml-1 rounded px-1.5 py-0.5 font-mono text-[10px] bg-black/20">
+                  {totalResultsCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveFilter("movies_tv")}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                  activeFilter === "movies_tv"
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm"
+                    : "border-border-custom text-on-surface-variant hover:text-on-surface hover:bg-surface"
+                }`}
+              >
+                <Film className="h-3.5 w-3.5 text-amber-400" />
+                <span>Movies & TV Shows</span>
+                <span className="ml-1 rounded px-1.5 py-0.5 font-mono text-[10px] bg-black/20">
+                  {results.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveFilter("anime")}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                  activeFilter === "anime"
+                    ? "bg-gradient-to-r from-violet-600/30 to-fuchsia-600/30 text-fuchsia-300 border-fuchsia-400/60 shadow-sm"
+                    : "border-border-custom text-on-surface-variant hover:text-on-surface hover:bg-surface"
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5 text-fuchsia-400" />
+                <span>Anime Series</span>
+                <span className="ml-1 rounded px-1.5 py-0.5 font-mono text-[10px] bg-black/20">
+                  {animeResults.length}
+                </span>
+              </button>
             </div>
 
             {loading ? (
@@ -239,39 +360,110 @@ function SearchPageContent() {
                   />
                 ))}
               </div>
-            ) : catalogMode === "anime" ? (
-              animeResults.length > 0 ? (
-                <div className="space-y-8">
+            ) : totalResultsCount === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+                <Film className="h-12 w-12 text-on-surface-variant" />
+                <div className="space-y-1">
+                  <p className="font-semibold text-sm">No scanner results found.</p>
+                  <p className="text-xs text-on-surface-variant max-w-xs">
+                    Please check spelling or search for wider words, genre titles, or franchise creators.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {/* 1. Combined Feed */}
+                {activeFilter === "all" && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                    {animeResults.map((anime) => (
-                      <AnimeCard key={anime.id} anime={anime} />
+                    {combinedItems.map((item, idx) => (
+                      <div
+                        key={item.kind === "anime" ? `anime_${item.data.id}` : `tmdb_${item.data.id}_${idx}`}
+                        className="relative flex justify-center group/search-card"
+                      >
+                        {/* Distinct Visual Distinction Badges */}
+                        <div className="pointer-events-none absolute left-2.5 top-2.5 z-30 drop-shadow-md">
+                          {item.kind === "anime" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-white uppercase shadow-md shadow-fuchsia-950/60 border border-fuchsia-300/50 backdrop-blur-md">
+                              <Sparkles className="h-2.5 w-2.5 text-yellow-300" />
+                              <span>Anime</span>
+                            </span>
+                          ) : item.kind === "tv" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-950/80 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-sky-200 uppercase shadow-md shadow-sky-950/60 border border-sky-400/60 backdrop-blur-md">
+                              <Tv className="h-2.5 w-2.5 text-sky-300" />
+                              <span>TV Series</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-950/80 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-amber-200 uppercase shadow-md shadow-amber-950/60 border border-amber-400/60 backdrop-blur-md">
+                              <Film className="h-2.5 w-2.5 text-amber-300" />
+                              <span>Movie</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {item.kind === "anime" ? (
+                          <AnimeCard anime={item.data} />
+                        ) : (
+                          <TitleCard title={item.data} mediaType={item.kind} />
+                        )}
+                      </div>
                     ))}
                   </div>
-                  <div className="flex justify-center pt-4">
-                    <button
-                      onClick={() => setPage((p) => p + 1)}
-                      disabled={loadingMore}
-                      className="flex items-center gap-2 rounded-xl bg-surface hover:bg-surface-hover border border-border-custom py-3 px-8 text-xs font-semibold disabled:opacity-50"
-                    >
-                      {loadingMore ? "Loading More..." : "Load More Results"}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-                  <Film className="h-12 w-12 text-on-surface-variant" />
-                  <p className="font-semibold text-sm">No anime results found.</p>
-                </div>
-              )
-            ) : results.length > 0 ? (
-              <div className="space-y-8">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                  {results.map((title) => (
-                    <div key={title.id} className="flex justify-center">
-                      <TitleCard title={title} />
+                )}
+
+                {/* 2. Movies & TV Shows Partition */}
+                {activeFilter === "movies_tv" && (
+                  results.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                      {results.map((title) => (
+                        <div key={title.id} className="relative flex justify-center group/search-card">
+                          <div className="pointer-events-none absolute left-2.5 top-2.5 z-30 drop-shadow-md">
+                            {title.media_type === "tv" ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-sky-950/80 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-sky-200 uppercase shadow-md shadow-sky-950/60 border border-sky-400/60 backdrop-blur-md">
+                                <Tv className="h-2.5 w-2.5 text-sky-300" />
+                                <span>TV Series</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-950/80 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-amber-200 uppercase shadow-md shadow-amber-950/60 border border-amber-400/60 backdrop-blur-md">
+                                <Film className="h-2.5 w-2.5 text-amber-300" />
+                                <span>Movie</span>
+                              </span>
+                            )}
+                          </div>
+                          <TitleCard title={title} mediaType={title.media_type} />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+                      <Film className="h-10 w-10 text-on-surface-variant" />
+                      <p className="text-xs text-on-surface-variant">No Movies or TV series found for this query.</p>
+                    </div>
+                  )
+                )}
+
+                {/* 3. Anime Partition */}
+                {activeFilter === "anime" && (
+                  animeResults.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                      {animeResults.map((anime) => (
+                        <div key={anime.id} className="relative flex justify-center group/search-card">
+                          <div className="pointer-events-none absolute left-2.5 top-2.5 z-30 drop-shadow-md">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-white uppercase shadow-md shadow-fuchsia-950/60 border border-fuchsia-300/50 backdrop-blur-md">
+                              <Sparkles className="h-2.5 w-2.5 text-yellow-300" />
+                              <span>Anime</span>
+                            </span>
+                          </div>
+                          <AnimeCard anime={anime} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+                      <Sparkles className="h-10 w-10 text-on-surface-variant" />
+                      <p className="text-xs text-on-surface-variant">No Anime series found for this query.</p>
+                    </div>
+                  )
+                )}
 
                 {/* Manual 'Load more' Button */}
                 <div className="flex justify-center pt-4">
@@ -291,20 +483,9 @@ function SearchPageContent() {
                   </button>
                 </div>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-                <Film className="h-12 w-12 text-on-surface-variant" />
-                <div className="space-y-1">
-                  <p className="font-semibold text-sm">No scanner results found.</p>
-                  <p className="text-xs text-on-surface-variant max-w-xs">
-                    Please check spelling or search for wider words, genre titles, or franchise creators.
-                  </p>
-                </div>
-              </div>
             )}
           </div>
         )}
-
       </div>
     </div>
   );

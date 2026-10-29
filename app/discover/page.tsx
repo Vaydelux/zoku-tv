@@ -7,7 +7,7 @@ import { useSessionStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { TitleCard } from "@/components/TitleCard";
 import { CustomSelect } from "@/components/CustomSelect";
-import { discoverMedia, getGenres, TMDBTitle, TMDBGenre } from "@/lib/tmdb";
+import { discoverMedia, getGenres, TMDBTitle, TMDBGenre, TMDB_POPULAR_LANGUAGES } from "@/lib/tmdb";
 import { AnimeDiscoverContent } from "./AnimeDiscover";
 
 import { Suspense } from "react";
@@ -197,6 +197,14 @@ function TmdbDiscoverContent() {
     { value: "release_date.desc", label: "Newest Catalog" },
   ];
 
+  const languageOptions = [
+    { value: "", label: "All Languages (Global)" },
+    ...TMDB_POPULAR_LANGUAGES.map((lang) => ({
+      value: lang.iso_639_1,
+      label: `${lang.english_name} (${lang.name} · ${lang.iso_639_1.toUpperCase()})`,
+    })),
+  ];
+
   return (
     <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
@@ -272,6 +280,15 @@ function TmdbDiscoverContent() {
                 onChange={(val) => applyFilters({ sort_by: val })}
                 options={sortingOptions}
                 testId="discover-sort-select"
+              />
+
+              {/* Language selector */}
+              <CustomSelect
+                label="Original Language"
+                value={language}
+                onChange={(val) => applyFilters({ language: val })}
+                options={languageOptions}
+                testId="discover-language-select"
               />
 
               {/* Release date Year ranges */}

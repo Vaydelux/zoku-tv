@@ -18,6 +18,8 @@ import {
 import { useSessionStore, useRailFilterStore, logout } from "@/stores";
 import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
 import { getNavbarNetworkStatus } from "@/lib/network-status";
+import { VoiceSearchButton } from "@/components/VoiceSearchButton";
+import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -28,6 +30,7 @@ export function Navbar() {
   const [isStatusPopoverOpen, setIsStatusPopoverOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showNavAutocomplete, setShowNavAutocomplete] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
@@ -68,6 +71,7 @@ export function Navbar() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowNavAutocomplete(false);
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
@@ -197,28 +201,77 @@ export function Navbar() {
               )}
             </div>
 
-            {/* Search Bar */}
+            {/* Search Bar with Voice Input & Real-time Autocomplete */}
             <form onSubmit={handleSearchSubmit} className="relative hidden sm:block">
               <input
                 type="text"
                 placeholder={catalogMode === "anime" ? "Search anime..." : "Titles, people, genres..."}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-44 md:w-52 lg:w-64 rounded-full border border-border-custom bg-surface/85 py-1.5 pl-4 pr-10 text-xs text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary backdrop-blur-md transition-all duration-300"
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowNavAutocomplete(true);
+                }}
+                onFocus={() => {
+                  if (searchQuery.trim().length >= 2) {
+                    setShowNavAutocomplete(true);
+                  }
+                }}
+                className="w-48 md:w-56 lg:w-64 rounded-full border border-border-custom bg-surface/85 py-1.5 pl-4 pr-16 text-xs text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary backdrop-blur-md transition-all duration-300"
               />
-              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
-                <Search className="h-4 w-4" />
-              </button>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                <VoiceSearchButton
+                  size="sm"
+                  onTranscript={(text) => {
+                    setSearchQuery(text);
+                    setShowNavAutocomplete(false);
+                    router.push(`/search?q=${encodeURIComponent(text)}`);
+                  }}
+                />
+                <button
+                  type="submit"
+                  aria-label="Submit search"
+                  className="p-1 text-on-surface-variant hover:text-primary transition-colors"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              {/* Real-time Autocomplete Dropdown */}
+              <SearchAutocompleteDropdown
+                query={searchQuery}
+                isOpen={showNavAutocomplete}
+                onClose={() => setShowNavAutocomplete(false)}
+                className="w-72 md:w-80 right-0 left-auto"
+                onSelectSuggestion={(suggestion) => {
+                  setShowNavAutocomplete(false);
+                  setSearchQuery("");
+                  router.push(suggestion.href);
+                }}
+                onViewAll={(q) => {
+                  setShowNavAutocomplete(false);
+                  setSearchQuery("");
+                  router.push(`/search?q=${encodeURIComponent(q)}`);
+                }}
+              />
             </form>
 
-            {/* Mobile Search Button */}
-            <button 
-              onClick={() => router.push("/search")}
-              aria-label="Open search"
-              className="p-2 sm:hidden rounded-xl border border-border-custom bg-surface/75 hover:bg-surface text-on-surface transition-colors"
-            >
-              <Search className="h-4 w-4" />
-            </button>
+            {/* Mobile Voice & Search Buttons */}
+            <div className="flex items-center gap-1 sm:hidden">
+              <VoiceSearchButton
+                size="sm"
+                className="rounded-xl border border-border-custom bg-surface/75"
+                onTranscript={(text) => {
+                  router.push(`/search?q=${encodeURIComponent(text)}`);
+                }}
+              />
+              <button 
+                onClick={() => router.push("/search")}
+                aria-label="Open search"
+                className="p-2 rounded-xl border border-border-custom bg-surface/75 hover:bg-surface text-on-surface transition-colors"
+              >
+                <Search className="h-4 w-4" />
+              </button>
+            </div>
 
             {/* Profile Menu Dropdown */}
             {currentProfile && (

@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Play, Star } from "lucide-react";
+import { Play, Star, X } from "lucide-react";
 import type { ContinueWatchingItem } from "@/lib/continue-watching";
-import { buildWatchUrl } from "@/lib/continue-watching";
+import { buildWatchUrl, getContinueWatchingItemId } from "@/lib/continue-watching";
+import { useContinueWatchingStore } from "@/stores";
 import { getTitleDetails } from "@/lib/tmdb";
 import { getAnimeDetails } from "@/lib/anilist";
 
@@ -14,6 +15,7 @@ interface ContinueWatchingCardProps {
 
 export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
   const router = useRouter();
+  const removeItem = useContinueWatchingStore((state) => state.removeItem);
   const [imageLoading, setImageLoading] = useState(true);
   const [hovered, setHovered] = useState(false);
   const [overview, setOverview] = useState(item.overview?.trim() || "");
@@ -38,6 +40,13 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
       : item.media_type.toUpperCase();
 
   const ratingLabel = rating != null ? rating.toFixed(1) : "N/A";
+
+  const handleRemove = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const id = getContinueWatchingItemId(item);
+    if (!id) return;
+    void removeItem(item.media_type, id);
+  };
 
   useEffect(() => {
     setOverview(item.overview?.trim() || "");
@@ -91,6 +100,17 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
       onMouseLeave={() => setHovered(false)}
       className="poster-card group/card relative aspect-[2/3] w-[128px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border-custom bg-surface transition-all duration-300 select-none hover:-translate-y-1.5 hover:scale-[1.03] hover:border-primary sm:w-[160px] md:w-[180px] lg:w-[200px]"
     >
+      {/* Quick Remove button */}
+      <button
+        type="button"
+        onClick={handleRemove}
+        aria-label={`Remove ${item.title} from Continue Watching`}
+        title="Remove from Continue Watching"
+        className="absolute right-2 top-2 z-30 flex h-6 w-6 items-center justify-center rounded-lg border border-white/15 bg-black/75 text-white/80 backdrop-blur-md transition-all hover:border-red-500/60 hover:bg-red-500/80 hover:text-white"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+
       {imageLoading && (
         <div className="absolute inset-0 flex animate-pulse items-center justify-center bg-neutral-900/90">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
@@ -128,7 +148,7 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
       </div>
 
       <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between bg-gradient-to-t from-black/95 via-black/55 to-black/25 p-3.5 opacity-0 transition-opacity duration-250 group-hover/card:pointer-events-auto group-hover/card:opacity-100">
-        <div className="flex justify-start">
+        <div className="flex justify-start pr-7">
           <span className="flex items-center gap-1 rounded border border-white/15 bg-black/70 px-2 py-0.5 font-mono text-[9px] text-white backdrop-blur-md">
             <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />
             <span>{ratingLabel}</span>

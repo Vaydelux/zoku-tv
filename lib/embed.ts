@@ -546,7 +546,8 @@ const EMBED_SERVER_INPUTS: EmbedServerInput[] = [
 export const EMBED_SERVER_CATALOG: EmbedServer[] = EMBED_SERVER_INPUTS.map((server) => {
   const compatibilityOnly = COMPATIBILITY_ONLY_SERVERS.has(server.id);
   return {
-    sandboxPolicy: "allow-scripts allow-same-origin allow-forms",
+    sandboxPolicy:
+      "allow-scripts allow-same-origin allow-forms allow-presentation allow-pointer-lock allow-top-navigation-by-user-activation",
     supportsSandbox: !compatibilityOnly,
     allowsPopups: compatibilityOnly,
     allowsFullscreen: true,

@@ -68,6 +68,7 @@ export function TitleCard({ title, mediaType }: TitleCardProps) {
         poster_path: title.poster_path,
         backdrop_path: title.backdrop_path,
         vote_average: title.vote_average,
+        release_date: title.release_date || title.first_air_date || null,
       });
     }
   };

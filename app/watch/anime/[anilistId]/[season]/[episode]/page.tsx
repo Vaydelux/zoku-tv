@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   RotateCcw,
   MonitorPlay,
+  Play,
+  Crosshair,
 } from "lucide-react";
 import { useSessionStore, useEpisodeProgressStore } from "@/stores";
 import { getAnimeDetails, getAnimeDisplayTitle, getAnimePoster } from "@/lib/anilist";
@@ -60,6 +62,7 @@ export default function AnimeWatchPage({ params }: AnimeWatchPageProps) {
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [selectedServerId, setSelectedServerId] = useState(DEFAULT_ANIME_SERVER_ID);
   const [loadAttempts, setLoadAttempts] = useState(0);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const { newServers, defaultServers } = groupAnimeEmbedServers();
   const selectedServer = getAnimeServerById(selectedServerId);
@@ -117,6 +120,10 @@ export default function AnimeWatchPage({ params }: AnimeWatchPageProps) {
 
   useEffect(() => {
     setIframeLoaded(false);
+    const unblockTimer = setTimeout(() => {
+      setIframeLoaded(true);
+    }, 2200);
+    return () => clearTimeout(unblockTimer);
   }, [selectedServerId, anilistId, seasonNum, episodeNum, loadAttempts]);
 
   const handleServerChange = (serverId: string) => {
@@ -217,6 +224,20 @@ export default function AnimeWatchPage({ params }: AnimeWatchPageProps) {
             newServers={newServers}
             defaultServers={defaultServers}
           />
+
+          {/* Target / Focus Player Button */}
+          <button
+            onClick={() => {
+              setIframeLoaded(true);
+              iframeRef.current?.focus();
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-white/10 hover:border-primary/60 bg-white/5 hover:bg-white/10 text-white text-[11px] font-semibold transition-all"
+            title="Focus and target anime player directly for clicks & controls"
+          >
+            <Crosshair className="h-3 w-3 text-primary" />
+            <span className="hidden sm:inline">Target Player</span>
+          </button>
+
           <button
             onClick={triggerNextServer}
             className="p-1.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white transition-all"
@@ -244,25 +265,52 @@ export default function AnimeWatchPage({ params }: AnimeWatchPageProps) {
       {/* 2. Embedded Video Player */}
       <div className="relative w-full aspect-video max-h-[75vh] bg-black isolate mx-auto">
         {!iframeLoaded && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950 gap-3">
+          <div
+            onClick={() => {
+              setIframeLoaded(true);
+              iframeRef.current?.focus();
+            }}
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950/90 gap-3 cursor-pointer"
+            title="Click anywhere to dismiss and interact directly with anime player"
+          >
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <p className="text-xs font-mono text-white/60">Loading {selectedServer.name} player...</p>
-            <button
-              onClick={triggerNextServer}
-              className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] text-white transition-all font-semibold"
-            >
-              Cycle Server Fallback
-            </button>
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIframeLoaded(true);
+                  iframeRef.current?.focus();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-[11px] font-bold shadow-md active:scale-95 transition-all"
+              >
+                <Play className="h-3 w-3 fill-current" />
+                <span>Target & Play Stream</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerNextServer();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] text-white transition-all font-semibold"
+              >
+                Cycle Server Fallback
+              </button>
+            </div>
           </div>
         )}
 
         <iframe
+          ref={iframeRef}
           key={`${selectedServerId}_${anilistId}_${seasonNum}_${episodeNum}_${loadAttempts}`}
           src={embedUrl}
           onLoad={() => setIframeLoaded(true)}
-          className="w-full h-full border-0 absolute inset-0 z-0 bg-black"
+          tabIndex={0}
+          className="w-full h-full border-0 absolute inset-0 z-0 bg-black focus:outline-none"
           allowFullScreen
-          allow="autoplay; encrypted-media; picture-in-picture"
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; screen-wake-lock; clipboard-write; web-share"
           referrerPolicy="no-referrer"
           title={`${selectedServer.name} anime player`}
         />

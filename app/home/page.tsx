@@ -31,13 +31,11 @@ import { TMDBTitle, TMDBGenre } from "@/lib/tmdb";
 import { loadHomeGenreRails, loadHomeTrending } from "@/lib/load-home-content";
 import { loadAnimeHomeContent } from "@/lib/load-anime-home-content";
 import type { AniListMedia } from "@/lib/anilist";
-import { getAnimeDisplayTitle, getAnimePoster } from "@/lib/anilist";
 import { filterContinueWatchingByCatalog } from "@/lib/continue-watching";
 import {
   filterWatchHistoryByCatalog,
   getWatchHistoryItemId,
   type WatchHistoryItem,
-  type WatchHistoryUpsertInput,
 } from "@/lib/watch-history";
 import {
   THEME_OPTIONS,
@@ -50,9 +48,6 @@ export default function HomePage() {
   const continueWatchingItems = useContinueWatchingStore((state) => state.items);
   const watchHistoryItems = useWatchHistoryStore((state) => state.items);
   const removeWatchHistoryItem = useWatchHistoryStore((state) => state.removeItem);
-  const seedInitialHistoryIfNeeded = useWatchHistoryStore(
-    (state) => state.seedInitialHistoryIfNeeded
-  );
   const watchlistItems = useWatchlistStore((state) => state.items);
 
   const catalogMode = currentProfile?.catalogMode ?? "tmdb";
@@ -190,81 +185,6 @@ export default function HomePage() {
   const handleRefreshWatchHistoryCache = async () => {
     setCacheRefreshVersion((prev) => prev + 1);
   };
-
-  // Build seed candidates from loaded catalog so Watch History is populated on first visit
-  const historySeedCandidates = useMemo<WatchHistoryUpsertInput[]>(() => {
-    if (catalogMode === "anime") {
-      return animeTrending.slice(0, 6).map((anime, idx) => ({
-        media_type: "anime" as const,
-        anilistId: anime.id,
-        season: 1,
-        episode: idx % 2 === 0 ? 12 : 4,
-        title: getAnimeDisplayTitle(anime),
-        overview: anime.description ?? null,
-        vote_average: anime.averageScore ? anime.averageScore / 10 : null,
-        poster_path: getAnimePoster(anime),
-        backdrop_path: anime.bannerImage ?? getAnimePoster(anime),
-        progress_percent: idx % 2 === 0 ? 100 : 64,
-        completed: idx % 2 === 0,
-      }));
-    }
-
-    const combined: WatchHistoryUpsertInput[] = [];
-    trendingMovies.slice(0, 4).forEach((movie, idx) => {
-      combined.push({
-        media_type: "movie",
-        tmdbId: movie.id,
-        title: movie.title || movie.name || "Untitled",
-        overview: movie.overview ?? null,
-        vote_average: movie.vote_average ?? null,
-        poster_path: movie.poster_path ?? null,
-        backdrop_path: movie.backdrop_path ?? null,
-        progress_percent: idx < 3 ? 100 : 58,
-        completed: idx < 3,
-      });
-    });
-    trendingTV.slice(0, 3).forEach((show, idx) => {
-      combined.push({
-        media_type: "tv",
-        tmdbId: show.id,
-        season: 1,
-        episode: idx === 0 ? 8 : 3,
-        title: show.name || show.title || "Untitled",
-        overview: show.overview ?? null,
-        vote_average: show.vote_average ?? null,
-        poster_path: show.poster_path ?? null,
-        backdrop_path: show.backdrop_path ?? null,
-        progress_percent: idx === 0 ? 100 : 72,
-        completed: idx === 0,
-      });
-    });
-    return combined;
-  }, [catalogMode, trendingMovies, trendingTV, animeTrending]);
-
-  useEffect(() => {
-    if (!user || !currentProfile || historySeedCandidates.length === 0) return;
-    void seedInitialHistoryIfNeeded(catalogMode, historySeedCandidates);
-    const partialCandidates = historySeedCandidates
-      .filter((c) => !c.completed)
-      .map((c, idx) => ({
-        media_type: c.media_type,
-        tmdbId: c.tmdbId ?? undefined,
-        anilistId: c.anilistId ?? undefined,
-        season: c.season ?? undefined,
-        episode: c.episode ?? undefined,
-        title: c.title,
-        overview: c.overview,
-        vote_average: c.vote_average,
-        poster_path: c.poster_path,
-        backdrop_path: c.backdrop_path,
-        progress_percent: idx === 0 ? 68 : 42,
-        current_time_sec: idx === 0 ? 2840 : 1420,
-        duration_sec: 4400,
-      }));
-    void useContinueWatchingStore
-      .getState()
-      .seedInitialContinueWatchingIfNeeded(catalogMode, partialCandidates);
-  }, [user, currentProfile, catalogMode, historySeedCandidates, seedInitialHistoryIfNeeded]);
 
   const loadingMedia = loadingTrending || loadingGenreRails;
 
@@ -490,7 +410,6 @@ export default function HomePage() {
         <WatchHistoryRail
           items={filteredHistory}
           catalogMode={catalogMode}
-          seedCandidates={historySeedCandidates}
           onQuickRemoveItem={handleQuickRemoveHistoryItem}
           onClearCache={handleRefreshWatchHistoryCache}
         />

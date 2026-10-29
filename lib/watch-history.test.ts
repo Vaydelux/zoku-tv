@@ -5,6 +5,7 @@ import {
   removeWatchHistoryEntry,
   purgeLocalWatchedAndMediaCaches,
   resetWatchHistoryProgress,
+  sanitizeWatchHistoryItems,
   mergeWatchHistory,
   filterWatchHistoryByCatalog,
   filterWatchHistoryByStatus,
@@ -12,6 +13,7 @@ import {
   type WatchHistoryItem,
   type StorageLike,
 } from "./watch-history";
+import { sanitizeContinueWatchingItems, type ContinueWatchingItem } from "./continue-watching";
 
 describe("watch-history pure domain logic", () => {
   it("records partially watched items and preserves progress", () => {
@@ -231,6 +233,72 @@ describe("watch-history pure domain logic", () => {
     assert.equal(reset.entry.watch_count, 2);
     assert.equal(reset.items[0].progress_percent, 0);
   });
+
+  it("strips synthetic auto-seeded entries from Continue Watching and Watch History while keeping genuine watched titles", () => {
+    const baseMs = 1793284572564;
+    const cwItems: ContinueWatchingItem[] = [
+      {
+        media_type: "movie",
+        tmdbId: 9991,
+        title: "Unwatched Trending Movie",
+        last_watched_at: new Date(baseMs - 2 * 3600_000).toISOString(),
+        progress_percent: 68,
+        current_time_sec: 2840,
+        duration_sec: 4400,
+      },
+      {
+        media_type: "movie",
+        tmdbId: 550,
+        title: "Fight Club (Actually Watched)",
+        last_watched_at: "2026-10-29T14:22:19.123Z",
+        progress_percent: 37,
+        current_time_sec: 1920,
+        duration_sec: 5180,
+      },
+    ];
+
+    const sanitizedCw = sanitizeContinueWatchingItems(cwItems);
+    assert.equal(sanitizedCw.removed.length, 1);
+    assert.equal(sanitizedCw.removed[0].tmdbId, 9991);
+    assert.equal(sanitizedCw.valid.length, 1);
+    assert.equal(sanitizedCw.valid[0].tmdbId, 550);
+
+    const historyItems: WatchHistoryItem[] = [
+      {
+        media_type: "movie",
+        tmdbId: 9992,
+        title: "Seeded Completed 1",
+        last_watched_at: new Date(baseMs - 1.5 * 3600_000).toISOString(),
+        progress_percent: 100,
+        completed: true,
+        watch_count: 2,
+      },
+      {
+        media_type: "movie",
+        tmdbId: 9993,
+        title: "Seeded Completed 2",
+        last_watched_at: new Date(baseMs - 3.0 * 3600_000).toISOString(),
+        progress_percent: 100,
+        completed: true,
+        watch_count: 1,
+      },
+      {
+        media_type: "movie",
+        tmdbId: 872585,
+        title: "Oppenheimer (Actually Watched)",
+        last_watched_at: "2026-10-29T16:05:11.987Z",
+        progress_percent: 100,
+        completed: true,
+        watch_count: 1,
+      },
+    ];
+
+    const sanitizedHistory = sanitizeWatchHistoryItems(historyItems);
+    assert.equal(sanitizedHistory.removed.length, 2);
+    assert.equal(sanitizedHistory.valid.length, 1);
+    assert.equal(sanitizedHistory.valid[0].tmdbId, 872585);
+  });
 });
+
 
 

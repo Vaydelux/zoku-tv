@@ -1,7 +1,10 @@
 import type { ContinueWatchingDoc, WatchHistoryDoc } from "@/lib/firestore-types";
 import type { MediaType } from "@/lib/media-types";
 import { watchlistEntryKey, getWatchlistItemId } from "@/lib/media-types";
-import { COMPLETION_THRESHOLD_PERCENT } from "@/lib/continue-watching";
+import {
+  COMPLETION_THRESHOLD_PERCENT,
+  sanitizeContinueWatchingItems,
+} from "@/lib/continue-watching";
 
 export const MAX_WATCH_HISTORY_ITEMS = 40;
 
@@ -42,13 +45,95 @@ export function watchHistorySeededKey(profileId: string, catalogMode: "tmdb" | "
   return `zoku_watch_history_seeded_${profileId}_${catalogMode}`;
 }
 
+export function isSyntheticWatchHistoryItem(
+  item: WatchHistoryItem,
+  allItems: WatchHistoryItem[] = []
+): boolean {
+  if (
+    item.duration_sec === 4400 &&
+    (item.current_time_sec === 2840 || item.current_time_sec === 1420)
+  ) {
+    return true;
+  }
+  if (
+    item.duration_sec === 4300 &&
+    (item.current_time_sec === 2900 || item.current_time_sec === 1450)
+  ) {
+    return true;
+  }
+
+  if (
+    !item.completed &&
+    item.duration_sec == null &&
+    (item.current_time_sec == null || item.current_time_sec === 0)
+  ) {
+    if (item.media_type === "movie" && item.progress_percent === 58) return true;
+    if (
+      item.media_type === "tv" &&
+      item.progress_percent === 72 &&
+      item.season === 1 &&
+      item.episode === 3
+    ) {
+      return true;
+    }
+    if (
+      item.media_type === "anime" &&
+      item.progress_percent === 64 &&
+      item.season === 1 &&
+      item.episode === 4
+    ) {
+      return true;
+    }
+  }
+
+  const itemTs = Date.parse(item.last_watched_at);
+  if (Number.isFinite(itemTs) && itemTs % 60_000 !== 0 && allItems.length > 1) {
+    for (const other of allItems) {
+      if (other === item) continue;
+      const otherId = getWatchHistoryItemId(other);
+      const thisId = getWatchHistoryItemId(item);
+      if (other.media_type === item.media_type && otherId === thisId) continue;
+      const otherTs = Date.parse(other.last_watched_at);
+      if (!Number.isFinite(otherTs)) continue;
+      const diff = Math.abs(itemTs - otherTs);
+      if (diff > 0 && diff % 1_800_000 === 0) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+export function sanitizeWatchHistoryItems(
+  items: WatchHistoryItem[]
+): { valid: WatchHistoryItem[]; removed: WatchHistoryItem[] } {
+  const valid: WatchHistoryItem[] = [];
+  const removed: WatchHistoryItem[] = [];
+
+  for (const item of items) {
+    if (isSyntheticWatchHistoryItem(item, items)) {
+      removed.push(item);
+    } else {
+      valid.push(item);
+    }
+  }
+
+  return { valid, removed };
+}
+
 export function readLocalWatchHistory(profileId: string): WatchHistoryItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(watchHistoryStorageKey(profileId));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as WatchHistoryItem[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    const { valid, removed } = sanitizeWatchHistoryItems(parsed);
+    if (removed.length > 0) {
+      writeLocalWatchHistory(profileId, valid);
+    }
+    return valid;
   } catch {
     return [];
   }
@@ -119,14 +204,18 @@ export function purgeLocalWatchedAndMediaCaches(
     const isProfileWatchCache =
       profileId &&
       (key === watchHistoryStorageKey(profileId) ||
-        key === `zoku_continue_${profileId}`);
+        key === `zoku_continue_${profileId}` ||
+        key.startsWith(`zoku_watch_history_seeded_${profileId}_`) ||
+        key.startsWith(`zoku_cw_seeded_${profileId}_`));
 
     const isCatalogOrWatchCache =
       Boolean(isProfileWatchCache) ||
       key.startsWith("zoku_tmdb_cache_") ||
       key.startsWith("zoku_anilist_cache_") ||
       (!profileId &&
-        (key.startsWith("zoku_watch_history_") || key.startsWith("zoku_continue_")));
+        (key.startsWith("zoku_watch_history_") ||
+          key.startsWith("zoku_continue_") ||
+          key.startsWith("zoku_cw_seeded_")));
 
     if (isCatalogOrWatchCache) {
       keysToRemove.push(key);
@@ -260,8 +349,11 @@ export function mergeWatchHistory(
   continueWatching: ContinueWatchingDoc[] = []
 ): WatchHistoryItem[] {
   const merged = new Map<string, WatchHistoryItem>();
+  const cleanCloud = sanitizeWatchHistoryItems(cloud).valid;
+  const cleanLocal = sanitizeWatchHistoryItems(local).valid;
+  const cleanCw = sanitizeContinueWatchingItems(continueWatching).valid;
 
-  for (const entry of cloud) {
+  for (const entry of cleanCloud) {
     const id = getWatchHistoryItemId(entry);
     if (!id) continue;
     merged.set(watchHistoryEntryKey(entry.media_type, id), {
@@ -271,7 +363,7 @@ export function mergeWatchHistory(
     });
   }
 
-  for (const entry of local) {
+  for (const entry of cleanLocal) {
     const id = getWatchHistoryItemId(entry);
     if (!id) continue;
     const key = watchHistoryEntryKey(entry.media_type, id);
@@ -294,7 +386,7 @@ export function mergeWatchHistory(
     });
   }
 
-  for (const cw of continueWatching) {
+  for (const cw of cleanCw) {
     const id = cw.media_type === "anime" ? (cw.anilistId ?? 0) : (cw.tmdbId ?? 0);
     if (!id) continue;
     const key = watchHistoryEntryKey(cw.media_type, id);
@@ -342,6 +434,35 @@ export function filterWatchHistoryByStatus(
   }
   if (statusFilter === "partial") {
     return items.filter((item) => !item.completed);
+  }
+  return items;
+}
+
+export type WatchHistoryTypeFilter = "all" | "movie" | "tv";
+
+/**
+ * Filters watch history items by media type:
+ * - 'all': returns all items
+ * - 'movie': returns movies (including anime movies)
+ * - 'tv': returns TV series (including episodic anime)
+ */
+export function filterWatchHistoryByType(
+  items: WatchHistoryItem[],
+  typeFilter: WatchHistoryTypeFilter
+): WatchHistoryItem[] {
+  if (typeFilter === "movie") {
+    return items.filter(
+      (item) =>
+        item.media_type === "movie" ||
+        (item.media_type === "anime" && (item.title || "").toLowerCase().includes("movie"))
+    );
+  }
+  if (typeFilter === "tv") {
+    return items.filter(
+      (item) =>
+        item.media_type === "tv" ||
+        (item.media_type === "anime" && !(item.title || "").toLowerCase().includes("movie"))
+    );
   }
   return items;
 }

@@ -24,11 +24,71 @@ export function continueWatchingStorageKey(profileId: string) {
   return `zoku_continue_${profileId}`;
 }
 
+export function isSyntheticContinueWatchingItem(
+  item: ContinueWatchingItem,
+  allItems: ContinueWatchingItem[] = []
+): boolean {
+  if (
+    item.duration_sec === 4400 &&
+    (item.current_time_sec === 2840 || item.current_time_sec === 1420)
+  ) {
+    return true;
+  }
+  if (
+    item.duration_sec === 4300 &&
+    (item.current_time_sec === 2900 || item.current_time_sec === 1450)
+  ) {
+    return true;
+  }
+
+  const itemTs = Date.parse(item.last_watched_at);
+  if (Number.isFinite(itemTs) && itemTs % 60_000 !== 0 && allItems.length > 1) {
+    for (const other of allItems) {
+      if (other === item) continue;
+      const otherId = getContinueWatchingItemId(other);
+      const thisId = getContinueWatchingItemId(item);
+      if (other.media_type === item.media_type && otherId === thisId) continue;
+      const otherTs = Date.parse(other.last_watched_at);
+      if (!Number.isFinite(otherTs)) continue;
+      const diff = Math.abs(itemTs - otherTs);
+      if (diff > 0 && diff % 1_800_000 === 0) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+export function sanitizeContinueWatchingItems(
+  items: ContinueWatchingItem[]
+): { valid: ContinueWatchingItem[]; removed: ContinueWatchingItem[] } {
+  const valid: ContinueWatchingItem[] = [];
+  const removed: ContinueWatchingItem[] = [];
+
+  for (const item of items) {
+    if (isSyntheticContinueWatchingItem(item, items)) {
+      removed.push(item);
+    } else {
+      valid.push(item);
+    }
+  }
+
+  return { valid, removed };
+}
+
 export function readLocalContinueWatching(profileId: string): ContinueWatchingItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(continueWatchingStorageKey(profileId));
-    return raw ? (JSON.parse(raw) as ContinueWatchingItem[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as ContinueWatchingItem[];
+    if (!Array.isArray(parsed)) return [];
+    const { valid, removed } = sanitizeContinueWatchingItems(parsed);
+    if (removed.length > 0) {
+      writeLocalContinueWatching(profileId, valid);
+    }
+    return valid;
   } catch {
     return [];
   }
@@ -60,15 +120,17 @@ export function mergeContinueWatching(
   cloud: ContinueWatchingItem[]
 ): ContinueWatchingItem[] {
   const merged = new Map<string, ContinueWatchingItem>();
+  const cleanCloud = sanitizeContinueWatchingItems(cloud).valid;
+  const cleanLocal = sanitizeContinueWatchingItems(local).valid;
 
-  for (const entry of cloud) {
+  for (const entry of cleanCloud) {
     merged.set(
       continueWatchingEntryKey(entry.media_type, getContinueWatchingItemId(entry)),
       entry
     );
   }
 
-  for (const entry of local) {
+  for (const entry of cleanLocal) {
     const key = continueWatchingEntryKey(entry.media_type, getContinueWatchingItemId(entry));
     const existing = merged.get(key);
     if (!existing) {

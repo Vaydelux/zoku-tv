@@ -56,6 +56,11 @@ export function AnimeCard({ anime }: AnimeCardProps) {
     if (isInWatchlist) {
       removeItem("anime", anime.id);
     } else {
+      const relDate = anime.startDate?.year
+        ? `${anime.startDate.year}-${String(anime.startDate.month || 1).padStart(2, "0")}-${String(anime.startDate.day || 1).padStart(2, "0")}`
+        : anime.seasonYear
+        ? `${anime.seasonYear}-01-01`
+        : null;
       addItem({
         media_type: "anime",
         anilistId: anime.id,
@@ -63,6 +68,7 @@ export function AnimeCard({ anime }: AnimeCardProps) {
         poster_path: getAnimePoster(anime),
         backdrop_path: anime.bannerImage ?? null,
         vote_average: anime.averageScore ? anime.averageScore / 10 : undefined,
+        release_date: relDate,
       });
     }
   };

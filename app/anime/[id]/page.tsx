@@ -92,6 +92,11 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
     if (inWatchlist) {
       removeItem("anime", anilistId);
     } else {
+      const relDate = details.startDate?.year
+        ? `${details.startDate.year}-${String(details.startDate.month || 1).padStart(2, "0")}-${String(details.startDate.day || 1).padStart(2, "0")}`
+        : details.seasonYear
+        ? `${details.seasonYear}-01-01`
+        : null;
       addItem({
         media_type: "anime",
         anilistId,
@@ -99,6 +104,7 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
         poster_path: poster,
         backdrop_path: details.bannerImage ?? null,
         vote_average: details.averageScore ? details.averageScore / 10 : undefined,
+        release_date: relDate,
       });
     }
   };
