@@ -34,6 +34,33 @@ import {
   writeLocalContinueWatching,
   type ContinueWatchingItem,
 } from "@/lib/continue-watching";
+import {
+  MAX_WATCH_HISTORY_ITEMS,
+  buildRewatchUrl,
+  clearLocalWatchHistory,
+  getWatchHistoryItemId,
+  mergeWatchHistory,
+  purgeLocalWatchedAndMediaCaches,
+  readLocalWatchHistory,
+  removeWatchHistoryEntry,
+  resetWatchHistoryProgress,
+  upsertWatchHistoryEntry,
+  watchHistoryEntryKey,
+  watchHistorySeededKey,
+  writeLocalWatchHistory,
+  type WatchHistoryItem,
+  type WatchHistoryUpsertInput,
+} from "@/lib/watch-history";
+import {
+  episodeProgressKey,
+  mergeEpisodeProgress,
+  readLocalEpisodeProgress,
+  resetEpisodeProgressRecord,
+  upsertEpisodeProgressRecord,
+  writeLocalEpisodeProgress,
+  type EpisodeProgressRecord,
+  type EpisodeProgressUpsertInput,
+} from "@/lib/episode-progress";
 import type { CatalogMode, MediaType } from "@/lib/media-types";
 import { watchlistEntryKey, getWatchlistItemId } from "@/lib/media-types";
 
@@ -515,6 +542,10 @@ interface ContinueWatchingState {
   recordWatching: (input: ContinueWatchingRecordInput) => void;
   recordProgress: (input: ContinueWatchingRecordInput) => void;
   removeItem: (media_type: MediaType, id: number) => Promise<void>;
+  seedInitialContinueWatchingIfNeeded: (
+    catalogMode: "tmdb" | "anime",
+    candidates: ContinueWatchingRecordInput[]
+  ) => Promise<void>;
 }
 
 let recordTimer: ReturnType<typeof setTimeout> | null = null;
@@ -550,7 +581,27 @@ async function flushContinueWatchingRecord(
   const currentTimeSec = input.current_time_sec ?? (sameEpisode ? previous?.current_time_sec : null);
   const durationSec = input.duration_sec ?? (sameEpisode ? previous?.duration_sec : null);
 
-  if (progressPercent != null && progressPercent >= COMPLETION_THRESHOLD_PERCENT) {
+  // Always record into Watch History (marking completed when >= threshold)
+  const isCompleted = progressPercent != null && progressPercent >= COMPLETION_THRESHOLD_PERCENT;
+  void useWatchHistoryStore.getState().recordHistory({
+    media_type: input.media_type,
+    tmdbId: input.media_type === "anime" ? null : input.tmdbId ?? null,
+    anilistId: input.media_type === "anime" ? input.anilistId ?? null : null,
+    season: input.season ?? null,
+    episode: input.episode ?? null,
+    title: input.title,
+    overview: input.overview ?? previous?.overview ?? null,
+    vote_average: input.vote_average ?? previous?.vote_average ?? null,
+    poster_path: input.poster_path ?? previous?.poster_path ?? null,
+    backdrop_path: input.backdrop_path ?? previous?.backdrop_path ?? null,
+    progress_percent: isCompleted ? 100 : (progressPercent ?? 24),
+    current_time_sec: isCompleted ? 0 : currentTimeSec,
+    duration_sec: durationSec,
+    completed: isCompleted,
+    last_watched_at: now,
+  });
+
+  if (isCompleted) {
     await get().removeItem(input.media_type, itemId);
     return;
   }
@@ -581,12 +632,12 @@ async function flushContinueWatchingRecord(
   ].slice(0, MAX_CONTINUE_WATCHING_ITEMS);
 
   set({ items: nextItems });
+  writeLocalContinueWatching(profileId, nextItems);
 
   try {
     const docRef = getDocRef(colPath, key);
     await setDocument(docRef, entry);
   } catch (e) {
-    writeLocalContinueWatching(profileId, nextItems);
     console.error("Failed to save continue watching entry", e);
   }
 }
@@ -691,11 +742,11 @@ export const useContinueWatchingStore = create<ContinueWatchingState>((set, get)
     if (!user || !profile) return;
 
     const currentItems = get().items;
-    set({
-      items: currentItems.filter(
-        (item) => !(item.media_type === media_type && getContinueWatchingItemId(item) === id)
-      ),
-    });
+    const nextItems = currentItems.filter(
+      (item) => !(item.media_type === media_type && getContinueWatchingItemId(item) === id)
+    );
+    set({ items: nextItems });
+    writeLocalContinueWatching(profile.id, nextItems);
 
     try {
       const docRef = getDocRef(
@@ -706,6 +757,541 @@ export const useContinueWatchingStore = create<ContinueWatchingState>((set, get)
     } catch (e) {
       set({ items: currentItems });
       console.error("Failed to remove continue watching entry", e);
+    }
+  },
+
+  seedInitialContinueWatchingIfNeeded: async (catalogMode, candidates) => {
+    if (typeof window === "undefined" || candidates.length === 0) return;
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+    if (!user || !profile) return;
+
+    const seedKey = `zoku_cw_seeded_${profile.id}_${catalogMode}`;
+    if (localStorage.getItem(seedKey) === "1") return;
+
+    const existingForMode = get().items.filter((item) =>
+      catalogMode === "anime"
+        ? item.media_type === "anime"
+        : item.media_type === "movie" || item.media_type === "tv"
+    );
+    if (existingForMode.length > 0) {
+      localStorage.setItem(seedKey, "1");
+      return;
+    }
+
+    localStorage.setItem(seedKey, "1");
+    const nowMs = Date.now();
+    const seeded: ContinueWatchingItem[] = candidates.slice(0, 3).map((c, idx) => ({
+      media_type: c.media_type,
+      tmdbId: c.media_type === "anime" ? null : (c.tmdbId ?? null),
+      anilistId: c.media_type === "anime" ? (c.anilistId ?? null) : null,
+      season: c.season ?? null,
+      episode: c.episode ?? null,
+      title: c.title,
+      overview: c.overview ?? null,
+      vote_average: c.vote_average ?? null,
+      poster_path: c.poster_path ?? null,
+      backdrop_path: c.backdrop_path ?? null,
+      last_watched_at: new Date(nowMs - (idx + 1) * 3600_000 * 2).toISOString(),
+      progress_percent: c.progress_percent ?? (idx === 0 ? 68 : idx === 1 ? 42 : 25),
+      current_time_sec: c.current_time_sec ?? (idx === 0 ? 2900 : 1450),
+      duration_sec: c.duration_sec ?? 4300,
+    }));
+
+    const nextItems = mergeContinueWatching(seeded, get().items);
+    set({ items: nextItems });
+    writeLocalContinueWatching(profile.id, nextItems);
+
+    try {
+      await Promise.all(
+        seeded.map((entry) => {
+          const docRef = getDocRef(
+            `users/${user.uid}/profiles/${profile.id}/continueWatching`,
+            continueWatchingEntryKey(entry.media_type, getContinueWatchingItemId(entry))
+          );
+          return setDocument(docRef, entry);
+        })
+      );
+    } catch (e) {
+      console.error("Failed to seed initial continue watching items", e);
+    }
+  },
+}));
+
+// === 2c. WATCH HISTORY STORE ===
+
+interface WatchHistoryState {
+  items: WatchHistoryItem[];
+  initWatchHistory: () => () => void;
+  getEntry: (media_type: MediaType, id: number) => WatchHistoryItem | undefined;
+  hasEntry: (media_type: MediaType, id: number) => boolean;
+  isCompleted: (media_type: MediaType, id: number) => boolean;
+  recordHistory: (input: WatchHistoryUpsertInput) => Promise<void>;
+  toggleCompleted: (input: WatchHistoryUpsertInput) => Promise<void>;
+  removeItem: (media_type: MediaType, id: number) => Promise<void>;
+  clearHistory: (catalogMode?: "tmdb" | "anime") => Promise<void>;
+  refreshLocalHistoryCache: () => Promise<{ clearedKeys: number }>;
+  seedInitialHistoryIfNeeded: (
+    catalogMode: "tmdb" | "anime",
+    candidates: WatchHistoryUpsertInput[]
+  ) => Promise<void>;
+  watchAgain: (item: WatchHistoryItem) => Promise<string>;
+}
+
+export const useWatchHistoryStore = create<WatchHistoryState>((set, get) => ({
+  items: [],
+
+  initWatchHistory: () => {
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+
+    if (!user || !profile) {
+      set({ items: [] });
+      return () => {};
+    }
+
+    const profileId = profile.id;
+    const colPath = `users/${user.uid}/profiles/${profileId}/watchHistory`;
+    const localItems = readLocalWatchHistory(profileId);
+    const cwItems = useContinueWatchingStore.getState().items;
+
+    if (localItems.length > 0 || cwItems.length > 0) {
+      set({ items: mergeWatchHistory(localItems, get().items, cwItems) });
+    }
+
+    const colRef = getCollectionRef(colPath);
+    const unsubscribe = listenToOrderedCollection(
+      colRef,
+      { orderByField: "last_watched_at", direction: "desc", limitTo: MAX_WATCH_HISTORY_ITEMS },
+      (snapshot) => {
+        const cloudItems: WatchHistoryItem[] = [];
+        snapshot.forEach((docSnap: { data: () => WatchHistoryItem }) => {
+          cloudItems.push(docSnap.data() as WatchHistoryItem);
+        });
+
+        const latestLocal = readLocalWatchHistory(profileId);
+        const latestCw = useContinueWatchingStore.getState().items;
+        const merged = mergeWatchHistory(latestLocal, cloudItems, latestCw);
+        set({ items: merged });
+        writeLocalWatchHistory(profileId, merged);
+      }
+    );
+
+    return unsubscribe;
+  },
+
+  getEntry: (media_type, id) => {
+    return get().items.find(
+      (item) => item.media_type === media_type && getWatchHistoryItemId(item) === id
+    );
+  },
+
+  hasEntry: (media_type, id) => {
+    return get().items.some(
+      (item) => item.media_type === media_type && getWatchHistoryItemId(item) === id
+    );
+  },
+
+  isCompleted: (media_type, id) => {
+    const entry = get().items.find(
+      (item) => item.media_type === media_type && getWatchHistoryItemId(item) === id
+    );
+    return Boolean(entry?.completed);
+  },
+
+  recordHistory: async (input) => {
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+    if (!user || !profile) return;
+
+    const result = upsertWatchHistoryEntry(get().items, input);
+    if (!result) return;
+
+    const { entry, items: nextItems } = result;
+    const itemId = getWatchHistoryItemId(entry);
+    const key = watchHistoryEntryKey(entry.media_type, itemId);
+
+    set({ items: nextItems });
+    writeLocalWatchHistory(profile.id, nextItems);
+
+    try {
+      const docRef = getDocRef(`users/${user.uid}/profiles/${profile.id}/watchHistory`, key);
+      await setDocument(docRef, entry);
+    } catch (e) {
+      console.error("Failed to persist watch history entry", e);
+    }
+  },
+
+  toggleCompleted: async (input) => {
+    const itemId = input.media_type === "anime" ? input.anilistId : input.tmdbId;
+    if (!itemId) return;
+
+    const existing = get().getEntry(input.media_type, itemId);
+    const nextCompleted = existing ? !existing.completed : true;
+
+    await get().recordHistory({
+      ...input,
+      completed: nextCompleted,
+      progress_percent: nextCompleted ? 100 : 45,
+      current_time_sec: nextCompleted ? 0 : (existing?.current_time_sec ?? 1200),
+    });
+
+    if (nextCompleted) {
+      // Completed items move out of Continue Watching and live in Watch History
+      await useContinueWatchingStore.getState().removeItem(input.media_type, itemId);
+    }
+  },
+
+  removeItem: async (media_type, id) => {
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+    if (!user || !profile) return;
+
+    const currentItems = get().items;
+    const nextItems = removeWatchHistoryEntry(currentItems, media_type, id);
+    set({ items: nextItems });
+    writeLocalWatchHistory(profile.id, nextItems);
+
+    // Also remove from Continue Watching if present so mergeWatchHistory doesn't resurrect it
+    if (useContinueWatchingStore.getState().getEntry(media_type, id)) {
+      void useContinueWatchingStore.getState().removeItem(media_type, id);
+    }
+
+    try {
+      const docRef = getDocRef(
+        `users/${user.uid}/profiles/${profile.id}/watchHistory`,
+        watchHistoryEntryKey(media_type, id)
+      );
+      await deleteDocument(docRef);
+    } catch (e) {
+      set({ items: currentItems });
+      console.error("Failed to remove watch history entry", e);
+    }
+  },
+
+  clearHistory: async (catalogMode) => {
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+    if (!user || !profile) return;
+
+    const currentItems = get().items;
+    const toRemove = catalogMode
+      ? currentItems.filter((item) =>
+          catalogMode === "anime"
+            ? item.media_type === "anime"
+            : item.media_type === "movie" || item.media_type === "tv"
+        )
+      : currentItems;
+
+    const remaining = catalogMode
+      ? currentItems.filter((item) =>
+          catalogMode === "anime"
+            ? item.media_type !== "anime"
+            : item.media_type === "anime"
+        )
+      : [];
+
+    set({ items: remaining });
+    if (remaining.length === 0) {
+      clearLocalWatchHistory(profile.id);
+    } else {
+      writeLocalWatchHistory(profile.id, remaining);
+    }
+
+    try {
+      await Promise.all(
+        toRemove.map((entry) => {
+          const docRef = getDocRef(
+            `users/${user.uid}/profiles/${profile.id}/watchHistory`,
+            watchHistoryEntryKey(entry.media_type, getWatchHistoryItemId(entry))
+          );
+          return deleteDocument(docRef);
+        })
+      );
+    } catch (e) {
+      console.error("Failed to clear watch history", e);
+    }
+  },
+
+  refreshLocalHistoryCache: async () => {
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+    if (!user || !profile || typeof window === "undefined") {
+      return { clearedKeys: 0 };
+    }
+
+    const removedKeys = purgeLocalWatchedAndMediaCaches(window.localStorage, profile.id);
+
+    if ("caches" in window) {
+      try {
+        const cacheNames = await window.caches.keys();
+        await Promise.all(cacheNames.map((name) => window.caches.delete(name)));
+      } catch {
+        // Ignore CacheStorage errors
+      }
+    }
+
+    try {
+      const historyColRef = getCollectionRef(`users/${user.uid}/profiles/${profile.id}/watchHistory`);
+      const cwColRef = getCollectionRef(`users/${user.uid}/profiles/${profile.id}/continueWatching`);
+
+      const [historySnap, cwSnap] = await Promise.all([
+        getCollectionDocs(historyColRef),
+        getCollectionDocs(cwColRef),
+      ]);
+
+      const cloudHistory: WatchHistoryItem[] = [];
+      historySnap.forEach((docSnap: { data: () => unknown }) => {
+        cloudHistory.push(docSnap.data() as WatchHistoryItem);
+      });
+
+      const cloudCw: ContinueWatchingItem[] = [];
+      cwSnap.forEach((docSnap: { data: () => unknown }) => {
+        cloudCw.push(docSnap.data() as ContinueWatchingItem);
+      });
+
+      const refreshed = mergeWatchHistory([], cloudHistory, cloudCw);
+      set({ items: refreshed });
+      writeLocalWatchHistory(profile.id, refreshed);
+      writeLocalContinueWatching(profile.id, cloudCw);
+    } catch (e) {
+      console.error("Failed to re-sync watch history after clearing local cache", e);
+    }
+
+    return { clearedKeys: Math.max(1, removedKeys.length) };
+  },
+
+  seedInitialHistoryIfNeeded: async (catalogMode, candidates) => {
+    if (typeof window === "undefined" || candidates.length === 0) return;
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+    if (!user || !profile) return;
+
+    const seedKey = watchHistorySeededKey(profile.id, catalogMode);
+    if (localStorage.getItem(seedKey) === "1") return;
+
+    const existingForMode = get().items.filter((item) =>
+      catalogMode === "anime"
+        ? item.media_type === "anime"
+        : item.media_type === "movie" || item.media_type === "tv"
+    );
+    if (existingForMode.length > 0) {
+      localStorage.setItem(seedKey, "1");
+      return;
+    }
+
+    localStorage.setItem(seedKey, "1");
+    let working = [...get().items];
+    const nowMs = Date.now();
+
+    const toSeed = candidates.slice(0, 6);
+    const seededEntries: WatchHistoryItem[] = [];
+
+    toSeed.forEach((candidate, idx) => {
+      const hoursAgo = candidate.completed ? (idx + 1) * 1.5 : (idx + 2) * 3.5;
+      const ts = new Date(nowMs - hoursAgo * 3600_000).toISOString();
+      const res = upsertWatchHistoryEntry(working, candidate, ts);
+      if (res) {
+        if (idx === 0 && res.entry.completed) {
+          res.entry.watch_count = 2;
+        }
+        working = res.items;
+        seededEntries.push(res.entry);
+      }
+    });
+
+    set({ items: working });
+    writeLocalWatchHistory(profile.id, working);
+
+    try {
+      await Promise.all(
+        seededEntries.map((entry) => {
+          const docRef = getDocRef(
+            `users/${user.uid}/profiles/${profile.id}/watchHistory`,
+            watchHistoryEntryKey(entry.media_type, getWatchHistoryItemId(entry))
+          );
+          return setDocument(docRef, entry);
+        })
+      );
+    } catch (e) {
+      console.error("Failed to persist initial watch history seed", e);
+    }
+  },
+
+  watchAgain: async (item) => {
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+    const targetUrl = buildRewatchUrl(item);
+
+    if (!user || !profile) {
+      return targetUrl;
+    }
+
+    const res = resetWatchHistoryProgress(get().items, item);
+    if (!res) return targetUrl;
+
+    const { entry, items: nextItems } = res;
+    set({ items: nextItems });
+    writeLocalWatchHistory(profile.id, nextItems);
+
+    const itemId = getWatchHistoryItemId(entry);
+    const key = watchHistoryEntryKey(entry.media_type, itemId);
+
+    // Remove or reset old progress from Continue Watching so it starts at 0%
+    await useContinueWatchingStore.getState().removeItem(entry.media_type, itemId);
+
+    // If TV or Anime, also reset episode 1 progress to 0% so episode thumbnail shows clean start
+    if (entry.media_type === "tv" || entry.media_type === "anime") {
+      void useEpisodeProgressStore.getState().resetEpisodeProgress(
+        entry.media_type,
+        itemId,
+        entry.season ?? 1,
+        entry.episode ?? 1
+      );
+    }
+
+    try {
+      const docRef = getDocRef(`users/${user.uid}/profiles/${profile.id}/watchHistory`, key);
+      await setDocument(docRef, entry);
+    } catch (e) {
+      console.error("Failed to persist watch again reset", e);
+    }
+
+    return targetUrl;
+  },
+}));
+
+// === 2d. EPISODE PROGRESS STORE ===
+
+interface EpisodeProgressState {
+  records: Record<string, EpisodeProgressRecord>;
+  initEpisodeProgress: () => () => void;
+  getProgress: (
+    media_type: "tv" | "anime",
+    id: number,
+    season: number,
+    episode: number
+  ) => EpisodeProgressRecord | null;
+  getProgressPercent: (
+    media_type: "tv" | "anime",
+    id: number,
+    season: number,
+    episode: number
+  ) => number;
+  isEpisodeCompleted: (
+    media_type: "tv" | "anime",
+    id: number,
+    season: number,
+    episode: number
+  ) => boolean;
+  recordEpisodeProgress: (input: EpisodeProgressUpsertInput) => Promise<void>;
+  resetEpisodeProgress: (
+    media_type: "tv" | "anime",
+    id: number,
+    season: number,
+    episode: number
+  ) => Promise<void>;
+}
+
+export const useEpisodeProgressStore = create<EpisodeProgressState>((set, get) => ({
+  records: {},
+
+  initEpisodeProgress: () => {
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+
+    if (!user || !profile) {
+      set({ records: {} });
+      return () => {};
+    }
+
+    const profileId = profile.id;
+    const colPath = `users/${user.uid}/profiles/${profileId}/episodeProgress`;
+    const localRecords = readLocalEpisodeProgress(profileId);
+    set({ records: localRecords });
+
+    const colRef = getCollectionRef(colPath);
+    const unsubscribe = listenToCollection(colRef, (snapshot) => {
+      const cloudRecords: EpisodeProgressRecord[] = [];
+      snapshot.forEach((docSnap: { data: () => EpisodeProgressRecord }) => {
+        cloudRecords.push(docSnap.data() as EpisodeProgressRecord);
+      });
+
+      const currentLocal = readLocalEpisodeProgress(profileId);
+      const merged = mergeEpisodeProgress(currentLocal, cloudRecords);
+      set({ records: merged });
+      writeLocalEpisodeProgress(profileId, merged);
+    });
+
+    return unsubscribe;
+  },
+
+  getProgress: (media_type, id, season, episode) => {
+    const key = episodeProgressKey(media_type, id, season, episode);
+    return get().records[key] ?? null;
+  },
+
+  getProgressPercent: (media_type, id, season, episode) => {
+    const rec = get().getProgress(media_type, id, season, episode);
+    return rec ? rec.progress_percent : 0;
+  },
+
+  isEpisodeCompleted: (media_type, id, season, episode) => {
+    const rec = get().getProgress(media_type, id, season, episode);
+    return Boolean(rec?.completed);
+  },
+
+  recordEpisodeProgress: async (input) => {
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+    if (!user || !profile) return;
+
+    const res = upsertEpisodeProgressRecord(get().records, input);
+    if (!res) return;
+
+    const { key, record, records } = res;
+    set({ records });
+    writeLocalEpisodeProgress(profile.id, records);
+
+    try {
+      const docRef = getDocRef(
+        `users/${user.uid}/profiles/${profile.id}/episodeProgress`,
+        key
+      );
+      await setDocument(docRef, record);
+    } catch (e) {
+      console.error("Failed to persist episode progress", e);
+    }
+  },
+
+  resetEpisodeProgress: async (media_type, id, season, episode) => {
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+    if (!user || !profile) return;
+
+    const res = resetEpisodeProgressRecord(get().records, media_type, id, season, episode);
+    set({ records: res.records });
+    writeLocalEpisodeProgress(profile.id, res.records);
+
+    try {
+      const docRef = getDocRef(
+        `users/${user.uid}/profiles/${profile.id}/episodeProgress`,
+        res.key
+      );
+      await setDocument(docRef, res.record);
+    } catch (e) {
+      console.error("Failed to reset episode progress", e);
     }
   },
 }));
@@ -720,6 +1306,7 @@ interface EmbedState {
   setIframeMode: (mode: "Strict" | "Compatibility") => void;
   markServerFailing: (id: string) => void;
   resetHealth: () => void;
+  hydrateEmbedPreferences: () => void;
 }
 
 export const useEmbedStore = create<EmbedState>((set, get) => ({
@@ -752,16 +1339,26 @@ export const useEmbedStore = create<EmbedState>((set, get) => ({
     set({ serverHealth: health });
   },
 
-  resetHealth: () => set({ serverHealth: {} })
-}));
+  resetHealth: () => set({ serverHealth: {} }),
 
-// Initialize Embed preferences from localStorage on startup if in browser
-if (typeof window !== "undefined") {
-  const savedServer = localStorage.getItem("zoku_selected_server_id");
-  const savedMode = localStorage.getItem("zoku_iframe_mode");
-  if (savedServer) useEmbedStore.setState({ selectedServerId: savedServer });
-  if (savedMode) useEmbedStore.setState({ iframeMode: savedMode as "Strict" | "Compatibility" });
-}
+  hydrateEmbedPreferences: () => {
+    if (typeof window === "undefined") return;
+    try {
+      const savedServer = localStorage.getItem("zoku_selected_server_id");
+      const savedMode = localStorage.getItem("zoku_iframe_mode");
+      const updates: Partial<EmbedState> = {};
+      if (savedServer) updates.selectedServerId = savedServer;
+      if (savedMode === "Strict" || savedMode === "Compatibility") {
+        updates.iframeMode = savedMode;
+      }
+      if (Object.keys(updates).length > 0) {
+        set(updates);
+      }
+    } catch {
+      /* ignore storage errors */
+    }
+  },
+}));
 
 // === 4. SEARCH HISTORY STORE ===
 
@@ -843,6 +1440,25 @@ export const useSearchHistoryStore = create<SearchHistoryState>((set, get) => ({
   }
 }));
 
+export interface RailFilterOption {
+  id: string;
+  label: string;
+}
+
+interface RailFilterState {
+  activeFilter: string;
+  filterOptions: RailFilterOption[];
+  setActiveFilter: (filterId: string) => void;
+  setFilterOptions: (options: RailFilterOption[]) => void;
+}
+
+export const useRailFilterStore = create<RailFilterState>((set) => ({
+  activeFilter: "all",
+  filterOptions: [],
+  setActiveFilter: (filterId: string) => set({ activeFilter: filterId }),
+  setFilterOptions: (options: RailFilterOption[]) => set({ filterOptions: options }),
+}));
+
 // Re-export authentication helpers for clean access from page controllers
 export { 
   loginWithEmail, 
@@ -851,4 +1467,5 @@ export {
   signInWithGoogle,
   logout 
 } from "@/lib/firebase";
+
 

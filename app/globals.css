@@ -40,26 +40,33 @@
 /* Default token values — Crimson Cinema dark (overridden at runtime by applyTheme) */
 :root,
 [data-theme="theme-crimson"] {
-  --background: #12141a;
-  --surface: #1a1d26;
-  --surface-hover: #252a36;
+  --background: #0e0a10;
+  --surface: #18121c;
+  --surface-hover: #251b2b;
   --primary: #e11d48;
   --primary-contrast: #ffffff;
-  --primary-glow: rgba(225, 29, 72, 0.35);
-  --accent: #f43f5e;
-  --accent-contrast: #ffffff;
-  --on-surface: #f4f4f5;
-  --on-surface-variant: rgba(228, 228, 231, 0.62);
-  --border-color: rgba(255, 255, 255, 0.09);
-  --shadow-glow: 0 10px 28px color-mix(in srgb, #e11d48 28%, transparent);
-  --shadow-elevated: 0 14px 36px rgba(0, 0, 0, 0.45);
-  --shadow-card: 0 8px 22px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
-  --shadow-card-hover: 0 24px 52px color-mix(in srgb, #e11d48 36%, transparent), 0 14px 32px rgba(0, 0, 0, 0.5);
+  --primary-glow: rgba(225, 29, 72, 0.42);
+  --accent: #fb7185;
+  --accent-contrast: #19040a;
+  --on-surface: #f8f5f7;
+  --on-surface-variant: rgba(244, 230, 236, 0.68);
+  --border-color: rgba(244, 63, 94, 0.22);
+  --shadow-glow: 0 10px 30px color-mix(in srgb, #e11d48 34%, transparent);
+  --shadow-elevated: 0 16px 42px rgba(0, 0, 0, 0.52);
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.44), 0 2px 8px rgba(0, 0, 0, 0.28);
+  --shadow-card-hover: 0 24px 52px color-mix(in srgb, #e11d48 40%, transparent), 0 14px 32px rgba(0, 0, 0, 0.52);
   --background-gradient:
-    radial-gradient(ellipse 105% 70% at 6% -10%, color-mix(in srgb, #64748b 22%, transparent), transparent 58%),
-    radial-gradient(ellipse 85% 55% at 98% 5%, color-mix(in srgb, #e11d48 9%, transparent), transparent 52%),
-    radial-gradient(ellipse 75% 50% at 48% 108%, color-mix(in srgb, #334155 16%, transparent), transparent 58%),
-    linear-gradient(175deg, #12141a 0%, color-mix(in srgb, #12141a 88%, #1c2230) 48%, color-mix(in srgb, #12141a 78%, #0f1218) 100%);
+    radial-gradient(ellipse 115% 78% at 8% -12%, color-mix(in srgb, #e11d48 30%, transparent) 0%, transparent 62%),
+    radial-gradient(ellipse 95% 68% at 96% 6%, color-mix(in srgb, #fb7185 24%, transparent) 0%, transparent 58%),
+    radial-gradient(ellipse 90% 64% at 50% 108%, color-mix(in srgb, #e11d48 20%, #18121c) 0%, transparent 64%),
+    linear-gradient(165deg, color-mix(in srgb, #0e0a10 82%, #e11d48 18%) 0%, #0e0a10 46%, color-mix(in srgb, #0e0a10 80%, #fb7185 20%) 100%);
+  --surface-gradient:
+    linear-gradient(145deg, color-mix(in srgb, #18121c 88%, #e11d48 12%) 0%, color-mix(in srgb, #18121c 94%, #0e0a10 6%) 55%, color-mix(in srgb, #251b2b 85%, #fb7185 15%) 100%);
+  --button-gradient:
+    linear-gradient(135deg, #e11d48 0%, color-mix(in srgb, #e11d48 65%, #fb7185 35%) 100%);
+  --orb-a: radial-gradient(circle, color-mix(in srgb, #e11d48 48%, transparent) 0%, transparent 70%);
+  --orb-b: radial-gradient(circle, color-mix(in srgb, #fb7185 42%, transparent) 0%, transparent 70%);
+  --orb-c: radial-gradient(circle, color-mix(in srgb, #e11d48 32%, #fb7185 28%) 0%, transparent 72%);
 }
 
 html, body {
@@ -78,14 +85,24 @@ html, body {
   overflow-x: hidden;
 }
 
+/* Unified page shell that preserves the login-style atmospheric gradient background across all pages */
+.app-page-shell {
+  position: relative;
+  min-height: 100vh;
+  color: var(--on-surface);
+  background: transparent;
+}
+
 /* Ensure content shells stay readable over gradients */
 .appearance-light .glass-panel {
   background: color-mix(in srgb, var(--surface) 88%, transparent);
+  background-image: var(--surface-gradient);
 }
 
 @layer components {
   .bg-primary {
     color: var(--primary-contrast);
+    background-image: var(--button-gradient);
   }
 
   .text-readable {
@@ -98,16 +115,21 @@ html, body {
 }
 
 .glass-panel {
-  background: color-mix(in srgb, var(--surface) 78%, transparent);
-  backdrop-filter: blur(20px);
+  background-color: color-mix(in srgb, var(--surface) 78%, transparent);
+  background-image: var(--surface-gradient);
+  backdrop-filter: blur(22px);
   border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-elevated);
 }
 
-/* Solid content panels read cleanly over gradient page backgrounds */
+/* Elevated theme-reactive card / panel surface */
 .theme-panel {
-  background-color: var(--surface);
+  background-color: color-mix(in srgb, var(--surface) 88%, transparent);
+  background-image: var(--surface-gradient);
+  backdrop-filter: blur(18px);
   color: var(--on-surface);
   border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -121,15 +143,16 @@ html, body {
 /* Readable text on filled primary surfaces across all themes */
 .bg-primary {
   color: var(--primary-contrast);
+  background-image: var(--button-gradient);
 }
 
-/* Watch page server picker — custom select (styled listbox) */
+/* Tokenized custom select & watch server picker */
 .zoku-server-select {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  max-width: min(100%, 15.5rem);
+  max-width: min(100%, 16rem);
   min-width: 0;
 }
 
@@ -138,24 +161,27 @@ html, body {
   padding-inline: 0.25rem;
   font-family: var(--font-mono), monospace;
   font-size: 9px;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--on-surface-variant);
 }
 
 .zoku-server-select__trigger {
   display: inline-flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
   min-width: 0;
   width: 100%;
   max-width: 100%;
-  padding: 0.4rem 0.65rem;
+  padding: 0.45rem 0.75rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  border: 1px solid var(--border-color);
+  background-color: color-mix(in srgb, var(--surface) 86%, transparent);
+  background-image: var(--surface-gradient);
+  color: var(--on-surface);
+  backdrop-filter: blur(16px);
   cursor: pointer;
   transition:
     border-color 0.2s ease,
@@ -164,14 +190,13 @@ html, body {
 }
 
 .zoku-server-select__trigger:hover {
-  border-color: color-mix(in srgb, var(--primary) 45%, rgba(255, 255, 255, 0.2));
-  background: rgba(255, 255, 255, 0.08);
+  border-color: color-mix(in srgb, var(--primary) 60%, var(--border-color));
+  background-color: var(--surface-hover);
 }
 
 .zoku-server-select.is-open .zoku-server-select__trigger {
-  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 35%, transparent);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent), var(--shadow-glow);
 }
 
 .zoku-server-select__value {
@@ -189,8 +214,8 @@ html, body {
   width: 0.875rem;
   height: 0.875rem;
   flex-shrink: 0;
-  opacity: 0.75;
-  transition: transform 0.3s ease-in-out;
+  color: var(--primary);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   transform: rotate(0deg);
 }
 
@@ -200,27 +225,27 @@ html, body {
 
 .zoku-server-select__picker {
   position: absolute;
-  top: calc(100% + 0.4rem);
+  top: calc(100% + 0.45rem);
   right: 0;
   z-index: 60;
   width: max(100%, 16rem);
-  max-width: min(92vw, 18rem);
-  max-height: min(55dvh, 22rem);
+  max-width: min(92vw, 19rem);
+  max-height: min(58dvh, 22rem);
   overflow-x: hidden;
   overflow-y: auto;
-  border-radius: 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #111113;
-  box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(255, 255, 255, 0.04);
+  border-radius: 0.9rem;
+  border: 1px solid var(--border-color);
+  background-color: color-mix(in srgb, var(--surface) 96%, var(--background));
+  background-image: var(--surface-gradient);
+  backdrop-filter: blur(24px);
+  box-shadow: var(--shadow-elevated);
   animation: scale-up 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: color-mix(in srgb, var(--primary) 45%, transparent) transparent;
 }
 
 .zoku-server-select__group + .zoku-server-select__group {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-color);
 }
 
 .zoku-server-select__group-label {
@@ -233,8 +258,9 @@ html, body {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
-  background: #111113;
+  color: var(--on-surface-variant);
+  background-color: color-mix(in srgb, var(--surface) 96%, var(--background));
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 65%, transparent);
 }
 
 .zoku-server-select__option {
@@ -245,9 +271,9 @@ html, body {
   gap: 0.75rem;
   padding: 0.65rem 0.9rem;
   border: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 45%, transparent);
   background: transparent;
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--on-surface);
   font-size: 0.75rem;
   font-weight: 550;
   text-align: left;
@@ -263,14 +289,16 @@ html, body {
 
 .zoku-server-select__option:hover,
 .zoku-server-select__option:focus-visible {
-  background-color: var(--primary) !important;
-  color: var(--primary-contrast) !important;
+  background-color: color-mix(in srgb, var(--primary) 18%, var(--surface-hover));
+  color: var(--on-surface);
   outline: none;
 }
 
 .zoku-server-select__option.is-selected {
-  background-color: color-mix(in srgb, var(--primary) 88%, #000);
+  background-color: var(--primary);
+  background-image: var(--button-gradient);
   color: var(--primary-contrast);
+  font-weight: 600;
 }
 
 .zoku-server-select__option-label {
@@ -289,13 +317,13 @@ html, body {
 
 @media (max-width: 640px) {
   .zoku-server-select {
-    max-width: min(100%, 11.5rem);
+    max-width: min(100%, 12.5rem);
   }
 
   .zoku-server-select__picker {
     right: 0;
     left: auto;
-    width: min(92vw, 16.5rem);
+    width: min(92vw, 17rem);
   }
 }
 
@@ -332,7 +360,7 @@ input[type="reset"]:hover:not(:disabled),
   transform: translateY(-1px);
 }
 
-/* Poster / title cards — brand-tinted depth (especially visible in light mode) */
+/* Poster / title cards — brand-tinted depth */
 .poster-card {
   box-shadow: var(--shadow-card);
   transition:
@@ -345,28 +373,28 @@ input[type="reset"]:hover:not(:disabled),
   box-shadow: var(--shadow-card-hover);
 }
 
-/* Hero scrims — dark keeps cinematic wash; light keeps art visible + readable copy */
+/* Hero scrims — seamlessly blend hero media into the theme gradient background */
 .hero-media-scrim {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to top, var(--background) 0%, color-mix(in srgb, var(--background) 72%, transparent) 42%, transparent 72%),
-    linear-gradient(to right, color-mix(in srgb, var(--background) 92%, transparent) 0%, color-mix(in srgb, var(--background) 40%, transparent) 42%, transparent 72%),
-    linear-gradient(to bottom, color-mix(in srgb, var(--background) 45%, transparent), transparent 38%);
+    linear-gradient(to top, color-mix(in srgb, var(--background) 96%, transparent) 0%, color-mix(in srgb, var(--background) 68%, transparent) 40%, transparent 74%),
+    linear-gradient(to right, color-mix(in srgb, var(--background) 90%, transparent) 0%, color-mix(in srgb, var(--background) 38%, transparent) 44%, transparent 74%),
+    linear-gradient(to bottom, color-mix(in srgb, var(--background) 42%, transparent), transparent 36%);
 }
 
 .appearance-light .hero-media-scrim {
   background:
-    linear-gradient(to top, var(--background) 0%, color-mix(in srgb, var(--background) 88%, transparent) 28%, transparent 58%),
-    linear-gradient(to right, color-mix(in srgb, var(--surface) 82%, transparent) 0%, color-mix(in srgb, var(--surface) 35%, transparent) 38%, transparent 68%),
+    linear-gradient(to top, color-mix(in srgb, var(--background) 96%, transparent) 0%, color-mix(in srgb, var(--background) 84%, transparent) 28%, transparent 58%),
+    linear-gradient(to right, color-mix(in srgb, var(--surface) 84%, transparent) 0%, color-mix(in srgb, var(--surface) 35%, transparent) 38%, transparent 68%),
     linear-gradient(to bottom, color-mix(in srgb, var(--background) 25%, transparent), transparent 32%);
 }
 
 .hero-meta-chip {
-  background: color-mix(in srgb, #000 42%, transparent);
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
   color: var(--on-surface);
   border: 1px solid var(--border-color);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
 }
 
 .appearance-light .hero-meta-chip {
@@ -387,27 +415,28 @@ input[type="reset"]:hover:not(:disabled),
 }
 
 .appearance-light .site-nav {
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
 }
 
 .appearance-light .ambient-orb {
-  opacity: 0.2;
+  opacity: 0.34;
 }
 
 .appearance-light .ambient-dot {
-  opacity: 0.22;
-  background: color-mix(in srgb, var(--primary) 35%, var(--on-surface));
+  opacity: 0.25;
+  background: color-mix(in srgb, var(--primary) 45%, var(--on-surface));
 }
 
 .rail-nav-btn {
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  background-color: color-mix(in srgb, var(--surface) 92%, transparent);
+  background-image: var(--surface-gradient);
   color: var(--on-surface);
   border-color: var(--border-color);
   box-shadow: var(--shadow-card);
 }
 
 .rail-nav-btn:hover {
-  background: var(--surface);
+  background-color: var(--surface);
   color: var(--primary);
   border-color: var(--primary);
   box-shadow: var(--shadow-glow);
@@ -427,41 +456,41 @@ input[type="reset"]:disabled {
   cursor: not-allowed;
 }
 
-/* Ambient atmosphere — cool slate orbs, whisper of primary */
+/* Theme-reactive ambient atmosphere orbs (shared by Login/BrandShell and all in-app pages) */
 .ambient-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(72px);
-  opacity: 0.38;
+  filter: blur(68px);
+  opacity: 0.56;
   will-change: transform;
-  animation: ambient-drift 28s ease-in-out infinite alternate;
+  animation: ambient-drift 26s ease-in-out infinite alternate;
 }
 
 .ambient-orb--a {
-  top: -12%;
+  top: -14%;
   left: -8%;
-  width: min(55vw, 420px);
-  height: min(55vw, 420px);
-  background: color-mix(in srgb, #64748b 55%, transparent);
+  width: min(58vw, 480px);
+  height: min(58vw, 480px);
+  background: var(--orb-a);
 }
 
 .ambient-orb--b {
-  top: 35%;
+  top: 28%;
   right: -10%;
-  width: min(48vw, 360px);
-  height: min(48vw, 360px);
-  background: color-mix(in srgb, var(--primary) 18%, #475569);
-  animation-duration: 34s;
+  width: min(52vw, 430px);
+  height: min(52vw, 430px);
+  background: var(--orb-b);
+  animation-duration: 32s;
   animation-delay: -8s;
 }
 
 .ambient-orb--c {
   bottom: -18%;
-  left: 28%;
-  width: min(60vw, 480px);
-  height: min(60vw, 480px);
-  background: color-mix(in srgb, #334155 50%, transparent);
-  animation-duration: 40s;
+  left: 24%;
+  width: min(64vw, 540px);
+  height: min(64vw, 540px);
+  background: var(--orb-c);
+  animation-duration: 38s;
   animation-delay: -14s;
 }
 
@@ -493,8 +522,8 @@ input[type="reset"]:disabled {
   width: 2px;
   height: 2px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--on-surface) 55%, transparent);
-  opacity: 0.35;
+  background: color-mix(in srgb, var(--primary) 55%, var(--on-surface));
+  opacity: 0.4;
   animation: ambient-float calc(12s + (var(--i) * 0.45s)) ease-in-out infinite;
   animation-delay: calc(var(--i) * -0.55s);
 }
@@ -505,13 +534,82 @@ input[type="reset"]:disabled {
 }
 
 @keyframes ambient-float {
-  0%, 100% { transform: translateY(0); opacity: 0.2; }
-  50% { transform: translateY(-18px); opacity: 0.55; }
+  0%, 100% { transform: translateY(0); opacity: 0.22; }
+  50% { transform: translateY(-18px); opacity: 0.6; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ambient-orb,
   .ambient-dot {
     animation: none;
+  }
+}
+
+/* Smooth horizontal rail edge fades & arrow scroll transitions */
+.rail-edge-fade-left {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  z-index: 20;
+  width: clamp(2.25rem, 5.5vw, 4.75rem);
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--background) 92%, transparent) 0%,
+    color-mix(in srgb, var(--background) 65%, transparent) 48%,
+    transparent 100%
+  );
+  transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rail-edge-fade-right {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  z-index: 20;
+  width: clamp(2.25rem, 5.5vw, 4.75rem);
+  pointer-events: none;
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--background) 92%, transparent) 0%,
+    color-mix(in srgb, var(--background) 65%, transparent) 48%,
+    transparent 100%
+  );
+  transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rail-scroll-track {
+  transition:
+    opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rail-scroll-track[data-scrolling="right"] .rail-card-slot {
+  animation: rail-glide-right 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rail-scroll-track[data-scrolling="left"] .rail-card-slot {
+  animation: rail-glide-left 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes rail-glide-right {
+  0% {
+    opacity: 0.76;
+    transform: translateX(8px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes rail-glide-left {
+  0% {
+    opacity: 0.76;
+    transform: translateX(-8px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
   }
 }

@@ -32,7 +32,7 @@ export default function WatchlistPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">
+    <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -49,7 +49,7 @@ export default function WatchlistPage() {
 
           <button
             onClick={() => router.push("/discover")}
-            className="flex items-center gap-1.5 rounded-xl bg-surface hover:bg-surface-hover border border-border-custom px-4 py-2.5 text-xs font-semibold text-on-surface hover:text-primary transition-all duration-300"
+            className="theme-panel flex items-center gap-1.5 rounded-xl hover:bg-surface-hover px-4 py-2.5 text-xs font-semibold text-on-surface hover:text-primary transition-all duration-300 self-start sm:self-auto"
           >
             <span>Explore Catalog</span>
             <ArrowRight className="h-4 w-4" />
@@ -90,8 +90,8 @@ export default function WatchlistPage() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-28 text-center border-2 border-dashed border-border-custom rounded-2xl bg-surface/10 p-8 gap-4 max-w-lg mx-auto">
-            <Film className="h-12 w-12 text-on-surface-variant animate-pulse" />
+          <div className="glass-panel flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-border-custom rounded-2xl p-8 gap-4 max-w-lg mx-auto">
+            <Film className="h-12 w-12 text-primary animate-pulse" />
             <div className="space-y-1">
               <p className="font-semibold text-sm">Your watchlist is vacant.</p>
               <p className="text-xs text-on-surface-variant leading-relaxed">
@@ -100,7 +100,7 @@ export default function WatchlistPage() {
             </div>
             <button
               onClick={() => router.push("/home")}
-              className="mt-2 rounded-xl bg-primary hover:bg-opacity-95 text-white py-2.5 px-6 text-xs font-bold transition-all shadow-md active:scale-95"
+              className="mt-2 rounded-xl bg-primary hover:bg-opacity-95 text-primary-contrast py-2.5 px-6 text-xs font-bold transition-all shadow-md active:scale-95"
             >
               Browse Home
             </button>

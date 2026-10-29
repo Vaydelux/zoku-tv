@@ -2,7 +2,14 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { useSessionStore, useWatchlistStore, useContinueWatchingStore } from "@/stores";
+import { 
+  useSessionStore, 
+  useWatchlistStore, 
+  useContinueWatchingStore, 
+  useWatchHistoryStore, 
+  useEpisodeProgressStore,
+  useEmbedStore 
+} from "@/stores";
 import { isBrandRoute } from "@/lib/auth-routes";
 import {
   applyTheme,
@@ -10,23 +17,37 @@ import {
   DEFAULT_APPEARANCE,
   normalizeAppearance,
 } from "@/lib/themes";
+import { installWindowFetchGuard } from "@/lib/runtime-guards";
+
+if (typeof window !== "undefined") {
+  installWindowFetchGuard(window);
+}
 
 export function ClientInitializer() {
   const pathname = usePathname();
   const initSession = useSessionStore((state) => state.initSession);
   const initWatchlist = useWatchlistStore((state) => state.initWatchlist);
   const initContinueWatching = useContinueWatchingStore((state) => state.initContinueWatching);
+  const initWatchHistory = useWatchHistoryStore((state) => state.initWatchHistory);
+  const initEpisodeProgress = useEpisodeProgressStore((state) => state.initEpisodeProgress);
+  const hydrateEmbedPreferences = useEmbedStore((state) => state.hydrateEmbedPreferences);
   const user = useSessionStore((state) => state.user);
   const currentProfile = useSessionStore((state) => state.currentProfile);
   const initializing = useSessionStore((state) => state.initializing);
 
-  // Initialize auth & profile listener
+  // Initialize auth, profile listener & persisted client preferences after hydration
   useEffect(() => {
+    installWindowFetchGuard(window);
+    (window as unknown as Record<string, unknown>).__ZOKU_SESSION_STORE__ = useSessionStore;
+    (window as unknown as Record<string, unknown>).__ZOKU_APPLY_THEME__ = applyTheme;
+    (window as unknown as Record<string, unknown>).__ZOKU_EPISODE_STORE__ = useEpisodeProgressStore;
+    (window as unknown as Record<string, unknown>).__ZOKU_WATCH_HISTORY_STORE__ = useWatchHistoryStore;
+    hydrateEmbedPreferences();
     const unsubscribeSession = initSession();
     return () => {
       unsubscribeSession();
     };
-  }, [initSession]);
+  }, [initSession, hydrateEmbedPreferences]);
 
   // Brand lock on splash / login / signup / profiles; profile theme only in-app
   useEffect(() => {
@@ -75,17 +96,21 @@ export function ClientInitializer() {
     }
   }, []);
 
-  // Initialize watchlist listener whenever user or profile changes
+  // Initialize watchlist, continue watching, watch history, and episode progress listeners whenever user or profile changes
   useEffect(() => {
     if (user && currentProfile && !isBrandRoute(pathname)) {
       const unsubscribeWatchlist = initWatchlist();
       const unsubscribeContinueWatching = initContinueWatching();
+      const unsubscribeWatchHistory = initWatchHistory();
+      const unsubscribeEpisodeProgress = initEpisodeProgress();
       return () => {
         unsubscribeWatchlist();
         unsubscribeContinueWatching();
+        unsubscribeWatchHistory();
+        unsubscribeEpisodeProgress();
       };
     }
-  }, [user, currentProfile, pathname, initWatchlist, initContinueWatching]);
+  }, [user, currentProfile, pathname, initWatchlist, initContinueWatching, initWatchHistory, initEpisodeProgress]);
 
   return null;
 }

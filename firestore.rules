@@ -104,6 +104,14 @@ service cloud.firestore {
           allow create, update: if isOwner(userId) && validContinueWatchingItem();
           allow delete: if isOwner(userId);
         }
+
+        match /watchHistory/{entryKey} {
+          allow read, write: if isOwner(userId);
+        }
+
+        match /episodeProgress/{entryKey} {
+          allow read, write: if isOwner(userId);
+        }
       }
     }
 

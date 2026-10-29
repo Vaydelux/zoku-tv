@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 interface BrandShellProps {
   children: ReactNode;
@@ -13,11 +13,20 @@ function BrandAtmosphere() {
       <div className="ambient-orb ambient-orb--a" />
       <div className="ambient-orb ambient-orb--b" />
       <div className="ambient-orb ambient-orb--c" />
+      <div className="ambient-particles">
+        {Array.from({ length: 18 }, (_, i) => (
+          <span
+            key={i}
+            className="ambient-dot"
+            style={{ "--i": i } as CSSProperties}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
-/** Shared pre-app chrome: cool charcoal gradient + ambient orbs (product brand) */
+/** Shared pre-app chrome: substantial theme-reactive gradient + ambient orbs */
 export function BrandShell({
   children,
   className = "",

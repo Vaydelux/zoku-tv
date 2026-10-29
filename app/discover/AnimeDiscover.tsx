@@ -6,6 +6,7 @@ import { SlidersHorizontal, RotateCcw, ChevronDown } from "lucide-react";
 import { Suspense } from "react";
 import { useSessionStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
+import { CustomSelect } from "@/components/CustomSelect";
 import { AnimeCard } from "@/components/anime/AnimeCard";
 import {
   ANILIST_GENRES,
@@ -106,71 +107,72 @@ export function AnimeDiscoverContent() {
 
   if (!currentProfile) return null;
 
+  const sortOptions = [
+    { value: "POPULARITY_DESC", label: "Popularity" },
+    { value: "TRENDING_DESC", label: "Trending" },
+    { value: "SCORE_DESC", label: "Top Rated" },
+    { value: "START_DATE_DESC", label: "Newest" },
+  ];
+
+  const seasonOptions = [
+    { value: "", label: "Any Season" },
+    ...ANILIST_SEASONS.map((s) => ({ value: s, label: s })),
+  ];
+
   return (
-    <div className="min-h-screen bg-background text-on-surface pb-16">
+    <div className="app-page-shell text-on-surface pb-16">
       <Navbar />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <div className="flex items-center justify-between gap-4 border-b border-border-custom pb-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border-custom pb-6">
           <div>
             <h1 className="text-2xl font-display font-bold uppercase tracking-wide">Discover Anime</h1>
             <p className="text-xs text-on-surface-variant mt-1">Browse the AniList catalog</p>
           </div>
           <button
             onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-            className="flex items-center gap-2 rounded-xl border border-border-custom px-4 py-2 text-xs font-semibold"
+            className="theme-panel flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold hover:border-primary/60 transition-colors"
           >
-            <SlidersHorizontal className="h-4 w-4" />
+            <SlidersHorizontal className="h-4 w-4 text-primary" />
             Filters
             <ChevronDown className={`h-4 w-4 transition-transform ${isFilterPanelOpen ? "rotate-180" : ""}`} />
           </button>
         </div>
 
         {isFilterPanelOpen && (
-          <div className="rounded-2xl border border-border-custom bg-surface p-6 space-y-5">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase">Sort By</label>
-              <select
+          <div className="glass-panel rounded-2xl p-6 space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <CustomSelect
+                label="Sort By"
                 value={localSort}
-                onChange={(e) => setLocalSort(e.target.value)}
-                className="w-full rounded-xl border border-border-custom bg-background px-4 py-2 text-sm"
-              >
-                <option value="POPULARITY_DESC">Popularity</option>
-                <option value="TRENDING_DESC">Trending</option>
-                <option value="SCORE_DESC">Top Rated</option>
-                <option value="START_DATE_DESC">Newest</option>
-              </select>
-            </div>
+                onChange={(val) => setLocalSort(val)}
+                options={sortOptions}
+                testId="anime-discover-sort-select"
+              />
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase">Season</label>
-                <select
-                  value={localSeason}
-                  onChange={(e) => setLocalSeason(e.target.value)}
-                  className="w-full rounded-xl border border-border-custom bg-background px-4 py-2 text-sm"
-                >
-                  <option value="">Any</option>
-                  {ANILIST_SEASONS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase">Year</label>
+              <CustomSelect
+                label="Season"
+                value={localSeason}
+                onChange={(val) => setLocalSeason(val)}
+                options={seasonOptions}
+                testId="anime-discover-season-select"
+              />
+
+              <div className="space-y-1.5">
+                <label className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">Year</label>
                 <input
                   type="number"
                   value={localYear}
                   onChange={(e) => setLocalYear(e.target.value)}
                   placeholder="e.g. 2024"
-                  className="w-full rounded-xl border border-border-custom bg-background px-4 py-2 text-sm"
+                  className="theme-panel w-full rounded-xl px-3.5 py-2.5 text-xs font-semibold text-on-surface focus:outline-none focus:border-primary"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase">Genres</label>
-              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+              <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-on-surface-variant">Genres</label>
+              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1">
                 {ANILIST_GENRES.map((genre) => {
                   const active = selectedGenres.includes(genre);
                   return (
@@ -181,8 +183,8 @@ export function AnimeDiscoverContent() {
                           active ? prev.filter((g) => g !== genre) : [...prev, genre]
                         )
                       }
-                      className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold border ${
-                        active ? "bg-primary text-white border-primary" : "border-border-custom"
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${
+                        active ? "bg-primary text-primary-contrast border-primary" : "border-border-custom bg-background/40 hover:border-primary"
                       }`}
                     >
                       {genre}
@@ -192,11 +194,11 @@ export function AnimeDiscoverContent() {
               </div>
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <button onClick={applyFilters} className="rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-white">
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button onClick={applyFilters} className="rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-contrast shadow-md">
                 Apply Filters
               </button>
-              <button onClick={resetFilters} className="inline-flex items-center gap-1 rounded-xl border border-border-custom px-4 py-2.5 text-xs font-semibold">
+              <button onClick={resetFilters} className="theme-panel inline-flex items-center gap-1 rounded-xl px-4 py-2.5 text-xs font-semibold hover:border-primary">
                 <RotateCcw className="h-3.5 w-3.5" />
                 Reset
               </button>

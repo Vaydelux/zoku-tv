@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useContinueWatchingStore } from "@/stores";
+import { useContinueWatchingStore, useEpisodeProgressStore } from "@/stores";
 import { EMBED_SERVER_CATALOG, getEmbedUrl } from "@/lib/embed";
 import { RESUME_THRESHOLD_PERCENT } from "@/lib/continue-watching";
 import { usePlayerProgressListener } from "@/lib/player-progress";
@@ -94,6 +94,8 @@ export function useWatchProgress({
     setPlaybackStarted(true);
   }, []);
 
+  const recordEpisodeProgress = useEpisodeProgressStore((state) => state.recordEpisodeProgress);
+
   const handleProgress = useCallback(
     (progressPercent: number, currentTimeSec: number, durationSec?: number) => {
       recordProgress({
@@ -110,8 +112,20 @@ export function useWatchProgress({
         current_time_sec: currentTimeSec,
         duration_sec: durationSec,
       });
+
+      if (mediaType === "tv" && season && episode) {
+        void recordEpisodeProgress({
+          media_type: "tv",
+          tmdbId,
+          season,
+          episode,
+          progress_percent: progressPercent,
+          current_time_sec: currentTimeSec,
+          duration_sec: durationSec,
+        });
+      }
     },
-    [tmdbId, mediaType, season, episode, title, overview, vote_average, poster_path, backdrop_path, recordProgress]
+    [tmdbId, mediaType, season, episode, title, overview, vote_average, poster_path, backdrop_path, recordProgress, recordEpisodeProgress]
   );
 
   const selectedServer = EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) || EMBED_SERVER_CATALOG[0];
@@ -133,5 +147,6 @@ export function useWatchProgress({
     startAtSec,
     handleResume,
     handleStartOver,
+    handleProgress,
   };
 }

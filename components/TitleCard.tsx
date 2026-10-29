@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Check, Star, Play } from "lucide-react";
-import { useWatchlistStore } from "@/stores";
+import { Plus, Check, Star, Play, CheckCircle2 } from "lucide-react";
+import { useWatchlistStore, useWatchHistoryStore } from "@/stores";
 import { getTitleDetails, TMDBTitle } from "@/lib/tmdb";
 
 interface TitleCardProps {
@@ -15,6 +15,7 @@ export function TitleCard({ title, mediaType }: TitleCardProps) {
   const router = useRouter();
   const actualMediaType = mediaType || title.media_type || "movie";
   const { addItem, removeItem, hasItem } = useWatchlistStore();
+  const { isCompleted, toggleCompleted } = useWatchHistoryStore();
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [synopsis, setSynopsis] = useState(title.overview?.trim() || "");
@@ -28,6 +29,7 @@ export function TitleCard({ title, mediaType }: TitleCardProps) {
   const releaseYear = (title.release_date || title.first_air_date || "").split("-")[0] || "N/A";
 
   const isInWatchlist = hasItem(actualMediaType, title.id);
+  const watchedCompleted = isCompleted(actualMediaType, title.id);
 
   useEffect(() => {
     setSynopsis(title.overview?.trim() || "");
@@ -68,6 +70,21 @@ export function TitleCard({ title, mediaType }: TitleCardProps) {
         vote_average: title.vote_average,
       });
     }
+  };
+
+  const handleHistoryToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    void toggleCompleted({
+      media_type: actualMediaType,
+      tmdbId: title.id,
+      season: actualMediaType === "tv" ? 1 : null,
+      episode: actualMediaType === "tv" ? 1 : null,
+      title: name,
+      overview: synopsis || title.overview || null,
+      vote_average: title.vote_average ?? null,
+      poster_path: title.poster_path ?? null,
+      backdrop_path: title.backdrop_path ?? null,
+    });
   };
 
   const handleClick = () => {
@@ -117,18 +134,34 @@ export function TitleCard({ title, mediaType }: TitleCardProps) {
             <span>{rating}</span>
           </span>
 
-          <button
-            type="button"
-            onClick={handleWatchlistToggle}
-            className={`rounded-full border p-1.5 transition-colors ${
-              isInWatchlist
-                ? "border-primary bg-primary text-primary-contrast"
-                : "border-white/20 bg-black/60 text-white hover:border-primary hover:bg-primary"
-            }`}
-            title={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
-          >
-            {isInWatchlist ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleHistoryToggle}
+              className={`rounded-full border p-1.5 transition-colors ${
+                watchedCompleted
+                  ? "border-emerald-500 bg-emerald-500/25 text-emerald-300"
+                  : "border-white/20 bg-black/60 text-white hover:border-primary hover:bg-primary"
+              }`}
+              title={watchedCompleted ? "Completed in Watch History" : "Mark as Watched (Add to History)"}
+              aria-label={watchedCompleted ? "Completed in Watch History" : "Mark as Watched"}
+            >
+              <CheckCircle2 className="h-3 w-3" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleWatchlistToggle}
+              className={`rounded-full border p-1.5 transition-colors ${
+                isInWatchlist
+                  ? "border-primary bg-primary text-primary-contrast"
+                  : "border-white/20 bg-black/60 text-white hover:border-primary hover:bg-primary"
+              }`}
+              title={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+            >
+              {isInWatchlist ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+            </button>
+          </div>
         </div>
 
         <div className="min-w-0 space-y-1.5">

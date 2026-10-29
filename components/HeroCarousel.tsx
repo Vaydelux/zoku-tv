@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { Play, Plus, Check, Star, Info } from "lucide-react";
+import { Play, Plus, Check, Star, Info, CheckCircle2 } from "lucide-react";
 import { TMDBTitle } from "@/lib/tmdb";
-import { useWatchlistStore } from "@/stores";
+import { useWatchlistStore, useWatchHistoryStore } from "@/stores";
 
 const DEFAULT_INTERVAL = 6000;
 const FALLBACK_BACKDROP =
@@ -25,6 +25,7 @@ function getBackdropUrl(backdropPath: string | null | undefined) {
 export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
   const router = useRouter();
   const { addItem, removeItem, hasItem } = useWatchlistStore();
+  const { isCompleted, toggleCompleted } = useWatchHistoryStore();
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -106,6 +107,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
   const heroRating = current?.vote_average ? current.vote_average.toFixed(1) : "N/A";
   const heroYear = (current?.release_date || current?.first_air_date || "").split("-")[0];
   const isInWatchlist = current ? hasItem(heroMediaType, current.id) : false;
+  const isInHistoryCompleted = current ? isCompleted(heroMediaType, current.id) : false;
 
   const handleWatchlistToggle = () => {
     if (!current) return;
@@ -121,6 +123,21 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
         vote_average: current.vote_average,
       });
     }
+  };
+
+  const handleHistoryToggle = () => {
+    if (!current) return;
+    void toggleCompleted({
+      media_type: heroMediaType,
+      tmdbId: current.id,
+      season: heroMediaType === "tv" ? 1 : null,
+      episode: heroMediaType === "tv" ? 1 : null,
+      title: heroName,
+      overview: current.overview ?? null,
+      vote_average: current.vote_average ?? null,
+      poster_path: current.poster_path ?? null,
+      backdrop_path: current.backdrop_path ?? null,
+    });
   };
 
   const transitionDuration = reducedMotion ? 0 : 0.8;
@@ -180,7 +197,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
               transition={{ duration: reducedMotion ? 0 : 0.45, ease: "easeOut" }}
               className="hero-copy flex w-full max-w-3xl flex-col items-start gap-3 sm:gap-4"
             >
-              <div className="hero-meta-chip flex flex-wrap items-center gap-2 sm:gap-3 rounded-full px-3 py-1 text-[10px] sm:text-xs md:text-sm font-mono text-on-surface-variant">
+              <div className="hero-meta-chip flex flex-wrap items-center gap-2 sm:gap-3 rounded-full px-3 py-1 text-[10px] sm:text-xs md:text-sm font-mono text-on-surface-variant tabular-nums">
                 <span className="text-primary font-bold uppercase">{heroMediaType}</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-border-custom" />
                 <span>{heroYear}</span>
@@ -230,6 +247,19 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
                   aria-label={isInWatchlist ? "Remove from watchlist" : "Add to watchlist"}
                 >
                   {isInWatchlist ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                </button>
+
+                <button
+                  onClick={handleHistoryToggle}
+                  className={`flex items-center gap-1.5 rounded-xl border py-2.5 px-3.5 sm:py-3 sm:px-4 text-xs font-semibold transition-all duration-300 ${
+                    isInHistoryCompleted
+                      ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-400"
+                      : "bg-surface border-border-custom hover:border-primary text-on-surface-variant hover:text-on-surface"
+                  }`}
+                  title={isInHistoryCompleted ? "Completed in Watch History" : "Mark as Watched (Add to Watch History)"}
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{isInHistoryCompleted ? "Watched" : "Mark Watched"}</span>
                 </button>
               </div>
             </motion.div>

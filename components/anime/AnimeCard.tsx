@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Check, Star, Play } from "lucide-react";
-import { useWatchlistStore } from "@/stores";
+import { Plus, Check, Star, Play, CheckCircle2 } from "lucide-react";
+import { useWatchlistStore, useWatchHistoryStore } from "@/stores";
 import type { AniListMedia } from "@/lib/anilist";
 import { getAnimeDetails, getAnimeDisplayTitle, getAnimePoster } from "@/lib/anilist";
 
@@ -14,6 +14,7 @@ interface AnimeCardProps {
 export function AnimeCard({ anime }: AnimeCardProps) {
   const router = useRouter();
   const { addItem, removeItem, hasItem } = useWatchlistStore();
+  const { isCompleted, toggleCompleted } = useWatchHistoryStore();
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [synopsis, setSynopsis] = useState(anime.description?.trim() || "");
@@ -23,6 +24,7 @@ export function AnimeCard({ anime }: AnimeCardProps) {
   const rating = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : "N/A";
   const year = anime.seasonYear ? String(anime.seasonYear) : "N/A";
   const isInWatchlist = hasItem("anime", anime.id);
+  const watchedCompleted = isCompleted("anime", anime.id);
 
   useEffect(() => {
     setSynopsis(anime.description?.trim() || "");
@@ -63,6 +65,21 @@ export function AnimeCard({ anime }: AnimeCardProps) {
         vote_average: anime.averageScore ? anime.averageScore / 10 : undefined,
       });
     }
+  };
+
+  const handleHistoryToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    void toggleCompleted({
+      media_type: "anime",
+      anilistId: anime.id,
+      season: 1,
+      episode: 1,
+      title: name,
+      overview: synopsis || anime.description || null,
+      vote_average: anime.averageScore ? anime.averageScore / 10 : null,
+      poster_path: getAnimePoster(anime),
+      backdrop_path: anime.bannerImage ?? null,
+    });
   };
 
   return (
@@ -106,18 +123,34 @@ export function AnimeCard({ anime }: AnimeCardProps) {
             <span>{rating}</span>
           </span>
 
-          <button
-            type="button"
-            onClick={handleWatchlistToggle}
-            className={`rounded-full border p-1.5 transition-colors ${
-              isInWatchlist
-                ? "border-primary bg-primary text-primary-contrast"
-                : "border-white/20 bg-black/60 text-white hover:border-primary hover:bg-primary"
-            }`}
-            title={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
-          >
-            {isInWatchlist ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleHistoryToggle}
+              className={`rounded-full border p-1.5 transition-colors ${
+                watchedCompleted
+                  ? "border-emerald-500 bg-emerald-500/25 text-emerald-300"
+                  : "border-white/20 bg-black/60 text-white hover:border-primary hover:bg-primary"
+              }`}
+              title={watchedCompleted ? "Completed in Watch History" : "Mark as Watched (Add to History)"}
+              aria-label={watchedCompleted ? "Completed in Watch History" : "Mark as Watched"}
+            >
+              <CheckCircle2 className="h-3 w-3" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleWatchlistToggle}
+              className={`rounded-full border p-1.5 transition-colors ${
+                isInWatchlist
+                  ? "border-primary bg-primary text-primary-contrast"
+                  : "border-white/20 bg-black/60 text-white hover:border-primary hover:bg-primary"
+              }`}
+              title={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+            >
+              {isInWatchlist ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+            </button>
+          </div>
         </div>
 
         <div className="min-w-0 space-y-1.5">

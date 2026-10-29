@@ -10,28 +10,56 @@ import {
   Settings, 
   Heart, 
   User, 
-  Grid, 
   ChevronDown, 
-  ShieldAlert, 
-  FolderHeart,
-  Clapperboard
+  Clapperboard,
+  Wifi,
+  WifiOff
 } from "lucide-react";
-import { useSessionStore, logout } from "@/stores";
+import { useSessionStore, useRailFilterStore, logout } from "@/stores";
 import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
+import { getNavbarNetworkStatus } from "@/lib/network-status";
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, profiles, currentProfile, setProfile } = useSessionStore();
+  const { activeFilter, filterOptions, setActiveFilter } = useRailFilterStore();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isStatusPopoverOpen, setIsStatusPopoverOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on click outside
+  // Track browser online/offline state
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      setIsStatusPopoverOpen(false);
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // Close dropdowns on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
+      }
+      if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
+        setIsStatusPopoverOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -69,9 +97,12 @@ export function Navbar() {
 
   const catalogMode = currentProfile?.catalogMode ?? "tmdb";
   const catalogLabel = catalogMode === "anime" ? "Anime" : "Movies & TV";
+  const networkStatus = getNavbarNetworkStatus(isOnline);
 
   return (
-    <nav className="site-nav sticky top-0 z-40 w-full border-b border-border-custom bg-background/90 backdrop-blur-md transition-colors duration-300">
+    <nav
+      className={`site-nav sticky top-0 z-40 w-full border-b ${networkStatus.navBorderClass} bg-background/90 backdrop-blur-md transition-colors duration-300`}
+    >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
           
@@ -107,9 +138,65 @@ export function Navbar() {
             </div>
           </div>
 
-          {/* Search, Notifications & Profile */}
-          <div className="flex items-center gap-4">
+          {/* Search, Connectivity Status Indicator & Profile */}
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
             
+            {/* Subtle Connectivity Status Indicator */}
+            <div className="relative" ref={statusRef}>
+              <button
+                type="button"
+                role="status"
+                aria-live="polite"
+                aria-label={`Network status: ${networkStatus.label}. ${networkStatus.description}`}
+                title={networkStatus.description}
+                data-testid="navbar-connection-indicator"
+                data-connection-state={networkStatus.state}
+                onClick={() => setIsStatusPopoverOpen((prev) => !prev)}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-wider transition-all duration-300 ${networkStatus.badgeToneClass}`}
+              >
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span
+                    className={`absolute inline-flex h-full w-full rounded-full ${networkStatus.pingColorClass} ${
+                      networkStatus.isOffline ? "animate-ping" : "opacity-60"
+                    }`}
+                  />
+                  <span
+                    data-testid="navbar-connection-dot"
+                    className={`relative inline-flex h-2 w-2 rounded-full transition-colors duration-300 ${networkStatus.dotColorClass}`}
+                  />
+                </span>
+                {networkStatus.isOffline ? (
+                  <WifiOff className="h-3 w-3 shrink-0" />
+                ) : (
+                  <Wifi className="hidden h-3 w-3 shrink-0 lg:inline-block" />
+                )}
+                <span className="hidden sm:inline">{networkStatus.label}</span>
+                <span className="sm:hidden">{networkStatus.shortLabel}</span>
+              </button>
+
+              {isStatusPopoverOpen && (
+                <div
+                  role="dialog"
+                  aria-label="Connection state details"
+                  className="glass-panel absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl p-3.5 shadow-2xl z-50 animate-scale-up"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${networkStatus.dotColorClass}`}
+                    />
+                    <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-on-surface">
+                      {networkStatus.isOffline
+                        ? "Offline-Only State Active"
+                        : "Online & Synchronized"}
+                    </p>
+                  </div>
+                  <p className="mt-1.5 text-xs leading-relaxed text-on-surface-variant">
+                    {networkStatus.description}
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Search Bar */}
             <form onSubmit={handleSearchSubmit} className="relative hidden sm:block">
               <input
@@ -117,7 +204,7 @@ export function Navbar() {
                 placeholder={catalogMode === "anime" ? "Search anime..." : "Titles, people, genres..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-48 lg:w-64 rounded-full border border-border-custom bg-surface py-1.5 pl-4 pr-10 text-xs text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300"
+                className="w-44 md:w-52 lg:w-64 rounded-full border border-border-custom bg-surface/85 py-1.5 pl-4 pr-10 text-xs text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary backdrop-blur-md transition-all duration-300"
               />
               <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
                 <Search className="h-4 w-4" />
@@ -127,9 +214,10 @@ export function Navbar() {
             {/* Mobile Search Button */}
             <button 
               onClick={() => router.push("/search")}
-              className="p-1.5 sm:hidden rounded-full hover:bg-surface text-on-surface transition-colors"
+              aria-label="Open search"
+              className="p-2 sm:hidden rounded-xl border border-border-custom bg-surface/75 hover:bg-surface text-on-surface transition-colors"
             >
-              <Search className="h-5 w-5" />
+              <Search className="h-4 w-4" />
             </button>
 
             {/* Profile Menu Dropdown */}
@@ -137,7 +225,7 @@ export function Navbar() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-2 rounded-full p-1 hover:bg-surface border border-border-custom transition-all duration-300"
+                  className="theme-panel flex items-center gap-2 rounded-full p-1 pr-2.5 hover:border-primary/60 transition-all duration-300"
                 >
                   <ProfileAvatarDisplay
                     avatar={currentProfile.avatar}
@@ -149,20 +237,20 @@ export function Navbar() {
                   <span className="hidden md:inline text-xs font-semibold max-w-[100px] truncate">
                     {currentProfile.name}
                   </span>
-                  <ChevronDown className={`h-4 w-4 text-on-surface-variant transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`h-3.5 w-3.5 text-primary transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
                 </button>
 
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border-custom bg-surface p-2 shadow-2xl animate-scale-up z-50">
-                    <div className="px-3 py-2 border-b border-border-custom">
-                      <p className="text-xs text-on-surface-variant">Active Profile</p>
-                      <p className="text-sm font-bold text-on-surface truncate">{currentProfile.name}</p>
+                  <div className="glass-panel absolute right-0 mt-2 w-60 max-w-[calc(100vw-1.5rem)] rounded-2xl p-2 shadow-2xl animate-scale-up z-50">
+                    <div className="px-3 py-2.5 border-b border-border-custom">
+                      <p className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">Active Profile</p>
+                      <p className="text-sm font-bold text-on-surface truncate mt-0.5">{currentProfile.name}</p>
                       <p className="text-[10px] font-mono text-primary mt-0.5">{catalogLabel} catalog</p>
                     </div>
 
                     {/* Profiles Selection */}
                     {profiles.length > 1 && (
-                      <div className="py-1 border-b border-border-custom">
+                      <div className="py-1.5 border-b border-border-custom">
                         <p className="px-3 py-1 text-[10px] uppercase font-mono tracking-wider text-on-surface-variant">Switch Profile</p>
                         {profiles
                           .filter((p) => p.id !== currentProfile.id)
@@ -170,7 +258,7 @@ export function Navbar() {
                             <button
                               key={p.id}
                               onClick={() => handleProfileSwitch(p)}
-                              className="w-full flex items-center gap-3 px-3 py-1.5 text-xs text-left text-on-surface hover:bg-surface-hover hover:text-primary rounded-lg transition-colors"
+                              className="w-full flex items-center gap-3 px-3 py-1.5 text-xs text-left text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
                             >
                               <ProfileAvatarDisplay
                                 avatar={p.avatar}
@@ -179,53 +267,53 @@ export function Navbar() {
                                 size="sm"
                                 className="!h-6 !w-6 !rounded-full"
                               />
-                              <span className="truncate">{p.name}</span>
+                              <span className="truncate font-medium">{p.name}</span>
                             </button>
                           ))}
                       </div>
                     )}
 
                     {/* Action Links */}
-                    <div className="py-1">
+                    <div className="py-1.5 space-y-0.5">
                       <Link
                         href="/profiles"
                         onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs text-on-surface hover:bg-surface-hover hover:text-primary rounded-lg transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
                       >
-                        <User className="h-4 w-4" />
+                        <User className="h-4 w-4 text-primary/80" />
                         <span>Manage Profiles</span>
                       </Link>
                       <Link
                         href="/settings?section=catalog"
                         onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs text-on-surface hover:bg-surface-hover hover:text-primary rounded-lg transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
                       >
-                        <Clapperboard className="h-4 w-4" />
+                        <Clapperboard className="h-4 w-4 text-primary/80" />
                         <span>Switch Catalog</span>
                       </Link>
                       <Link
                         href="/settings"
                         onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs text-on-surface hover:bg-surface-hover hover:text-primary rounded-lg transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
                       >
-                        <Settings className="h-4 w-4" />
+                        <Settings className="h-4 w-4 text-primary/80" />
                         <span>Settings</span>
                       </Link>
                       <Link
                         href="/watchlist"
                         onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs text-on-surface hover:bg-surface-hover hover:text-primary rounded-lg transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
                       >
-                        <Heart className="h-4 w-4" />
+                        <Heart className="h-4 w-4 text-primary/80" />
                         <span>My Watchlist</span>
                       </Link>
                     </div>
 
                     {/* Sign Out */}
-                    <div className="border-t border-border-custom pt-1 mt-1">
+                    <div className="border-t border-border-custom pt-1.5 mt-1">
                       <button
                         onClick={handleSignOut}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-left text-red-400 hover:bg-red-500/15 rounded-xl transition-colors"
                       >
                         <LogOut className="h-4 w-4" />
                         <span>Sign Out</span>
@@ -238,6 +326,53 @@ export function Navbar() {
 
           </div>
         </div>
+
+        {/* Responsive Mobile Navigation Row (< md) */}
+        <div className="flex md:hidden items-center justify-around gap-1 border-t border-border-custom/60 py-1.5">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex-1 rounded-lg py-1.5 text-center text-xs font-semibold transition-all ${
+                  isActive
+                    ? "bg-primary text-primary-contrast shadow-sm"
+                    : "text-on-surface-variant hover:bg-surface-hover hover:text-on-surface"
+                }`}
+              >
+                {link.name}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Compact, touch-friendly scrollable rail filter interface on small screens (< md) */}
+        {pathname === "/home" && filterOptions.length > 0 && (
+          <div
+            data-testid="navbar-mobile-rail-filters"
+            className="md:hidden flex items-center gap-1.5 overflow-x-auto no-scrollbar touch-pan-x py-2 px-1 border-t border-border-custom/50 scroll-smooth -mx-1"
+          >
+            {filterOptions.map((chip) => {
+              const isActive = activeFilter === chip.id;
+              return (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => setActiveFilter(chip.id)}
+                  data-testid={`mobile-navbar-rail-filter-${chip.id}`}
+                  className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition-all whitespace-nowrap active:scale-95 ${
+                    isActive
+                      ? "bg-primary text-primary-contrast shadow-sm shadow-primary/20"
+                      : "theme-panel text-on-surface-variant hover:text-on-surface hover:border-primary/40"
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </nav>
   );

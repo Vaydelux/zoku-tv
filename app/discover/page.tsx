@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SlidersHorizontal, Eye, Star, Clock, Calendar, ArrowUpRight, RotateCcw, ChevronDown } from "lucide-react";
+import { SlidersHorizontal, Star, Clock, Calendar, RotateCcw } from "lucide-react";
 import { useSessionStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { TitleCard } from "@/components/TitleCard";
+import { CustomSelect } from "@/components/CustomSelect";
 import { discoverMedia, getGenres, TMDBTitle, TMDBGenre } from "@/lib/tmdb";
 import { AnimeDiscoverContent } from "./AnimeDiscover";
 
@@ -24,13 +25,19 @@ export default function DiscoverPage() {
 }
 
 function DiscoverPageContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const { currentProfile } = useSessionStore();
 
   if ((currentProfile?.catalogMode ?? "tmdb") === "anime") {
     return <AnimeDiscoverContent />;
   }
+
+  return <TmdbDiscoverContent />;
+}
+
+function TmdbDiscoverContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { currentProfile } = useSessionStore();
 
   // Load genres list
   const [availableGenres, setAvailableGenres] = useState<TMDBGenre[]>([]);
@@ -191,7 +198,7 @@ function DiscoverPageContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">
+    <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
@@ -207,13 +214,13 @@ function DiscoverPageContent() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Media Type Switcher */}
-            <div className="flex rounded-xl bg-surface border border-border-custom p-1">
+            <div className="theme-panel flex rounded-xl p-1">
               <button
                 onClick={() => applyFilters({ type: "movie", with_genres: "" })}
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  mediaType === "movie" ? "bg-primary text-white" : "text-on-surface-variant hover:text-on-surface"
+                  mediaType === "movie" ? "bg-primary text-primary-contrast" : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >
                 Movies
@@ -221,7 +228,7 @@ function DiscoverPageContent() {
               <button
                 onClick={() => applyFilters({ type: "tv", with_genres: "" })}
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  mediaType === "tv" ? "bg-primary text-white" : "text-on-surface-variant hover:text-on-surface"
+                  mediaType === "tv" ? "bg-primary text-primary-contrast" : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >
                 TV Series
@@ -230,7 +237,7 @@ function DiscoverPageContent() {
 
             <button
               onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-              className={`p-2.5 rounded-xl border border-border-custom flex items-center justify-center gap-2 hover:bg-surface text-xs font-semibold ${
+              className={`theme-panel p-2.5 rounded-xl flex items-center justify-center gap-2 hover:bg-surface-hover text-xs font-semibold ${
                 isFilterPanelOpen ? "text-primary border-primary" : "text-on-surface"
               }`}
             >
@@ -245,7 +252,7 @@ function DiscoverPageContent() {
           
           {/* Left Filters Panel */}
           {isFilterPanelOpen && (
-            <div className="w-full lg:w-80 rounded-2xl border border-border-custom bg-surface/50 p-6 backdrop-blur-md space-y-6 shrink-0 sticky top-20">
+            <div className="glass-panel w-full lg:w-80 rounded-2xl p-6 space-y-6 shrink-0 lg:sticky lg:top-20">
               
               <div className="flex items-center justify-between border-b border-border-custom pb-3">
                 <span className="text-xs font-mono uppercase tracking-wider text-on-surface-variant">Filter Criteria</span>
@@ -259,21 +266,13 @@ function DiscoverPageContent() {
               </div>
 
               {/* Sort selector */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">Sorting</label>
-                <div className="relative">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => applyFilters({ sort_by: e.target.value })}
-                    className="w-full appearance-none rounded-xl border border-border-custom bg-background px-4 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer"
-                  >
-                    {sortingOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-on-surface-variant pointer-events-none" />
-                </div>
-              </div>
+              <CustomSelect
+                label="Sorting"
+                value={sortBy}
+                onChange={(val) => applyFilters({ sort_by: val })}
+                options={sortingOptions}
+                testId="discover-sort-select"
+              />
 
               {/* Release date Year ranges */}
               <div className="space-y-2">

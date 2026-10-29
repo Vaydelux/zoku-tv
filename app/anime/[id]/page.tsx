@@ -3,9 +3,11 @@
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Plus, Check, Star, ArrowLeft, MonitorPlay } from "lucide-react";
-import { useSessionStore, useWatchlistStore } from "@/stores";
+import { useSessionStore, useWatchlistStore, useEpisodeProgressStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
+import { CustomSelect } from "@/components/CustomSelect";
 import { AnimeRail } from "@/components/anime/AnimeRail";
+import { EpisodeThumbnailWithProgress } from "@/components/EpisodeThumbnailWithProgress";
 import {
   getAnimeDetails,
   getAnimeDisplayTitle,
@@ -24,6 +26,7 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
   const anilistId = Number(id);
   const { currentProfile } = useSessionStore();
   const { addItem, removeItem, hasItem } = useWatchlistStore();
+  const { getProgress } = useEpisodeProgressStore();
 
   const [details, setDetails] = useState<Awaited<ReturnType<typeof getAnimeDetails>>>(null);
   const [seasons, setSeasons] = useState<AnimeSeason[]>([]);
@@ -101,7 +104,7 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background text-on-surface pb-16">
+    <div className="app-page-shell text-on-surface pb-16">
       <Navbar />
 
       <div
@@ -132,7 +135,7 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
             <p className="text-xs sm:text-sm text-on-surface-variant line-clamp-3 max-w-3xl">{details.description}</p>
             <div className="flex flex-wrap gap-2">
               {(details.genres ?? []).map((genre) => (
-                <span key={genre} className="text-[10px] font-mono uppercase px-2 py-1 rounded-lg bg-surface border border-border-custom">
+                <span key={genre} className="theme-panel text-[10px] font-mono uppercase px-2 py-1 rounded-lg">
                   {genre}
                 </span>
               ))}
@@ -142,14 +145,14 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
                 onClick={() =>
                   router.push(`/watch/anime/${activeSeason.anilistId}/${activeSeason.filmuSeason}/1`)
                 }
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-white"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-contrast shadow-md"
               >
-                <Play className="h-4 w-4 fill-white" />
+                <Play className="h-4 w-4 fill-current" />
                 Play S{activeSeason.seasonNumber} E1
               </button>
               <button
                 onClick={handleWatchlist}
-                className="inline-flex items-center gap-2 rounded-xl border border-border-custom px-5 py-2.5 text-xs font-semibold"
+                className="theme-panel inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-semibold hover:border-primary"
               >
                 {inWatchlist ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                 {inWatchlist ? "In Watchlist" : "Add to Watchlist"}
@@ -161,51 +164,88 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {seasons.length > 1 && (
-          <div className="flex flex-wrap gap-2">
-            {seasons.map((season) => (
-              <button
-                key={season.seasonNumber}
-                onClick={() => setSelectedSeason(season.seasonNumber)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                  selectedSeason === season.seasonNumber
-                    ? "bg-primary text-white border-primary"
-                    : "bg-surface border-border-custom hover:border-primary"
-                }`}
-              >
-                Season {season.seasonNumber}
-              </button>
-            ))}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {seasons.map((season) => (
+                <button
+                  key={season.seasonNumber}
+                  onClick={() => setSelectedSeason(season.seasonNumber)}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                    selectedSeason === season.seasonNumber
+                      ? "bg-primary text-primary-contrast border-primary"
+                      : "theme-panel hover:border-primary"
+                  }`}
+                >
+                  Season {season.seasonNumber}
+                </button>
+              ))}
+            </div>
+            <div className="w-full sm:w-56">
+              <CustomSelect
+                ariaLabel="Select anime season"
+                value={selectedSeason}
+                onChange={(val) => setSelectedSeason(Number(val))}
+                align="right"
+                options={seasons.map((s) => ({
+                  value: s.seasonNumber,
+                  label: `Season ${s.seasonNumber}`,
+                  badge: `${s.episodes.length} EP`,
+                }))}
+                testId="anime-season-select"
+              />
+            </div>
           </div>
         )}
 
         {activeSeason && (
-          <div className="space-y-4">
+          <div className="glass-panel rounded-2xl p-5 sm:p-6 space-y-4">
             <div className="flex items-center gap-2 text-xs font-mono uppercase text-on-surface-variant">
               <MonitorPlay className="h-4 w-4 text-primary" />
               <span>{activeSeason.title} — Episodes</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-              {activeSeason.episodes.map((ep) => (
-                <button
-                  key={ep.episodeNumber}
-                  onClick={() =>
-                    router.push(
-                      `/watch/anime/${activeSeason.anilistId}/${activeSeason.filmuSeason}/${ep.episodeNumber}`
-                    )
-                  }
-                  className="flex flex-col items-start p-2.5 rounded-xl border border-border-custom bg-surface hover:border-primary hover:bg-primary/5 text-left transition-all"
-                >
-                  {ep.thumbnail && (
-                    <img
-                      src={ep.thumbnail}
-                      alt={ep.title}
-                      className="w-full aspect-video object-cover rounded-lg mb-2"
+              {activeSeason.episodes.map((ep) => {
+                const epProgress = getProgress(
+                  "anime",
+                  activeSeason.anilistId,
+                  activeSeason.filmuSeason,
+                  ep.episodeNumber
+                );
+                const progressPct = epProgress?.progress_percent ?? 0;
+                const isCompleted = Boolean(epProgress?.completed);
+
+                return (
+                  <button
+                    key={ep.episodeNumber}
+                    onClick={() =>
+                      router.push(
+                        `/watch/anime/${activeSeason.anilistId}/${activeSeason.filmuSeason}/${ep.episodeNumber}`
+                      )
+                    }
+                    data-testid={`anime-episode-item-${ep.episodeNumber}`}
+                    className="group theme-panel flex flex-col items-start p-2.5 rounded-xl hover:border-primary hover:bg-primary/5 text-left transition-all relative overflow-hidden"
+                  >
+                    <EpisodeThumbnailWithProgress
+                      thumbnail={ep.thumbnail}
+                      title={ep.title}
+                      episodeNumber={ep.episodeNumber}
+                      progressPercent={progressPct}
+                      completed={isCompleted}
+                      aspectRatio="video"
+                      className="mb-2 w-full"
                     />
-                  )}
-                  <span className="text-[10px] font-mono text-on-surface-variant">Episode {ep.episodeNumber}</span>
-                  <span className="text-xs font-semibold line-clamp-2">{ep.title}</span>
-                </button>
-              ))}
+                    <div className="flex items-center justify-between w-full text-[10px] font-mono text-on-surface-variant">
+                      <span>Episode {ep.episodeNumber}</span>
+                      {isCompleted ? (
+                        <span className="text-emerald-400 font-semibold text-[9px]">Watched</span>
+                      ) : progressPct > 0 ? (
+                        <span className="text-primary font-semibold text-[9px]">{Math.round(progressPct)}%</span>
+                      ) : null}
+                    </div>
+                    <span className="text-xs font-semibold line-clamp-2 mt-0.5">{ep.title}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

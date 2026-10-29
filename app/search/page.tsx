@@ -145,7 +145,7 @@ function SearchPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">
+    <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
@@ -167,11 +167,11 @@ function SearchPageContent() {
               placeholder={catalogMode === "anime" ? "Search anime titles..." : "Search movies, tv shows, franchises..."}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              className="w-full rounded-2xl border border-border-custom bg-surface py-3.5 pl-5 pr-12 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
+              className="glass-panel w-full rounded-2xl py-3.5 pl-5 pr-12 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
             />
             <button 
               type="submit" 
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-xl bg-primary text-white hover:bg-opacity-95 transition-all"
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-xl bg-primary text-primary-contrast hover:bg-opacity-95 transition-all"
             >
               <Search className="h-4 w-4" />
             </button>
@@ -181,10 +181,10 @@ function SearchPageContent() {
         {/* Search Content */}
         {!queryParam ? (
           /* Search history & recommendations */
-          <div className="max-w-xl mx-auto rounded-2xl border border-border-custom bg-surface/40 p-6 backdrop-blur-md space-y-4">
+          <div className="glass-panel max-w-xl mx-auto rounded-2xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border-custom pb-3">
               <span className="text-xs font-mono uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
-                <History className="h-4 w-4" />
+                <History className="h-4 w-4 text-primary" />
                 <span>Search Portal History</span>
               </span>
               {history.length > 0 && (

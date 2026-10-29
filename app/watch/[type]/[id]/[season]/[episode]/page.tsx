@@ -12,12 +12,13 @@ import {
   AlertTriangle,
   MonitorPlay,
 } from "lucide-react";
-import { useSessionStore, useEmbedStore } from "@/stores";
+import { useSessionStore, useEmbedStore, useEpisodeProgressStore } from "@/stores";
 import { EMBED_SERVER_CATALOG, getEmbedUrl, groupEmbedServers } from "@/lib/embed";
 import { getTitleDetails, getSeasonDetails, TMDBTitle, TMDBSeasonDetail } from "@/lib/tmdb";
 import { useWatchProgress } from "@/hooks/useWatchProgress";
 import { ResumePrompt } from "@/components/watch/ResumePrompt";
 import { ServerSelect } from "@/components/watch/ServerSelect";
+import { EpisodeThumbnailWithProgress } from "@/components/EpisodeThumbnailWithProgress";
 
 interface TVWatchPageProps {
   params: Promise<{ type: string; id: string; season: string; episode: string }>;
@@ -41,6 +42,7 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
     markServerFailing, 
     serverHealth 
   } = useEmbedStore();
+  const { getProgress } = useEpisodeProgressStore();
 
   const [details, setDetails] = useState<TMDBTitle | null>(null);
   const [seasonDetail, setSeasonDetail] = useState<TMDBSeasonDetail | null>(null);
@@ -397,17 +399,43 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {seasonDetail.episodes?.map((ep) => {
                 const isActive = ep.episode_number === episodeNum;
+                const epProgress = getProgress("tv", titleId, seasonNum, ep.episode_number);
+                const progressPct = epProgress?.progress_percent ?? 0;
+                const isCompleted = Boolean(epProgress?.completed);
+                const thumbUrl = ep.still_path
+                  ? `https://image.tmdb.org/t/p/w500${ep.still_path}`
+                  : null;
+
                 return (
                   <button
                     key={ep.id}
                     onClick={() => router.push(`/watch/tv/${titleId}/${seasonNum}/${ep.episode_number}`)}
-                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all ${
+                    data-testid={`tv-episode-item-${ep.episode_number}`}
+                    className={`group/ep flex flex-col items-start p-2.5 rounded-xl border text-left transition-all relative overflow-hidden ${
                       isActive
-                        ? "bg-primary/20 border-primary text-primary"
-                        : "bg-white/5 border-white/10 hover:border-white/25 hover:bg-white/10 text-white/80 hover:text-white"
+                        ? "bg-primary/20 border-primary shadow-sm shadow-primary/20"
+                        : "theme-panel hover:border-primary hover:bg-primary/5"
                     }`}
                   >
-                    <span className="text-[10px] font-mono text-white/50">Episode {ep.episode_number}</span>
+                    <EpisodeThumbnailWithProgress
+                      thumbnail={thumbUrl}
+                      title={ep.name || `Episode ${ep.episode_number}`}
+                      episodeNumber={ep.episode_number}
+                      progressPercent={progressPct}
+                      completed={isCompleted}
+                      aspectRatio="video"
+                      className="mb-2 w-full"
+                    />
+                    <div className="flex items-center justify-between w-full text-[10px] font-mono text-on-surface-variant">
+                      <span className={isActive ? "text-primary font-bold" : ""}>
+                        EP {ep.episode_number}
+                      </span>
+                      {isCompleted ? (
+                        <span className="text-emerald-400 font-semibold text-[9px]">Watched</span>
+                      ) : progressPct > 0 ? (
+                        <span className="text-primary font-semibold text-[9px]">{Math.round(progressPct)}%</span>
+                      ) : null}
+                    </div>
                     <span className="text-xs font-semibold truncate w-full mt-0.5">
                       {ep.name || `Episode ${ep.episode_number}`}
                     </span>

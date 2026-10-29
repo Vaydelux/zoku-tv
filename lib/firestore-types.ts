@@ -48,3 +48,37 @@ export type ContinueWatchingDoc = {
   current_time_sec?: number | null;
   duration_sec?: number | null;
 };
+
+export type WatchHistoryDoc = {
+  media_type: MediaType;
+  tmdbId?: number | null;
+  anilistId?: number | null;
+  season?: number | null;
+  episode?: number | null;
+  title: string;
+  overview?: string | null;
+  vote_average?: number | null;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  last_watched_at: string;
+  progress_percent?: number | null;
+  current_time_sec?: number | null;
+  duration_sec?: number | null;
+  completed: boolean;
+  watch_count: number;
+};
+
+export type EpisodeProgressDoc = {
+  media_type: "tv" | "anime";
+  tmdbId?: number | null;
+  anilistId?: number | null;
+  season: number;
+  episode: number;
+  progress_percent: number;
+  current_time_sec: number;
+  duration_sec?: number | null;
+  completed: boolean;
+  updated_at: string;
+};
+
+

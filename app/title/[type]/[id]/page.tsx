@@ -3,9 +3,11 @@
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Plus, Check, Star, ArrowLeft, Clock, Monitor, Users, Eye, Sparkles } from "lucide-react";
-import { useSessionStore, useWatchlistStore } from "@/stores";
+import { useSessionStore, useWatchlistStore, useEpisodeProgressStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { TitleRail } from "@/components/TitleRail";
+import { CustomSelect } from "@/components/CustomSelect";
+import { EpisodeThumbnailWithProgress } from "@/components/EpisodeThumbnailWithProgress";
 import { 
   getTitleDetails, 
   getCredits, 
@@ -30,6 +32,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
 
   const { currentProfile } = useSessionStore();
   const { addItem, removeItem, hasItem } = useWatchlistStore();
+  const getProgress = useEpisodeProgressStore((state) => state.getProgress);
 
   const [details, setDetails] = useState<TMDBTitle | null>(null);
   const [cast, setCast] = useState<TMDBCredit[]>([]);
@@ -155,7 +158,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">
+    <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
       {/* 1. Immersive Spotlight Backdrop */}
@@ -220,9 +223,9 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-2">
               <button
                 onClick={handlePlayClick}
-                className="flex items-center gap-2 rounded-xl bg-primary hover:bg-opacity-90 py-3.5 px-8 text-xs sm:text-sm font-semibold text-white shadow-lg active:scale-95 transition-all duration-300"
+                className="flex items-center gap-2 rounded-xl bg-primary hover:bg-opacity-90 py-3.5 px-8 text-xs sm:text-sm font-semibold text-primary-contrast shadow-lg active:scale-95 transition-all duration-300"
               >
-                <Play className="h-4.5 w-4.5 fill-white" />
+                <Play className="h-4.5 w-4.5 fill-current" />
                 <span>{mediaType === "movie" ? "Play Movie" : "Start Watching"}</span>
               </button>
 
@@ -231,7 +234,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
                 className={`flex items-center gap-2 rounded-xl border py-3.5 px-6 text-xs sm:text-sm font-semibold transition-all duration-300 ${
                   isInWatchlist 
                     ? "bg-primary/15 border-primary text-primary" 
-                    : "bg-surface hover:bg-surface-hover border-border-custom text-on-surface hover:text-primary"
+                    : "theme-panel hover:bg-surface-hover text-on-surface hover:text-primary"
                 }`}
               >
                 {isInWatchlist ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -243,7 +246,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
 
         {/* 3. TV Season and Episode Selector Panel */}
         {mediaType === "tv" && details.seasons && details.seasons.length > 0 && (
-          <div className="rounded-2xl border border-border-custom bg-surface/30 p-6 backdrop-blur-md space-y-6">
+          <div className="glass-panel rounded-2xl p-6 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-custom pb-4">
               <span className="text-xs font-mono uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
                 <Monitor className="h-4 w-4 text-primary" />
@@ -251,18 +254,19 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
               </span>
 
               {/* Season Selection Dropdown */}
-              <div className="relative">
-                <select
+              <div className="w-full sm:w-64">
+                <CustomSelect
+                  ariaLabel="Select season"
                   value={selectedSeason}
-                  onChange={(e) => setSelectedSeason(Number(e.target.value))}
-                  className="rounded-xl border border-border-custom bg-background px-4 py-2 text-xs font-semibold text-on-surface focus:outline-none cursor-pointer"
-                >
-                  {details.seasons.map((s) => (
-                    <option key={s.id} value={s.season_number}>
-                      {s.name} ({s.episode_count} Episodes)
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedSeason(Number(val))}
+                  align="right"
+                  options={details.seasons.map((s) => ({
+                    value: s.season_number,
+                    label: s.name,
+                    badge: `${s.episode_count} EP`,
+                  }))}
+                  testId="title-season-select"
+                />
               </div>
             </div>
 
@@ -276,18 +280,26 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
                   const epStill = ep.still_path 
                     ? `https://image.tmdb.org/t/p/w300${ep.still_path}`
                     : "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=300";
+                  const epRecord = getProgress("tv", details.id, selectedSeason, ep.episode_number);
+                  const epProgress = epRecord?.progress_percent ?? 0;
+                  const epCompleted = Boolean(epRecord?.completed);
+
                   return (
                     <div 
                       key={ep.id}
                       onClick={() => router.push(`/watch/tv/${details.id}/${selectedSeason}/${ep.episode_number}`)}
                       className="group flex gap-4 p-3 rounded-xl border border-border-custom hover:border-primary bg-background/40 hover:bg-surface/50 cursor-pointer transition-all duration-300"
                     >
-                      {/* Episode Still thumbnail */}
-                      <div className="relative w-28 sm:w-36 aspect-[16/10] rounded-lg overflow-hidden shrink-0 shadow bg-black border border-border-custom">
-                        <img src={epStill} alt={ep.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Play className="h-6 w-6 text-white fill-white animate-pulse" />
-                        </div>
+                      {/* Episode Still thumbnail with Progress Bar */}
+                      <div className="w-28 sm:w-36 shrink-0">
+                        <EpisodeThumbnailWithProgress
+                          thumbnail={epStill}
+                          title={ep.name}
+                          episodeNumber={ep.episode_number}
+                          progressPercent={epProgress}
+                          completed={epCompleted}
+                          aspectRatio="wide"
+                        />
                       </div>
 
                       {/* Episode Meta */}

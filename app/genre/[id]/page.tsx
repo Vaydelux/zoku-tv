@@ -68,7 +68,7 @@ export default function GenrePage({ params }: GenrePageProps) {
   }, [currentProfile, genreId]);
 
   return (
-    <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">
+    <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -77,7 +77,7 @@ export default function GenrePage({ params }: GenrePageProps) {
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded-xl bg-surface hover:bg-surface-hover border border-border-custom text-on-surface hover:text-primary transition-all active:scale-95"
+            className="theme-panel p-2 rounded-xl hover:bg-surface-hover text-on-surface hover:text-primary transition-all active:scale-95"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>

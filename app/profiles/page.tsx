@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useTransition } from "react";
+import { Suspense, useState, useEffect, useCallback, useTransition } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSessionStore } from "@/stores";
@@ -39,6 +39,22 @@ type ToastState = {
 } | null;
 
 export default function ProfilesPage() {
+  return (
+    <Suspense
+      fallback={
+        <BrandShell>
+          <div className="flex min-h-[100dvh] items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </div>
+        </BrandShell>
+      }
+    >
+      <ProfilesPageContent />
+    </Suspense>
+  );
+}
+
+function ProfilesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isNavigating, startTransition] = useTransition();

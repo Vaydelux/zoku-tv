@@ -6,6 +6,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { SiteChrome } from "@/components/SiteChrome";
 import { DEFAULT_THEME_ID } from "@/lib/themes";
 import { getPwaIconUrl } from "@/lib/pwa-brand";
+import { INLINE_FETCH_AND_EXTENSION_GUARD_SCRIPT } from "@/lib/runtime-guards";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -73,8 +74,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full`} data-theme="theme-crimson">
-      <body className="antialiased min-h-full bg-background text-on-surface">
+    <html
+      lang="en"
+      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full`}
+      data-theme="theme-crimson"
+      suppressHydrationWarning
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: INLINE_FETCH_AND_EXTENSION_GUARD_SCRIPT,
+          }}
+        />
+      </head>
+      <body
+        className="antialiased min-h-full bg-background text-on-surface"
+        suppressHydrationWarning
+      >
         <ClientInitializer />
         <AuthGate>
           <SiteChrome>{children}</SiteChrome>

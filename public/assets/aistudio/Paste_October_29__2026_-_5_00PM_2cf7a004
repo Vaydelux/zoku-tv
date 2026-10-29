@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Zoku TV — Chronos: The Outer Reach</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Space Grotesk & Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with forms and container queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Configuration -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-error-container": "#ffdad6",
+            "on-secondary-fixed-variant": "#92002a",
+            "outline-variant": "#5c3f40",
+            "on-primary-fixed-variant": "#920028",
+            "secondary-fixed-dim": "#ffb2b7",
+            "on-secondary-container": "#ffc2c4",
+            "surface-tint": "#ffb3b6",
+            "tertiary-fixed": "#ffdf9a",
+            "on-primary-container": "#fffaf9",
+            "tertiary": "#f7be1d",
+            "on-secondary-fixed": "#40000d",
+            "error": "#ffb4ab",
+            "secondary-fixed": "#ffdadb",
+            "primary-container": "#e11d48",
+            "secondary": "#ffb2b7",
+            "primary-fixed": "#ffdada",
+            "primary": "#ffb3b6",
+            "primary-fixed-dim": "#ffb3b6",
+            "on-error": "#690005",
+            "on-tertiary": "#3f2e00",
+            "on-primary": "#68001a",
+            "surface-container-high": "#282a30",
+            "tertiary-fixed-dim": "#f7be1d",
+            "surface-container-lowest": "#0c0e14",
+            "on-background": "#e2e2ea",
+            "inverse-on-surface": "#2e3037",
+            "on-tertiary-fixed": "#251a00",
+            "on-surface": "#e2e2ea",
+            "surface": "#111319",
+            "outline": "#ac8889",
+            "surface-container-highest": "#33343b",
+            "on-tertiary-container": "#fffaf7",
+            "surface-bright": "#373940",
+            "surface-container-low": "#191b22",
+            "on-surface-variant": "#e5bdbe",
+            "inverse-surface": "#e2e2ea",
+            "surface-dim": "#111319",
+            "secondary-container": "#b50036",
+            "background": "#111319",
+            "on-primary-fixed": "#40000c",
+            "surface-variant": "#33343b",
+            "surface-container": "#1d1f26",
+            "on-tertiary-fixed-variant": "#5a4300",
+            "error-container": "#93000a",
+            "on-secondary": "#67001b",
+            "inverse-primary": "#be0037",
+            "tertiary-container": "#926e00"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "margin-mobile": "1rem",
+            "margin-tablet": "1.5rem",
+            "space-lg": "1.5rem",
+            "space-2xl": "3rem",
+            "space-xl": "2rem",
+            "space-md": "1rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "gutter": "1rem",
+            "gutter-mobile": "0.75rem",
+            "margin": "2rem"
+          },
+          "fontFamily": {
+            "button-label": ["Inter"],
+            "body-overview": ["Inter"],
+            "card-title": ["Inter"],
+            "body-compact": ["Inter"],
+            "meta-chip": ["JetBrains Mono"],
+            "headline-section": ["Space Grotesk"],
+            "button-label-mobile": ["Inter"],
+            "headline-hero": ["Space Grotesk"],
+            "meta-label": ["JetBrains Mono"],
+            "headline-hero-mobile": ["Space Grotesk"],
+            "brand-wordmark": ["Space Grotesk"]
+          },
+          "fontSize": {
+            "button-label": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+            "body-overview": ["14px", { "lineHeight": "22px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "card-title": ["12px", { "lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "600" }],
+            "body-compact": ["12px", { "lineHeight": "18px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "meta-chip": ["10px", { "lineHeight": "14px", "letterSpacing": "0.08em", "fontWeight": "700" }],
+            "headline-section": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+            "button-label-mobile": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+            "headline-hero": ["56px", { "lineHeight": "58px", "letterSpacing": "-0.025em", "fontWeight": "700" }],
+            "meta-label": ["9px", { "lineHeight": "12px", "letterSpacing": "0.08em", "fontWeight": "500" }],
+            "headline-hero-mobile": ["32px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "brand-wordmark": ["20px", { "lineHeight": "24px", "letterSpacing": "0.05em", "fontWeight": "700" }]
+          }
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-surface-container-lowest text-on-surface antialiased selection:bg-primary-container selection:text-white min-h-screen">
+<!-- TOP APP BAR (Shared Component Navigation Anchor) -->
+<header class="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-surface-container-high bg-surface-container-lowest/95 backdrop-blur-md px-6 lg:px-12 py-3.5 transition-all">
+<div class="flex items-center gap-8">
+<a class="flex items-center gap-3 text-white group" href="#">
+<div class="size-6 text-primary-container group-hover:scale-110 transition-transform">
+<svg class="w-full h-full" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M6 6H42L36 24L42 42H6L12 24L6 6Z" fill="currentColor"></path>
+</svg>
+</div>
+<h2 class="text-white text-brand-wordmark font-brand-wordmark tracking-tight">Zoku TV</h2>
+</a>
+<nav class="hidden md:flex items-center gap-7">
+<a class="text-on-surface-variant hover:text-white text-sm font-medium transition-colors" href="#">Home</a>
+<a class="text-white text-sm font-semibold relative after:absolute after:-bottom-3.5 after:left-0 after:right-0 after:h-0.5 after:bg-primary-container" href="#">Movies</a>
+<a class="text-on-surface-variant hover:text-white text-sm font-medium transition-colors" href="#">Series</a>
+<a class="text-on-surface-variant hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5" href="#">
+<span class="text-tertiary text-xs font-mono font-bold tracking-wider">IMAX</span> Vault
+        </a>
+<a class="text-on-surface-variant hover:text-white text-sm font-medium transition-colors" href="#">Live Cinema</a>
+<a class="text-on-surface-variant hover:text-white text-sm font-medium transition-colors" href="#">My Library</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<label class="hidden sm:flex items-center bg-surface-container-low border border-surface-container-high focus-within:border-primary-container rounded-lg h-10 px-3 transition-colors w-52 lg:w-64">
+<span class="material-symbols-outlined text-outline text-[20px] mr-2">search</span>
+<input class="bg-transparent border-none text-white text-sm focus:ring-0 p-0 w-full placeholder:text-outline" placeholder="Search 4K Masters, Directors..."/>
+</label>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center rounded-lg h-10 px-3.5 bg-primary-container hover:bg-secondary-container text-white text-xs font-bold tracking-wider uppercase transition shadow-lg shadow-primary-container/20">
+<span>Crimson VIP</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-surface-container-low border border-surface-container-high hover:border-outline text-white transition" title="Notifications">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-surface-container-low border border-surface-container-high hover:border-outline text-white transition" title="Audio/Video Settings">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-surface-container-low border border-surface-container-high hover:border-outline text-white transition" title="AirPlay / Cast">
+<span class="material-symbols-outlined text-[20px]">cast</span>
+</button>
+</div>
+<div class="relative group ml-1">
+<div class="w-10 h-10 rounded-full ring-2 ring-primary-container/40 p-0.5 overflow-hidden cursor-pointer">
+<img class="w-full h-full object-cover rounded-full" data-alt="Close up portrait photograph of an elite film curator with subtle magenta studio rim lighting against a deep dark obsidian backdrop, high fidelity, 8k" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0-eMlSOgrOg7kp5FR71eZS4SvtYQJAK90jvhTuYj3Qg45ALEdc4hCgk75OjEeU-RcSd0QWr1n0IeBf0H9TgBMdwKY7IrlRBn4zCmMzBgQKbSsH47gUCTtg4FpgtMHxWNO1HGbKOm6KRLsKUouJRkoxRJFhNSfLMzxWPkaOuLtjM8afXBf9cJ4O1NWH9fVwUY80YQCBp5mWzLKo3rAeWRmSSle76ebT_f3tRQ2rp0"/>
+</div>
+</div>
+</div>
+</header>
+<!-- MAIN CINEMA STAGE & VIEW CONTAINER -->
+<main class="w-full max-w-[1540px] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col gap-8">
+<!-- BREADCRUMBS & CONTEXT BAR -->
+<div class="flex flex-wrap items-center justify-between gap-3 text-xs font-meta-chip uppercase tracking-wider text-outline">
+<div class="flex items-center gap-2">
+<a class="hover:text-primary transition-colors flex items-center gap-1" href="#">
+<span class="material-symbols-outlined text-sm">arrow_back</span> Catalog
+        </a>
+<span>/</span>
+<a class="hover:text-primary transition-colors" href="#">Sci-Fi &amp; Cosmos</a>
+<span>/</span>
+<span class="text-white font-semibold">Chronos: The Outer Reach</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container border border-surface-container-high text-tertiary">
+<span class="size-1.5 rounded-full bg-tertiary animate-pulse"></span>
+<span>IMAX 1.90:1 EXPANDED RATIO ENGAGED</span>
+</div>
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container border border-surface-container-high text-on-surface-variant font-mono">
+<span class="material-symbols-outlined text-[14px] text-primary">router</span>
+<span>LATENCY: 12ms</span>
+</div>
+</div>
+</div>
+<!-- 1. ACTIVE CINEMATIC PLAYER / VIDEO STAGE -->
+<section class="relative w-full aspect-[21/9] sm:aspect-[16/9] lg:aspect-[2.35/1] rounded-2xl overflow-hidden bg-black border border-surface-container-high shadow-2xl group select-none">
+<!-- Video Screen Media (Singularity Visual) -->
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-[1.01]" data-alt="Cinematic wide 8k capture from deep space sci-fi film depicting a colossal Kerr black hole accretion disk swirling with brilliant incandescent crimson and amber photon rings, distorting spacetime against an infinite velvet obsidian cosmos with distant star clusters." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC4kihVj1zxWdx4ZaJH7Zagfx8ohdJDSjcdsQrbXwuDkpjy-5YcmBFigebyXBUH9tYBO028SlNL2TYdgPxY0a7lMWAR6GW0hXK4ZskCEbtVvzQy_fEatIrPfSLOyattCkcbcOj5etnGzkfZKB4ueoBbM5t9AOkMpN37PoV9D5hXIhPIy4XC8sC_EJ0Mc8fX_ILBzHmOPtkEJezWGs-xkOU3gwqQ1SliEdgbppXNzDA')">
+<!-- Atmospheric Vignettes & Cinema Gradients -->
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/30 to-black/60 pointer-events-none"></div>
+<div class="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-black/80 pointer-events-none"></div>
+</div>
+<!-- PLAYER HUD: TOP OVERLAY -->
+<div class="absolute top-0 inset-x-0 p-4 sm:p-6 flex items-center justify-between z-30 transition-opacity duration-300 opacity-90 group-hover:opacity-100">
+<div class="flex items-center gap-3">
+<button class="size-10 rounded-xl bg-surface-container-lowest/80 backdrop-blur-md border border-white/10 hover:border-primary-container text-white flex items-center justify-center transition hover:bg-surface-container" title="Back to Browsing">
+<span class="material-symbols-outlined text-xl">arrow_back</span>
+</button>
+<div class="flex flex-col">
+<h1 class="text-white font-headline-hero text-lg sm:text-xl font-bold tracking-tight drop-shadow-md">Chronos: The Outer Reach</h1>
+<p class="text-on-surface-variant text-xs font-mono tracking-wide">Chapter 7: Event Horizon Threshold [24.000 fps]</p>
+</div>
+</div>
+<!-- Telemetry Pill -->
+<div class="flex items-center gap-2">
+<div class="hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-surface-container-lowest/80 backdrop-blur-md border border-primary-container/30 text-white text-xs font-mono font-medium shadow-lg">
+<span class="size-2 rounded-full bg-primary-container animate-ping"></span>
+<span class="text-primary font-bold">94.2 MBPS</span>
+<span class="text-white/30">•</span>
+<span class="text-on-surface">LOSSLESS DOLBY VISION 5.0</span>
+<span class="text-white/30">•</span>
+<span class="text-on-surface-variant">NODE US-EAST-VIRGINIA</span>
+</div>
+<button class="size-10 rounded-xl bg-surface-container-lowest/80 backdrop-blur-md border border-white/10 hover:border-white text-white flex items-center justify-center transition" title="Picture in Picture">
+<span class="material-symbols-outlined text-lg">picture_in_picture_alt</span>
+</button>
+</div>
+</div>
+<!-- CENTER FLOATING PLAY/PAUSE TRIGGER (Active Microinteraction) -->
+<div class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+<button class="pointer-events-auto size-20 sm:size-24 rounded-full bg-surface-container-lowest/60 backdrop-blur-xl border border-white/20 text-white flex items-center justify-center hover:scale-110 active:scale-95 transition shadow-2xl hover:bg-primary-container hover:border-transparent group/play">
+<span class="material-symbols-outlined text-4xl sm:text-5xl text-white ml-1.5 group-hover/play:scale-105 transition-transform" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+<!-- PLAYER HUD: BOTTOM CONTROLS & TIMELINE -->
+<div class="absolute bottom-0 inset-x-0 p-4 sm:p-6 flex flex-col gap-3.5 z-30 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/90 to-transparent pt-12">
+<!-- Scrub Bar Component -->
+<div class="group/scrub relative w-full cursor-pointer py-2">
+<!-- Hover Thumbnail Preview Card -->
+<div class="absolute bottom-6 left-[52%] -translate-x-1/2 hidden group-hover/scrub:flex flex-col items-center pointer-events-none pb-2 transition-all">
+<div class="w-36 h-20 rounded-lg overflow-hidden border-2 border-primary-container bg-surface-container-low shadow-2xl relative">
+<img class="w-full h-full object-cover" data-alt="Cinematic shot of astronaut Dr. Maya Lin staring through a frosted visor illuminated by the fiery red glow of a cosmic singularity inside the cockpit, anamorphic lens flare" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzc876m0qnYSw3JmlZlymJIgRznHHkJjxTHSIiUMStM8XuK8X25hnnACUbVGin4-l83UqVJVogRaJlcifdMHegiqPRtpr58SAtwkdSFbodWr7IHO7G0G4TriEmiXNc3ZBOXBKEqFn6CcQjABMaM-UXHAajyY79FWAxu1uDZ9za-5BirPM5D_vPKHpF7jo7c1KKN2RIGVKOdc7HLt9PU5SR12JbW6goBS5lzSe9mio"/>
+<div class="absolute bottom-1 inset-x-1 text-center bg-black/75 rounded text-[10px] font-mono text-white py-0.5">
+                01:14:22
+              </div>
+</div>
+<div class="w-2 h-2 bg-primary-container rotate-45 -mt-1"></div>
+</div>
+<!-- Progress Rails -->
+<div class="relative h-1.5 group-hover/scrub:h-2.5 rounded-full bg-surface-container-high transition-all overflow-visible">
+<!-- Buffered Track -->
+<div class="absolute left-0 top-0 bottom-0 rounded-full bg-outline-variant/70" style="width: 84%;"></div>
+<!-- Played Track (Crimson) -->
+<div class="absolute left-0 top-0 bottom-0 rounded-full bg-primary-container flex items-center justify-end" style="width: 52%;">
+<div class="size-3.5 sm:size-4 rounded-full bg-white border-2 border-primary-container shadow-md scale-0 group-hover/scrub:scale-100 transition-transform -mr-1.5"></div>
+</div>
+</div>
+</div>
+<!-- Controls Row -->
+<div class="flex items-center justify-between gap-4">
+<!-- Left playback controls -->
+<div class="flex items-center gap-2 sm:gap-4">
+<button class="text-white hover:text-primary transition" title="Play">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button class="text-on-surface-variant hover:text-white transition" title="Rewind 10s">
+<span class="material-symbols-outlined text-xl">replay_10</span>
+</button>
+<button class="text-on-surface-variant hover:text-white transition" title="Skip 10s">
+<span class="material-symbols-outlined text-xl">forward_10</span>
+</button>
+<!-- Volume Controller -->
+<div class="flex items-center gap-2 group/volume ml-1 sm:ml-2">
+<button class="text-white hover:text-primary transition">
+<span class="material-symbols-outlined text-xl">volume_up</span>
+</button>
+<div class="w-16 sm:w-20 h-1.5 bg-surface-container-high rounded-full overflow-hidden relative cursor-pointer">
+<div class="h-full bg-white group-hover/volume:bg-primary-container" style="width: 75%;"></div>
+</div>
+<span class="hidden lg:inline text-[10px] font-mono text-outline">-6.2 dB</span>
+</div>
+<!-- Timestamp Display -->
+<div class="text-xs font-mono text-on-surface-variant tracking-wider ml-1">
+<span class="text-white font-medium">01:14:22</span>
+<span class="text-outline"> / </span>
+<span>02:24:18</span>
+</div>
+</div>
+<!-- Right format & theater toggles -->
+<div class="flex items-center gap-2 sm:gap-3 font-mono text-xs">
+<!-- Audio Stream Selector Pill -->
+<div class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container border border-surface-container-high text-on-surface hover:border-primary-container cursor-pointer transition">
+<span class="material-symbols-outlined text-sm text-tertiary">graphic_eq</span>
+<span>ATMOS 7.1.4</span>
+</div>
+<!-- Resolution Selector Pill -->
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container border border-surface-container-high text-white hover:border-primary-container cursor-pointer transition">
+<span class="size-1.5 rounded-full bg-emerald-400"></span>
+<span>4K UHD 60P</span>
+</div>
+<!-- Subtitle Selector -->
+<button class="p-1.5 text-on-surface-variant hover:text-white hover:bg-surface-container rounded transition" title="Captions &amp; Subtitles">
+<span class="material-symbols-outlined text-xl">closed_caption</span>
+</button>
+<!-- Aspect Toggle -->
+<button class="p-1.5 text-on-surface-variant hover:text-white hover:bg-surface-container rounded transition hidden sm:block" title="Aspect Ratio">
+<span class="material-symbols-outlined text-xl">aspect_ratio</span>
+</button>
+<!-- Settings -->
+<button class="p-1.5 text-on-surface-variant hover:text-white hover:bg-surface-container rounded transition" title="Stream Telemetry &amp; Codecs">
+<span class="material-symbols-outlined text-xl">settings</span>
+</button>
+<!-- Fullscreen -->
+<button class="p-1.5 text-white hover:text-primary hover:bg-surface-container rounded transition" title="Fullscreen Cinema">
+<span class="material-symbols-outlined text-xl">fullscreen</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- 2. HERO MOVIE DETAIL & METADATA DASHBOARD -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Left Column: Title, Primary CTA, Synopsis, Creative Staff -->
+<div class="lg:col-span-8 flex flex-col gap-6">
+<!-- Header Info & Tech Badges -->
+<div class="flex flex-col gap-3">
+<div class="flex flex-wrap items-center gap-2">
+<span class="px-2 py-0.5 rounded bg-primary-container/20 border border-primary-container/40 text-primary text-meta-chip font-meta-chip">
+              98% CRITIC MATCH
+            </span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high border border-surface-container-highest text-tertiary text-meta-chip font-meta-chip">
+              IMAX ENHANCED
+            </span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high border border-surface-container-highest text-white text-meta-chip font-meta-chip">
+              4K ULTRA HD
+            </span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high border border-surface-container-highest text-on-surface text-meta-chip font-meta-chip">
+              DOLBY VISION
+            </span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high border border-surface-container-highest text-on-surface text-meta-chip font-meta-chip">
+              ATMOS 7.1.4
+            </span>
+<span class="px-1.5 py-0.5 rounded border border-outline text-outline text-[10px] font-mono">
+              PG-13
+            </span>
+<span class="text-outline text-xs font-mono ml-1">2024 • 2h 24m 18s</span>
+</div>
+<h2 class="text-white text-3xl sm:text-5xl font-headline-hero font-bold tracking-tight leading-none">
+            Chronos: The Outer Reach
+          </h2>
+<p class="text-primary text-sm sm:text-base font-medium tracking-wide">
+            "At the perimeter of the horizon, time ceases to be an arrow and becomes an ocean."
+          </p>
+</div>
+<!-- Action Command Bar -->
+<div class="flex flex-wrap items-center gap-3">
+<button class="flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-primary-container hover:bg-secondary-container text-white font-button-label text-button-label transition shadow-xl shadow-primary-container/25">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+<span>Resume Playback (01:14:22)</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-3.5 rounded-xl bg-surface-container border border-surface-container-high hover:border-outline text-white font-button-label text-sm transition">
+<span class="material-symbols-outlined text-lg">replay</span>
+<span>Restart</span>
+</button>
+<button class="flex items-center justify-center size-12 rounded-xl bg-surface-container border border-surface-container-high hover:border-outline text-white transition" title="Add to Library Watchlist">
+<span class="material-symbols-outlined text-xl">bookmark_add</span>
+</button>
+<button class="flex items-center justify-center size-12 rounded-xl bg-surface-container border border-surface-container-high hover:border-outline text-white transition" title="Lossless Offline Download (28.4 GB)">
+<span class="material-symbols-outlined text-xl">download</span>
+</button>
+<button class="flex items-center justify-center size-12 rounded-xl bg-surface-container border border-surface-container-high hover:border-outline text-white transition" title="Share with Cinephile Circle">
+<span class="material-symbols-outlined text-xl">share</span>
+</button>
+<div class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container-low border border-surface-container-high ml-auto text-xs font-mono">
+<span class="material-symbols-outlined text-tertiary text-lg" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-white font-bold text-sm">4.9</span>
+<span class="text-outline">/ 5.0 (42.8k reviews)</span>
+</div>
+</div>
+<!-- Synopsis Narrative -->
+<div class="space-y-3 bg-surface-container-low/60 border border-surface-container-high p-5 rounded-2xl backdrop-blur-sm">
+<h3 class="text-xs font-meta-label uppercase tracking-widest text-outline">Synopsis</h3>
+<p class="text-on-surface text-body-overview leading-relaxed font-body-overview">
+            When an anomaly near Jupiter’s gravitational periphery starts broadcasting recursive mathematical signals, astrophysicist Dr. Maya Lin boards the interstellar science cruiser <span class="text-white font-semibold">Chronos-9</span> to navigate the boundary layer of an emergent naked singularity. As relativistic dilation warps reality and acoustic echoes of earth’s past breach the cockpit hull, the surviving expedition crew must make an irreversible leap through the outer reach to prevent the collapse of causal geometry.
+          </p>
+<div class="flex flex-wrap gap-2 pt-1">
+<span class="text-xs text-on-surface-variant font-mono">Genres:</span>
+<a class="text-xs text-primary hover:underline" href="#">Hard Sci-Fi</a>
+<span class="text-outline">•</span>
+<a class="text-xs text-primary hover:underline" href="#">Cosmic Mystery</a>
+<span class="text-outline">•</span>
+<a class="text-xs text-primary hover:underline" href="#">Psychological Drama</a>
+<span class="text-outline">•</span>
+<a class="text-xs text-primary hover:underline" href="#">Existential Cinema</a>
+</div>
+</div>
+<!-- Creative Leadership Matrix -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-surface-container-high pt-4">
+<div>
+<span class="text-meta-label font-meta-label text-outline uppercase block">Director</span>
+<span class="text-white text-sm font-semibold mt-0.5 block">Lucian Vance</span>
+<span class="text-xs text-on-surface-variant">Director's Cut Unrated</span>
+</div>
+<div>
+<span class="text-meta-label font-meta-label text-outline uppercase block">Original Score</span>
+<span class="text-white text-sm font-semibold mt-0.5 block">Hans Zimmer &amp; Trent Reznor</span>
+<span class="text-xs text-on-surface-variant">Dolby Atmos Spatial Master</span>
+</div>
+<div>
+<span class="text-meta-label font-meta-label text-outline uppercase block">Director of Photography</span>
+<span class="text-white text-sm font-semibold mt-0.5 block">Greig Fraser, ASC, ACS</span>
+<span class="text-xs text-on-surface-variant">ARRI Alexa 65 Large Format</span>
+</div>
+</div>
+</div>
+<!-- Right Column: Audiophile & Technical Master Specs Card -->
+<div class="lg:col-span-4 flex flex-col gap-5">
+<div class="bg-surface-container border border-surface-container-high rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-5">
+<div class="flex items-center justify-between border-b border-surface-container-highest pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">tune</span>
+<h3 class="text-sm font-headline-section font-bold tracking-wider uppercase text-white">Stream Diagnostics</h3>
+</div>
+<span class="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 font-mono text-[10px] tracking-wider uppercase">
+              Lossless Direct Play
+            </span>
+</div>
+<!-- Bitrate Live Gauge -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center text-xs font-mono">
+<span class="text-outline">Peak Video Bitrate</span>
+<span class="text-white font-bold">94.2 Mbps <span class="text-emerald-400 font-normal">/ HEVC Main 10</span></span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-secondary-container via-primary-container to-primary rounded-full" style="width: 88%;"></div>
+</div>
+<div class="flex justify-between text-[10px] font-mono text-outline">
+<span>Min: 68 Mbps</span>
+<span>Target: 95 Mbps</span>
+<span>Buffer: 100% (60s)</span>
+</div>
+</div>
+<!-- Audio Spatial Channel Matrix (7.1.4 Surround Visualizer) -->
+<div class="bg-surface-container-low rounded-xl p-3.5 border border-surface-container-highest/60 flex flex-col gap-2.5">
+<div class="flex items-center justify-between text-xs">
+<span class="font-meta-chip font-bold text-white flex items-center gap-1.5">
+<span class="material-symbols-outlined text-tertiary text-sm">surround_sound</span>
+                Spatial Audio Topology
+              </span>
+<span class="font-mono text-[10px] text-tertiary">DOLBY ATMOS 7.1.4</span>
+</div>
+<!-- Graphic Speaker Matrix -->
+<div class="grid grid-cols-5 gap-1.5 py-2 px-1 text-center font-mono text-[9px]">
+<div class="p-1 rounded bg-primary-container/20 border border-primary-container/40 text-primary font-bold">L</div>
+<div class="p-1 rounded bg-primary-container/20 border border-primary-container/40 text-primary font-bold">C</div>
+<div class="p-1 rounded bg-primary-container/20 border border-primary-container/40 text-primary font-bold">R</div>
+<div class="p-1 rounded bg-tertiary-container/30 border border-tertiary/40 text-tertiary font-bold">LFE</div>
+<div class="p-1 rounded bg-primary-container/20 border border-primary-container/40 text-primary font-bold">W-L</div>
+<div class="p-1 rounded bg-surface-container-high border border-white/10 text-on-surface">SL</div>
+<div class="p-1 rounded bg-primary-container/30 border border-primary-container text-white font-bold animate-pulse">TL1</div>
+<div class="p-1 rounded bg-primary-container/30 border border-primary-container text-white font-bold animate-pulse">TR1</div>
+<div class="p-1 rounded bg-surface-container-high border border-white/10 text-on-surface">SR</div>
+<div class="p-1 rounded bg-primary-container/20 border border-primary-container/40 text-primary font-bold">W-R</div>
+<div class="p-1 rounded bg-surface-container-high border border-white/10 text-on-surface">SBL</div>
+<div class="p-1 rounded bg-primary-container/30 border border-primary-container text-white font-bold animate-pulse">TL2</div>
+<div class="p-1 rounded bg-primary-container/30 border border-primary-container text-white font-bold animate-pulse">TR2</div>
+<div class="p-1 rounded bg-surface-container-high border border-white/10 text-on-surface">SBR</div>
+<div class="p-1 rounded bg-emerald-950 border border-emerald-500/40 text-emerald-400 font-bold">SUB2</div>
+</div>
+<p class="text-[10px] text-outline font-mono text-center">4 Ceiling Objects Active • TrueHD 24-bit / 96kHz Lossless</p>
+</div>
+<!-- Master Video Specs Grid -->
+<div class="grid grid-cols-2 gap-2 text-xs">
+<div class="p-2.5 rounded-lg bg-surface-container-low border border-surface-container-highest">
+<span class="text-outline text-[10px] block font-mono">COLOR PROFILE</span>
+<span class="text-white font-semibold font-mono">BT.2020 / DCI-P3</span>
+<span class="text-[10px] text-on-surface-variant block">1000 nits Mastering Peak</span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low border border-surface-container-highest">
+<span class="text-outline text-[10px] block font-mono">ENCODING ENGINE</span>
+<span class="text-white font-semibold font-mono">HEVC Profile 7 FEL</span>
+<span class="text-[10px] text-on-surface-variant block">Full Enhancement Layer</span>
+</div>
+</div>
+<!-- Format Compatibility Verified -->
+<div class="flex items-center justify-between text-xs text-on-surface-variant pt-1 border-t border-surface-container-highest">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-emerald-400">verified</span>
+              HDMI 2.1 eARC Handshake
+            </span>
+<span class="font-mono text-white">48 Gbps PASSTHROUGH</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. DETAILED MULTI-TAB CONTENT SECTION -->
+<section class="mt-4 flex flex-col gap-6">
+<!-- Tab Headers -->
+<div class="flex items-center gap-2 border-b border-surface-container-high pb-px overflow-x-auto no-scrollbar">
+<button class="px-5 py-3 text-sm font-semibold text-white border-b-2 border-primary-container flex items-center gap-2 whitespace-nowrap">
+<span class="material-symbols-outlined text-lg text-primary">groups</span>
+<span>Cast &amp; Key Crew</span>
+</button>
+<button class="px-5 py-3 text-sm font-medium text-on-surface-variant hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+<span class="material-symbols-outlined text-lg">auto_stories</span>
+<span>Chapters &amp; Sequences (14)</span>
+</button>
+<button class="px-5 py-3 text-sm font-medium text-on-surface-variant hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+<span class="material-symbols-outlined text-lg">movie_filter</span>
+<span>Bonus Features &amp; BTS (3)</span>
+</button>
+<button class="px-5 py-3 text-sm font-medium text-on-surface-variant hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+<span class="material-symbols-outlined text-lg">hub</span>
+<span>Master Audiophile Specs</span>
+</button>
+</div>
+<!-- Tab Content Area: Cast & Crew Cards -->
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+<!-- Cast 1 -->
+<div class="flex flex-col items-center text-center p-3 rounded-xl bg-surface-container-low border border-surface-container-high hover:border-outline transition group">
+<div class="size-20 sm:size-24 rounded-full overflow-hidden mb-3 ring-2 ring-surface-container-highest group-hover:ring-primary-container transition">
+<img class="w-full h-full object-cover group-hover:scale-110 transition duration-500" data-alt="Intense portrait of actress playing Dr. Maya Lin, dressed in dark high-tech flight undersuit with subtle red backlighting, high detail cinema headshot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyZRDzGRoMRj19LKXBQsH2ygp4h-8B3I1SFRb-PWwirJxZspY3jLb4uIBZZW-n3zpilKkEeiRqy2RKfoohRVVIbQbQM-K7QBgiFUcKviEEjjRrfLmZRtO1IpRloEa83RGeaGyFzMPKDG-VLxsFa9kbrbEBwJkB_-XJxnE50ytNznfPLLPkO5F4gZpAHLA46ay9Tf_RnLnr8gJ79KT5mnvGMGQsk4_oqzMH6cdSBzc"/>
+</div>
+<h4 class="text-white text-sm font-semibold tracking-tight">Elena Vance</h4>
+<p class="text-primary text-xs font-mono">Dr. Maya Lin</p>
+<span class="text-[10px] text-outline mt-1">Lead Astrophysicist</span>
+</div>
+<!-- Cast 2 -->
+<div class="flex flex-col items-center text-center p-3 rounded-xl bg-surface-container-low border border-surface-container-high hover:border-outline transition group">
+<div class="size-20 sm:size-24 rounded-full overflow-hidden mb-3 ring-2 ring-surface-container-highest group-hover:ring-primary-container transition">
+<img class="w-full h-full object-cover group-hover:scale-110 transition duration-500" data-alt="Cinematic headshot portrait of seasoned actor portraying Commander Hayes with silver-streaked hair, futuristic tactical flight jacket, deep shadows and crisp contrast" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATBClj-XCoSalyA7bRaDWQuG-hGd9n_XepBKWvDumxH1WQ23-5G98xMx6OMIcmXo6L-ubxV00bf_RyEqcfE5qS5tQx4q9Nlzoposr-s0bAr4Hh770j4bdqrPYA5CAzq6j6I37TCplQvlSya-ruEeqYd5GvM49r0Vp0Mn04f8b7BbWNxUbcd9b4yrmtKJVcFSyijn2ZRDWJdoqPgw_h0wSNFMAonG6KggfOyobpsus"/>
+</div>
+<h4 class="text-white text-sm font-semibold tracking-tight">Marcus Sterling</h4>
+<p class="text-primary text-xs font-mono">Commander Hayes</p>
+<span class="text-[10px] text-outline mt-1">Mission Pilot</span>
+</div>
+<!-- Cast 3 -->
+<div class="flex flex-col items-center text-center p-3 rounded-xl bg-surface-container-low border border-surface-container-high hover:border-outline transition group">
+<div class="size-20 sm:size-24 rounded-full overflow-hidden mb-3 ring-2 ring-surface-container-highest group-hover:ring-primary-container transition">
+<img class="w-full h-full object-cover group-hover:scale-110 transition duration-500" data-alt="Portrait of actor in a sleek science officer uniform looking pensively into the camera, dark sci-fi rim lighting, cinematic portrait photography" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuFMK3wSf_TI0tg-IouXVvh0_U25BQqd5yVI-AjIF3SLx1FjcEaYiK33yfyG9LORPhf4aAbwwtVCxTaHFEPZr0UqkyhdkWG2kvyg9OqAafrelJu0V2IMqxK7SBMeZlLkyXuI-EAneXs5rFIVrcwFtJ--NrqYc3K-50O4ZqMMDGg0iif-oew2RJXKHxXO-tViovUme8ObDVEwo6pstxu1wM3JGvLd_HX05FiC86ZjA"/>
+</div>
+<h4 class="text-white text-sm font-semibold tracking-tight">Kenji Sato</h4>
+<p class="text-primary text-xs font-mono">Dr. Aris Thorne</p>
+<span class="text-[10px] text-outline mt-1">Quantum Architect</span>
+</div>
+<!-- Cast 4 -->
+<div class="flex flex-col items-center text-center p-3 rounded-xl bg-surface-container-low border border-surface-container-high hover:border-outline transition group">
+<div class="size-20 sm:size-24 rounded-full overflow-hidden mb-3 ring-2 ring-surface-container-highest group-hover:ring-primary-container transition">
+<img class="w-full h-full object-cover group-hover:scale-110 transition duration-500" data-alt="Cinematic studio headshot of actress with short hair and serious expression in futuristic comms specialist gear, moody rim lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCP6ms7BzpK7EkQRMkQwTOh0TYJq6uqy4eJesv4U0ZUCN46nHfuA4CGFgOg03WsbrhF5DxaUfxI3DLiNTM_JGL27WVH9vs6BEZhnFKs5q-_ioRYiWY1S8ApHlDd78BbPiKKa9bZijvjm7-S5lTxZ33rHDuaNmwaeC26pHOKSza-tUZPf8ZxFiIypMKugwUtPK5A949lHaTpQYohA04HOs5eOIwSNmeT377wwSv45Y0"/>
+</div>
+<h4 class="text-white text-sm font-semibold tracking-tight">Sora Ndiaye</h4>
+<p class="text-primary text-xs font-mono">Lieutenant Kael</p>
+<span class="text-[10px] text-outline mt-1">Communications Chief</span>
+</div>
+<!-- Cast 5 -->
+<div class="flex flex-col items-center text-center p-3 rounded-xl bg-surface-container-low border border-surface-container-high hover:border-outline transition group">
+<div class="size-20 sm:size-24 rounded-full overflow-hidden mb-3 ring-2 ring-surface-container-highest group-hover:ring-primary-container transition">
+<img class="w-full h-full object-cover group-hover:scale-110 transition duration-500" data-alt="Minimalist abstract portrait with digital holographic waveform overlay symbolizing an advanced artificial intelligence voice actor, deep obsidian background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAITmvDb6dDag36JX1oF4fnzyG97ANI1xJORu68zLF4ICYtf73fPdpAQkzKvwAqCtwvVxxHRzZy4E0tien65o80cgH9WlZw41KakVU8KCn3qB4zyUYm4CDqW8O6SSQr76Heyl0IdIzw_FyEGAvcuxYsRPfMwU5T_fFeIARRDU-Pp_vUBA3H-y75p3P9HKqg5Um1OKBQ4u682l3vXrL1cQmhyxL4GHIFhjOnCeKcEy0"/>
+</div>
+<h4 class="text-white text-sm font-semibold tracking-tight">AURA AI Matrix</h4>
+<p class="text-primary text-xs font-mono">Voice Synthesizer</p>
+<span class="text-[10px] text-outline mt-1">Ship Neural Core</span>
+</div>
+<!-- Cast 6: Crew Focus -->
+<div class="flex flex-col items-center text-center p-3 rounded-xl bg-surface-container-low border border-surface-container-high hover:border-outline transition group">
+<div class="size-20 sm:size-24 rounded-full overflow-hidden mb-3 ring-2 ring-surface-container-highest group-hover:ring-primary-container transition">
+<img class="w-full h-full object-cover group-hover:scale-110 transition duration-500" data-alt="Portrait of film director Lucian Vance on cinema set holding a viewfinder with glowing monitor panels in background, cinematic documentary style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD66sWeSJwYN1bKVPEwV9F57U1f_5T8EGj0YhbrKGVWbqvrVCq0pMcxkY_ZeonEYYru04vfIhMgwXnLQmxlai35VHiw807CK7mk9LcVKQhCtKRXyeR_FSXV3gOW3ShzWVHaTOwIOJ2v41Yf29lQfvbACBHuv2OYUT1LFdA3gC2CR-TXehGEHHo_i99b9XPprJAWjGSXWxyi68qeJUVEWhUJPhZEo1e5OOJmpbMCiFA"/>
+</div>
+<h4 class="text-white text-sm font-semibold tracking-tight">Lucian Vance</h4>
+<p class="text-primary text-xs font-mono">Screenplay &amp; Directing</p>
+<span class="text-[10px] text-outline mt-1">Visionary Filmmaker</span>
+</div>
+</div>
+<!-- BONUS FEATURES & DELETED SCENES STRIP -->
+<div class="mt-4 flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">star</span>
+<h3 class="text-sm font-headline-section font-bold tracking-wider uppercase text-white">IMAX Vault Extras &amp; Deep-Dives</h3>
+</div>
+<a class="text-xs text-on-surface-variant hover:text-white transition font-mono" href="#">View All 12 Featurettes →</a>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+<!-- Featurette 1 -->
+<div class="group relative rounded-xl overflow-hidden bg-surface-container-low border border-surface-container-high hover:border-primary-container transition cursor-pointer flex flex-col">
+<div class="relative aspect-video w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition duration-500" data-alt="Behind the scenes film crew filming an immense 1:1 scale spacecraft corridor practical set with massive mechanical gimbals and real practical lighting in dark soundstage" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxNa4OsN4jQ2m67LXYY4PbZbduoGgcqu0tmK6KRdu61CaOYsb3L3l0oetH6HCZKIogfRuUvM3bLVQS8xczoy0L3x3K3SMU8x5rgRAIDz7kSY_xn6SK2XcqTUUJgd_pEry4pxR-MfDbmxWWoLXKKf1Cu61VMi5G7KqAnYPhnwHo_jWYpbUcjjqAVCrRDQajjg-2k0MQSn8bcFtZR4qG6uvwLbLZs9XrPT6t94zHT1A"/>
+<div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition flex items-center justify-center">
+<div class="size-10 rounded-full bg-primary-container text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+<span class="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/80 font-mono text-[10px] text-white">24:15 • 4K</span>
+</div>
+<div class="p-3 flex flex-col">
+<h5 class="text-white text-sm font-semibold group-hover:text-primary transition">Behind The Singularity: Practical FX</h5>
+<p class="text-on-surface-variant text-xs mt-1 line-clamp-2">How Lucian Vance avoided CGI black holes using high-speed optical fluid projections and 65mm cameras.</p>
+</div>
+</div>
+<!-- Featurette 2 -->
+<div class="group relative rounded-xl overflow-hidden bg-surface-container-low border border-surface-container-high hover:border-primary-container transition cursor-pointer flex flex-col">
+<div class="relative aspect-video w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition duration-500" data-alt="Behind the scenes shot of audio mixing studio with 64-channel mixing console, composers Hans Zimmer and Trent Reznor adjusting analog modular synthesizers" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuLNT419QUVjtVhvf8C4YRPDHpViIQ48dhQYLGVdIO-LnKrH7_FQR_bzoNmZZPWpWasqdrFN65v2DccFcWXgfsiPmasCO1RwJ3yvle15ue8uS4t5Zpew2Dw-iNI_3r7H74AVDOWVFXPetje6AWhMPHbvk_pu5K9oCV00_DRTr_MspQM3NCwg6pqbLbf9jK37XA1WlzSy6QzmC6vck6EbMXe-phAua30fMatJHsS8w"/>
+<div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition flex items-center justify-center">
+<div class="size-10 rounded-full bg-primary-container text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+<span class="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/80 font-mono text-[10px] text-white">18:42 • 4K</span>
+</div>
+<div class="p-3 flex flex-col">
+<h5 class="text-white text-sm font-semibold group-hover:text-primary transition">Scoring in Spatial Audio: Hans &amp; Trent</h5>
+<p class="text-on-surface-variant text-xs mt-1 line-clamp-2">A technical walkthrough of rendering sub-bass gravitational infrasound natively for Dolby Atmos ceiling channels.</p>
+</div>
+</div>
+<!-- Featurette 3 -->
+<div class="group relative rounded-xl overflow-hidden bg-surface-container-low border border-surface-container-high hover:border-primary-container transition cursor-pointer flex flex-col">
+<div class="relative aspect-video w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition duration-500" data-alt="Cinematic still from an alternate ending scene featuring two astronauts on a desolate violet crystalline alien landscape staring into a twin red dwarf sunrise" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5W8xoFB0A5vIFV21WhK-0JNf17kf7vgLRPGFR0cWJ2iiR1YAJtRUVQAt7Hpsgo9RK7y-K3ix3tNR-vXPVK7_ITAu62pbBB5F5f5i_Q583whcdgaZE701Fxj1MEbwInKGjC1I45gTDPzs3gNSRvRDWE2zgBplTeeI2jX-iYUgIFVWp0aiqRRnne03akEv_cSdql8a_8GhsIzeah70xDFr-cW__k_HOzViXyAoLcZw"/>
+<div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition flex items-center justify-center">
+<div class="size-10 rounded-full bg-primary-container text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+<span class="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/80 font-mono text-[10px] text-white">09:10 • 4K</span>
+</div>
+<div class="p-3 flex flex-col">
+<h5 class="text-white text-sm font-semibold group-hover:text-primary transition">Alternate Timeline: The Sol System Return</h5>
+<p class="text-on-surface-variant text-xs mt-1 line-clamp-2">The fully mastered deleted sequence detailing what Dr. Lin witnessed across the outer dimensional fold.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. "MORE LIKE THIS" CURATED CINEMATIC RECOMMENDATIONS -->
+<section class="mt-6 mb-12 flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div>
+<h3 class="text-lg font-headline-hero font-bold tracking-tight text-white">More Curated Deep Space &amp; Singularity Epics</h3>
+<p class="text-xs text-on-surface-variant font-mono">Matched to your preference for 4K Lossless Masters &amp; Hard Sci-Fi</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="size-9 rounded-lg bg-surface-container border border-surface-container-high text-white hover:border-outline flex items-center justify-center transition">
+<span class="material-symbols-outlined text-lg">arrow_back</span>
+</button>
+<button class="size-9 rounded-lg bg-surface-container border border-surface-container-high text-white hover:border-outline flex items-center justify-center transition">
+<span class="material-symbols-outlined text-lg">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Recommendation Posters Grid -->
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+<!-- Rec 1 -->
+<a class="group flex flex-col gap-2.5 transition" href="#">
+<div class="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-surface-container-low border border-surface-container-high group-hover:border-primary-container transition shadow-lg">
+<img class="w-full h-full object-cover group-hover:scale-105 transition duration-500" data-alt="High quality film poster for Neon Eclipse, showing a solitary astronaut silhouette standing before a cybernetic space station orbited by a neon magenta eclipse" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0dDsW7RG8SvaRPTbeE4DJ84kPTopp2gCHOt70PAV1ZX91a93SK-FGp6TqSuLlL8Jh4227CMw9PAZCVJ1hmQ5z8JgggjE8wPnLdi3iSo-clO22Z5rPJqhMZbUblmqdsW5x8QOlEIcJrElwNEH_U50cnCzTyT1maxAYXFUHYx99AzCy9H__H2WEi1FCjiSkxl7lHpXJ-QliBPOFOw8xXheS4h4LSRThkYSuSWByIHc"/>
+<div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/80 font-mono text-[9px] text-tertiary font-bold">IMAX</div>
+<div class="absolute bottom-2 left-2 right-2 flex justify-between items-center text-[10px] font-mono text-white/90 bg-surface-container-lowest/80 backdrop-blur-sm p-1 rounded">
+<span>96% MATCH</span>
+<span class="text-primary font-bold">4K 60FPS</span>
+</div>
+</div>
+<div>
+<h4 class="text-white text-sm font-semibold group-hover:text-primary transition truncate">Neon Eclipse: Terminal Void</h4>
+<p class="text-on-surface-variant text-xs font-mono">2023 • 2h 11m • Sci-Fi Thriller</p>
+</div>
+</a>
+<!-- Rec 2 -->
+<a class="group flex flex-col gap-2.5 transition" href="#">
+<div class="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-surface-container-low border border-surface-container-high group-hover:border-primary-container transition shadow-lg">
+<img class="w-full h-full object-cover group-hover:scale-105 transition duration-500" data-alt="Futuristic film poster for The Cipher Protocol with complex glowing holographic quantum data strings wrapped around a derelict deep space satellite against pitch black void" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNzML6DFle5GUchfje6imOi55Ux9EdGoNySNtNY0CX5NLHxaJHLq4NKxFKADDG_7heRodPooB5pRmooVVeL5xFMUxsjplAm_J9WbA37yaRQr9p3e6CUfa_EVaThSu6ehSHOP_FJVW1i5hG4sXE0iAnjbqZV6I-sFsK3jOvMnCY9kNecrDlI0KZKMJyeAI4t32nPGZ8AH4z-ktmo3ECLGVmZEs4e9mshkzTLRqyKjI"/>
+<div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/80 font-mono text-[9px] text-primary font-bold">DOLBY VISION</div>
+<div class="absolute bottom-2 left-2 right-2 flex justify-between items-center text-[10px] font-mono text-white/90 bg-surface-container-lowest/80 backdrop-blur-sm p-1 rounded">
+<span>94% MATCH</span>
+<span class="text-primary font-bold">98 MBPS</span>
+</div>
+</div>
+<div>
+<h4 class="text-white text-sm font-semibold group-hover:text-primary transition truncate">The Cipher Protocol</h4>
+<p class="text-on-surface-variant text-xs font-mono">2024 • 1h 58m • Cyber-Cosmos</p>
+</div>
+</a>
+<!-- Rec 3 -->
+<a class="group flex flex-col gap-2.5 transition" href="#">
+<div class="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-surface-container-low border border-surface-container-high group-hover:border-primary-container transition shadow-lg">
+<img class="w-full h-full object-cover group-hover:scale-105 transition duration-500" data-alt="Chilling cinematic movie poster for Arctic Abyss showing an ice-crusted submarine drill exploring an ocean beneath Europa moon ice crust with deep teal and crimson bioluminescence" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQWDA_dKbixHA1l3W1WDsV-R_-07tlZqgsN3RezcEdZte6fnejngpzfXZY9al_zjD0ISFGobLVDSY6SVkr-IApxCTdyW_-qC3B0IluRIyyxJ7fsLed_SzJ0dN7Vndu-298uGkNkCq2N97n9sV0MLE9BOzSppbGa5vpcX7TBZHiQXt8O2vM1CmY_f-qPGadDX4cxHohir-1WRakYQLP0YzR5DKj5AQDGlcYjGfSYfM"/>
+<div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/80 font-mono text-[9px] text-emerald-400 font-bold">MASTER ATMOS</div>
+<div class="absolute bottom-2 left-2 right-2 flex justify-between items-center text-[10px] font-mono text-white/90 bg-surface-container-lowest/80 backdrop-blur-sm p-1 rounded">
+<span>91% MATCH</span>
+<span class="text-primary font-bold">4K HDR</span>
+</div>
+</div>
+<div>
+<h4 class="text-white text-sm font-semibold group-hover:text-primary transition truncate">Arctic Abyss: Sub-Zero Horizon</h4>
+<p class="text-on-surface-variant text-xs font-mono">2022 • 2h 05m • Oceanic Sci-Fi</p>
+</div>
+</a>
+<!-- Rec 4 -->
+<a class="group flex flex-col gap-2.5 transition" href="#">
+<div class="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-surface-container-low border border-surface-container-high group-hover:border-primary-container transition shadow-lg">
+<img class="w-full h-full object-cover group-hover:scale-105 transition duration-500" data-alt="Epic film poster for Helios Station Drift depicting a colossal rotating solar ring station silhouetted against a blazing orange solar flare erupting from a sun" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2WzKDOQFXu5QaR4H6tW85lX0XJ9H5vbymxoue6lTVOc5LIBUIgOt4C4A3mtymnV0k_7fCzf75Y3O_Js56PCYLlhoUQgcmuTufMA8mwfpRe__Jmz8VjvRS07vXauQREWO9hkfkdn4LyAcedEKtFC5NJRzarVJxI0delOCzgLSLZzx6JvoneB9yqbruSnRnrR3aKRM-MVEhlcCWPuvBSmSESQ3ZyGHeK3JbF59lGK8"/>
+<div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/80 font-mono text-[9px] text-tertiary font-bold">IMAX ENHANCED</div>
+<div class="absolute bottom-2 left-2 right-2 flex justify-between items-center text-[10px] font-mono text-white/90 bg-surface-container-lowest/80 backdrop-blur-sm p-1 rounded">
+<span>97% MATCH</span>
+<span class="text-primary font-bold">92 MBPS</span>
+</div>
+</div>
+<div>
+<h4 class="text-white text-sm font-semibold group-hover:text-primary transition truncate">Helios Station Drift</h4>
+<p class="text-on-surface-variant text-xs font-mono">2023 • 2h 32m • Space Epic</p>
+</div>
+</a>
+<!-- Rec 5 -->
+<a class="group flex flex-col gap-2.5 transition" href="#">
+<div class="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-surface-container-low border border-surface-container-high group-hover:border-primary-container transition shadow-lg">
+<img class="w-full h-full object-cover group-hover:scale-105 transition duration-500" data-alt="Sci-fi film poster for Singularity Echoes featuring a fractured geometric crystal floating through interstellar red dust nebula with mirror reflections of a lone pilot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHJr2D3IYp8Wyzb62M40t9Ju2UY7IQecmjUzqzYGiCXWpqXxgTv9mqLlq2lThtD0KAOlInTugUyb74RgTNTXpDGYlhkUEgrwKaMuEPbWNqitvX88MzxiyA5s-dcwScz73K2AMM2dTtF6UttjAi3TphmyvCBNIlbYqYzRL0gk5-HNxePmpfZhZDtDQKh7GrW8jtFYLCZhshlMXok3HyVhFcuwmPJTtEaD5bxaaCjJQ"/>
+<div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/80 font-mono text-[9px] text-white font-bold">DTS-HD MASTER</div>
+<div class="absolute bottom-2 left-2 right-2 flex justify-between items-center text-[10px] font-mono text-white/90 bg-surface-container-lowest/80 backdrop-blur-sm p-1 rounded">
+<span>89% MATCH</span>
+<span class="text-primary font-bold">4K REMASTER</span>
+</div>
+</div>
+<div>
+<h4 class="text-white text-sm font-semibold group-hover:text-primary transition truncate">Singularity Echoes</h4>
+<p class="text-on-surface-variant text-xs font-mono">2021 • 1h 49m • Cosmic Mystery</p>
+</div>
+</a>
+</div>
+</section>
+</main>
+<!-- CINEMA FOOTER -->
+<footer class="w-full border-t border-surface-container-high bg-surface-container-lowest text-on-surface-variant text-xs py-10 px-6 lg:px-12 mt-12">
+<div class="max-w-[1540px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+<div class="flex items-center gap-3 text-white">
+<div class="size-5 text-primary-container">
+<svg class="w-full h-full" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M6 6H42L36 24L42 42H6L12 24L6 6Z" fill="currentColor"></path>
+</svg>
+</div>
+<span class="font-brand-wordmark font-bold text-sm tracking-wider uppercase">Zoku TV Ultra-Cinema Engine</span>
+</div>
+<div class="flex flex-wrap items-center justify-center gap-6 font-mono text-[11px]">
+<span class="text-outline">Dolby Vision &amp; Dolby Atmos are registered trademarks of Dolby Laboratories.</span>
+<span>•</span>
+<a class="hover:text-white transition" href="#">Lossless Codec Certifications</a>
+<span>•</span>
+<a class="hover:text-white transition" href="#">Network Node Status: 99.99% OK</a>
+</div>
+<div class="text-outline text-[11px] font-mono">
+        © 2024 Zoku Entertainment Network Inc.
+      </div>
+</div>
+</footer>
+</body></html>

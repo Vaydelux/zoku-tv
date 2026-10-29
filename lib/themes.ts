@@ -33,6 +33,11 @@ export type ThemeTokens = {
   onSurfaceVariant: string;
   borderColor: string;
   backgroundGradient: string;
+  surfaceGradient: string;
+  buttonGradient: string;
+  orbA: string;
+  orbB: string;
+  orbC: string;
 };
 
 export type ThemeOption = {
@@ -47,7 +52,15 @@ export type ThemeOption = {
   lightTokens: ThemeTokens;
 };
 
-type SolidTokens = Omit<ThemeTokens, "backgroundGradient">;
+type SolidTokens = Omit<
+  ThemeTokens,
+  | "backgroundGradient"
+  | "surfaceGradient"
+  | "buttonGradient"
+  | "orbA"
+  | "orbB"
+  | "orbC"
+>;
 
 const token = (
   background: string,
@@ -102,54 +115,71 @@ function contrastOn(color: string): string {
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
   });
   const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return luminance > 0.45 ? "#141418" : "#ffffff";
+  return luminance > 0.45 ? "#101218" : "#ffffff";
 }
 
-/** Lift near-black shells slightly — keep cool, avoid washed mud */
-function liftHex(hex: string, amount = 0.1): string {
-  const rgb = parseHex(hex);
-  if (!rgb) return hex;
-  const lifted = rgb.map((c) => Math.min(255, Math.round(c + (255 - c) * amount)));
-  return `#${lifted.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
-}
-
-/** Nudge warm/muddy dark shells toward cool slate without killing theme hue */
-function coolMix(hex: string, slate = "#151922", amount = 0.35): string {
-  const a = parseHex(hex);
-  const b = parseHex(slate);
-  if (!a || !b) return hex;
-  const mixed = a.map((c, i) => Math.round(c * (1 - amount) + b[i] * amount));
-  return `#${mixed.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
-}
-
-function softenDarkTokens(tokens: SolidTokens): SolidTokens {
+/** Gently enrich dark shells while preserving the substantial hue of each theme */
+function tuneDarkTokens(tokens: SolidTokens): SolidTokens {
   return {
     ...tokens,
-    background: liftHex(coolMix(tokens.background, "#12151c", 0.4), 0.08),
-    surface: liftHex(coolMix(tokens.surface, "#1a1e28", 0.32), 0.06),
-    surfaceHover: liftHex(coolMix(tokens.surfaceHover, "#242a36", 0.28), 0.05),
+    primaryContrast: contrastOn(tokens.primary),
+    accentContrast: contrastOn(tokens.accent),
   };
 }
 
 function withGradient(tokens: SolidTokens, mode: AppearanceMode): ThemeTokens {
   const bg = tokens.background;
+  const surface = tokens.surface;
+  const surfaceHover = tokens.surfaceHover;
   const primary = tokens.primary;
-  /** Cool slate atmosphere + whisper of primary — no muddy pink wash */
+  const accent = tokens.accent;
+
   const backgroundGradient =
     mode === "dark"
       ? [
-          `radial-gradient(ellipse 105% 70% at 6% -10%, color-mix(in srgb, #64748b 22%, transparent), transparent 58%)`,
-          `radial-gradient(ellipse 85% 55% at 98% 5%, color-mix(in srgb, ${primary} 9%, transparent), transparent 52%)`,
-          `radial-gradient(ellipse 75% 50% at 48% 108%, color-mix(in srgb, #334155 16%, transparent), transparent 58%)`,
-          `linear-gradient(175deg, ${bg} 0%, color-mix(in srgb, ${bg} 88%, #1c2230) 48%, color-mix(in srgb, ${bg} 78%, #0f1218) 100%)`,
+          `radial-gradient(ellipse 115% 78% at 8% -12%, color-mix(in srgb, ${primary} 30%, transparent) 0%, transparent 62%)`,
+          `radial-gradient(ellipse 95% 68% at 96% 6%, color-mix(in srgb, ${accent} 24%, transparent) 0%, transparent 58%)`,
+          `radial-gradient(ellipse 90% 64% at 50% 108%, color-mix(in srgb, ${primary} 20%, ${surface}) 0%, transparent 64%)`,
+          `linear-gradient(165deg, color-mix(in srgb, ${bg} 82%, ${primary} 18%) 0%, ${bg} 46%, color-mix(in srgb, ${bg} 80%, ${accent} 20%) 100%)`,
         ].join(", ")
       : [
-          `radial-gradient(ellipse 100% 60% at 8% 0%, color-mix(in srgb, #94a3b8 14%, transparent), transparent 52%)`,
-          `radial-gradient(ellipse 80% 50% at 100% 18%, color-mix(in srgb, ${primary} 8%, transparent), transparent 48%)`,
-          `linear-gradient(170deg, ${bg} 0%, color-mix(in srgb, ${bg} 92%, #e8ecf2) 50%, ${tokens.surface} 100%)`,
+          `radial-gradient(ellipse 110% 70% at 6% -8%, color-mix(in srgb, ${primary} 22%, transparent) 0%, transparent 58%)`,
+          `radial-gradient(ellipse 90% 60% at 96% 12%, color-mix(in srgb, ${accent} 18%, transparent) 0%, transparent 55%)`,
+          `radial-gradient(ellipse 85% 55% at 50% 106%, color-mix(in srgb, ${primary} 14%, transparent) 0%, transparent 60%)`,
+          `linear-gradient(168deg, color-mix(in srgb, ${bg} 88%, ${primary} 12%) 0%, ${bg} 52%, color-mix(in srgb, ${surface} 90%, ${accent} 10%) 100%)`,
         ].join(", ");
 
-  return { ...tokens, backgroundGradient };
+  const surfaceGradient =
+    mode === "dark"
+      ? `linear-gradient(145deg, color-mix(in srgb, ${surface} 88%, ${primary} 12%) 0%, color-mix(in srgb, ${surface} 94%, ${bg} 6%) 55%, color-mix(in srgb, ${surfaceHover} 85%, ${accent} 15%) 100%)`
+      : `linear-gradient(145deg, color-mix(in srgb, #ffffff 90%, ${primary} 10%) 0%, #ffffff 58%, color-mix(in srgb, ${surfaceHover} 88%, ${accent} 12%) 100%)`;
+
+  const buttonGradient = `linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary} 65%, ${accent} 35%) 100%)`;
+
+  const orbA =
+    mode === "dark"
+      ? `radial-gradient(circle, color-mix(in srgb, ${primary} 48%, transparent) 0%, transparent 70%)`
+      : `radial-gradient(circle, color-mix(in srgb, ${primary} 30%, transparent) 0%, transparent 70%)`;
+
+  const orbB =
+    mode === "dark"
+      ? `radial-gradient(circle, color-mix(in srgb, ${accent} 42%, transparent) 0%, transparent 70%)`
+      : `radial-gradient(circle, color-mix(in srgb, ${accent} 26%, transparent) 0%, transparent 70%)`;
+
+  const orbC =
+    mode === "dark"
+      ? `radial-gradient(circle, color-mix(in srgb, ${primary} 32%, ${accent} 28%) 0%, transparent 72%)`
+      : `radial-gradient(circle, color-mix(in srgb, ${primary} 20%, ${accent} 18%) 0%, transparent 72%)`;
+
+  return {
+    ...tokens,
+    backgroundGradient,
+    surfaceGradient,
+    buttonGradient,
+    orbA,
+    orbB,
+    orbC,
+  };
 }
 
 function toLightTokens(dark: ThemeTokens): ThemeTokens {
@@ -157,22 +187,22 @@ function toLightTokens(dark: ThemeTokens): ThemeTokens {
   const accentContrast = contrastOn(dark.accent);
   const rgb = parseHex(dark.primary);
   const glow = rgb
-    ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.28)`
+    ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3)`
     : dark.primaryGlow;
 
   return withGradient(
     {
-      background: "#f0eef2",
+      background: "#f4f3f8",
       surface: "#ffffff",
-      surfaceHover: "#e8e6ec",
+      surfaceHover: "#ebe9f2",
       primary: dark.primary,
       primaryContrast,
       primaryGlow: glow,
       accent: dark.accent,
       accentContrast,
-      onSurface: "#121218",
-      onSurfaceVariant: "rgba(18, 18, 24, 0.72)",
-      borderColor: "rgba(18, 18, 24, 0.14)",
+      onSurface: "#111218",
+      onSurfaceVariant: "rgba(17, 18, 24, 0.72)",
+      borderColor: "rgba(17, 18, 24, 0.14)",
     },
     "light"
   );
@@ -182,177 +212,369 @@ type ThemeSeed = Omit<ThemeOption, "tokens" | "lightTokens"> & { tokens: SolidTo
 
 const THEME_SEEDS: ThemeSeed[] = [
   {
+    id: "theme-crimson",
+    name: "Crimson Cinema",
+    hint: "Velvet crimson & ruby",
+    desc: "Signature theatrical obsidian bathed in deep crimson and ruby spotlight gradients",
+    preview: "linear-gradient(135deg, #e11d48 0%, #fb7185 50%, #190b14 100%)",
+    tokens: token(
+      "#0e0a10",
+      "#18121c",
+      "#251b2b",
+      "#e11d48",
+      "#ffffff",
+      "rgba(225,29,72,0.42)",
+      "#fb7185",
+      "#19040a",
+      "#f8f5f7",
+      "rgba(244,230,236,0.68)",
+      "rgba(244,63,94,0.22)"
+    ),
+  },
+  {
     id: "theme-sunset",
     name: "Sunset Graphite",
-    hint: "Warm orange embers",
-    desc: "Warm dusky graphite with ember-orange highlights",
-    preview: "bg-gradient-to-br from-orange-500 to-stone-700",
-    tokens: token("#100d0b", "#191411", "#241c17", "#f97316", "#1b0b03", "rgba(249,115,22,0.4)", "#fb923c", "#1b0b03", "#f7f7f9", "#b8a498", "rgba(249,115,22,0.22)"),
+    hint: "Tangerine &rose horizon",
+    desc: "Warm dusk horizon blending molten tangerine, coral rose, and deep espresso",
+    preview: "linear-gradient(135deg, #f97316 0%, #fb7185 55%, #1c100d 100%)",
+    tokens: token(
+      "#120b09",
+      "#1d1310",
+      "#2b1c17",
+      "#f97316",
+      "#180802",
+      "rgba(249,115,22,0.44)",
+      "#fb7185",
+      "#1f050b",
+      "#fbf6f3",
+      "rgba(235,214,203,0.7)",
+      "rgba(249,115,22,0.24)"
+    ),
   },
   {
     id: "theme-aurora",
     name: "Dark Aurora",
-    hint: "Teal + violet electric",
-    desc: "Cosmic boreal luminescence with electric violet accents",
-    preview: "bg-gradient-to-br from-teal-400 to-violet-600",
-    tokens: token("#050b12", "#0b1520", "#102230", "#2dd4bf", "#031412", "rgba(45,212,191,0.4)", "#a78bfa", "#16082e", "#e6f4ea", "#8ea194", "rgba(45,212,191,0.22)"),
+    hint: "Emerald teal & electric violet",
+    desc: "Boreal sky ribbons of luminous turquoise and ultraviolet over midnight fjords",
+    preview: "linear-gradient(135deg, #14b8a6 0%, #8b5cf6 55%, #07131c 100%)",
+    tokens: token(
+      "#061018",
+      "#0d1c28",
+      "#152a3b",
+      "#2dd4bf",
+      "#031815",
+      "rgba(45,212,191,0.42)",
+      "#a78bfa",
+      "#14072b",
+      "#ecfdf5",
+      "rgba(186,224,214,0.7)",
+      "rgba(45,212,191,0.24)"
+    ),
   },
   {
     id: "theme-moonlight",
     name: "Moonlight",
-    hint: "Silver-blue minimal",
-    desc: "Cool monochrome silver-blue minimal cinema",
-    preview: "bg-gradient-to-br from-slate-200 to-blue-500",
-    tokens: token("#0b101a", "#141b28", "#1c2637", "#93c5fd", "#0b172a", "rgba(147,197,253,0.4)", "#cbd5e1", "#0b172a", "#f8fafc", "#94a3b8", "rgba(147,197,253,0.2)"),
-  },
-  {
-    id: "theme-crimson",
-    name: "Crimson Cinema",
-    hint: "Cool charcoal + red",
-    desc: "Cool slate cinema shell with restrained crimson accents",
-    preview: "bg-gradient-to-br from-red-500 to-slate-900",
+    hint: "Celestial sapphire & silver",
+    desc: "Luminous lunar sapphire and glacier silver over deep midnight slate",
+    preview: "linear-gradient(135deg, #60a5fa 0%, #c7d2fe 55%, #0b1324 100%)",
     tokens: token(
-      "#12141a",
-      "#1a1d26",
-      "#252a36",
-      "#e11d48",
-      "#ffffff",
-      "rgba(225,29,72,0.35)",
-      "#f43f5e",
-      "#ffffff",
-      "#f4f4f5",
-      "rgba(228,228,231,0.62)",
-      "rgba(255,255,255,0.09)"
+      "#09101d",
+      "#111c30",
+      "#1a2944",
+      "#60a5fa",
+      "#061226",
+      "rgba(96,165,250,0.42)",
+      "#a5b4fc",
+      "#0b102b",
+      "#f4f7fb",
+      "rgba(191,206,228,0.7)",
+      "rgba(96,165,250,0.24)"
     ),
   },
   {
     id: "theme-ocean",
     name: "Deep Ocean",
-    hint: "Sapphire navy",
-    desc: "Abyssal indigo marine depths with cyan glow",
-    preview: "bg-gradient-to-br from-cyan-400 to-blue-900",
-    tokens: token("#06111c", "#0b1b2b", "#10263a", "#38bdf8", "#042033", "rgba(56,189,248,0.4)", "#22d3ee", "#042033", "#eef4f8", "#8da9c4", "rgba(56,189,248,0.22)"),
+    hint: "Bioluminescent cyan & cobalt",
+    desc: "Abyssal marine trenches illuminated by electric aqua and cobalt currents",
+    preview: "linear-gradient(135deg, #06b6d4 0%, #3b82f6 55%, #051322 100%)",
+    tokens: token(
+      "#05111e",
+      "#0b1e32",
+      "#122d49",
+      "#22d3ee",
+      "#031c24",
+      "rgba(34,211,238,0.42)",
+      "#3b82f6",
+      "#ffffff",
+      "#eef8ff",
+      "rgba(176,212,238,0.7)",
+      "rgba(34,211,238,0.24)"
+    ),
   },
   {
     id: "theme-neon",
     name: "Toxic Neon",
-    hint: "Acid green edge",
-    desc: "Cyberpunk acid radioactive green edge lighting",
-    preview: "bg-gradient-to-br from-lime-300 to-green-950",
-    tokens: token("#070b05", "#10170b", "#192411", "#bef264", "#132004", "rgba(190,242,100,0.4)", "#a3e635", "#132004", "#e5e2e3", "#b4bf9a", "rgba(190,242,100,0.24)"),
+    hint: "Cyber lime & emerald pulse",
+    desc: "High-voltage cybernetic lime and emerald laser gradients on bio-carbon",
+    preview: "linear-gradient(135deg, #a3e635 0%, #10b981 55%, #091307 100%)",
+    tokens: token(
+      "#081006",
+      "#111f0e",
+      "#1a2f15",
+      "#a3e635",
+      "#0f1c03",
+      "rgba(163,230,53,0.42)",
+      "#10b981",
+      "#031c13",
+      "#f2fce8",
+      "rgba(195,222,175,0.7)",
+      "rgba(163,230,53,0.24)"
+    ),
   },
   {
     id: "theme-rose",
     name: "Rose Dusk",
-    hint: "Soft rose on slate",
-    desc: "Cool slate dusk with soft rose accents — no muddy plum wash",
-    preview: "bg-gradient-to-br from-rose-300 to-slate-900",
+    hint: "Blush sakura & amethyst",
+    desc: "Velvet sakura rose and twilightorchid gradients over dusky plum slate",
+    preview: "linear-gradient(135deg, #fb7185 0%, #e879f9 55%, #190e1c 100%)",
     tokens: token(
-      "#13151c",
-      "#1c2030",
-      "#282e40",
+      "#130c16",
+      "#1f1424",
+      "#2d1e35",
       "#fb7185",
-      "#1a0610",
-      "rgba(251,113,133,0.35)",
-      "#fda4af",
-      "#1a0610",
-      "#faf5f6",
-      "rgba(228,218,222,0.62)",
-      "rgba(255,255,255,0.09)"
+      "#1f050b",
+      "rgba(251,113,133,0.4)",
+      "#e879f9",
+      "#240529",
+      "#fdf4f7",
+      "rgba(235,205,220,0.7)",
+      "rgba(251,113,133,0.24)"
     ),
   },
   {
     id: "theme-sand",
     name: "Sand Storm",
-    hint: "Caramel gold earth",
-    desc: "Arid desert gold grain dune warmth",
-    preview: "bg-gradient-to-br from-amber-300 to-stone-800",
-    tokens: token("#110e09", "#1b1610", "#282015", "#fbbf24", "#241703", "rgba(251,191,36,0.4)", "#f59e0b", "#241703", "#f4eae1", "#b09f8f", "rgba(251,191,36,0.22)"),
+    hint: "Sunlit gold & copper",
+    desc: "Mirage dunes of burnished gold, warm amber, and spiced terracotta",
+    preview: "linear-gradient(135deg, #fbbf24 0%, #f97316 55%, #1c1309 100%)",
+    tokens: token(
+      "#130e08",
+      "#20180e",
+      "#2f2314",
+      "#fbbf24",
+      "#211502",
+      "rgba(251,191,36,0.42)",
+      "#f97316",
+      "#1f0a02",
+      "#fcf6ed",
+      "rgba(226,208,184,0.7)",
+      "rgba(251,191,36,0.24)"
+    ),
   },
   {
     id: "theme-void",
     name: "Void Purple",
-    hint: "Space indigo",
-    desc: "Deep ultraviolet event horizon nebula",
-    preview: "bg-gradient-to-br from-indigo-400 to-violet-950",
-    tokens: token("#070611", "#100d1d", "#19142b", "#a78bfa", "#16082e", "rgba(167,139,250,0.4)", "#818cf8", "#0d1035", "#f9f5fc", "#a28cb8", "rgba(167,139,250,0.22)"),
+    hint: "Ultraviolet & magenta nebula",
+    desc: "Deep space singularity pulsing with violet, indigo, and fuchsia nebula light",
+    preview: "linear-gradient(135deg, #a855f7 0%, #ec4899 55%, #0c071a 100%)",
+    tokens: token(
+      "#090614",
+      "#140e26",
+      "#1f163a",
+      "#a855f7",
+      "#ffffff",
+      "rgba(168,85,247,0.44)",
+      "#ec4899",
+      "#ffffff",
+      "#faf5ff",
+      "rgba(216,196,240,0.7)",
+      "rgba(168,85,247,0.25)"
+    ),
   },
   {
     id: "theme-arctic",
     name: "Arctic Fog",
-    hint: "Icy cyan steel",
-    desc: "Chilled glacial frost silver mist",
-    preview: "bg-gradient-to-br from-cyan-200 to-slate-700",
-    tokens: token("#081014", "#101c21", "#17272d", "#a5f3fc", "#082128", "rgba(165,243,252,0.4)", "#67e8f9", "#082128", "#f0f5f9", "#94a3b0", "rgba(165,243,252,0.22)"),
+    hint: "Glacial cyan & sky crystal",
+    desc: "Crystalline polar ice sheets reflecting sky-blue and frost-cyan auroras",
+    preview: "linear-gradient(135deg, #67e8f9 0%, #38bdf8 55%, #09161c 100%)",
+    tokens: token(
+      "#081217",
+      "#102028",
+      "#18303b",
+      "#67e8f9",
+      "#051d24",
+      "rgba(103,232,249,0.42)",
+      "#38bdf8",
+      "#041a29",
+      "#f0faff",
+      "rgba(182,216,230,0.7)",
+      "rgba(103,232,249,0.24)"
+    ),
   },
   {
     id: "theme-amber",
     name: "Amber Twilight",
-    hint: "Fireside orange glow",
-    desc: "Cozy warm fireside amber evening light",
-    preview: "bg-gradient-to-br from-amber-400 to-orange-950",
-    tokens: token("#140e0a", "#261b13", "#3a281c", "#f39c12", "#241703", "rgba(243,156,18,0.4)", "#fbbf24", "#241703", "#fdf5f0", "#beaa9d", "rgba(243,156,18,0.22)"),
+    hint: "Honey amber & crimson hearth",
+    desc: "Rich fireside honey-amber glowing against warm mahogany and ember red",
+    preview: "linear-gradient(135deg, #f59e0b 0%, #ef4444 55%, #1d1008 100%)",
+    tokens: token(
+      "#140c07",
+      "#23160d",
+      "#342014",
+      "#f59e0b",
+      "#1f1202",
+      "rgba(245,158,11,0.42)",
+      "#ef4444",
+      "#ffffff",
+      "#fff7ed",
+      "rgba(230,204,184,0.7)",
+      "rgba(245,158,11,0.24)"
+    ),
   },
   {
     id: "theme-ember",
     name: "Electric Ember",
-    hint: "Molten magma orange",
-    desc: "Supercharged molten magma orange heat",
-    preview: "bg-gradient-to-br from-orange-500 to-red-950",
-    tokens: token("#120909", "#241313", "#381d1d", "#ff4500", "#1a0500", "rgba(255,69,0,0.4)", "#ff6b35", "#1a0500", "#faeeee", "#c09e9e", "rgba(255,69,0,0.22)"),
+    hint: "Volcanic scarlet & magma",
+    desc: "Superheated volcanic scarlet and molten orange surging through obsidian",
+    preview: "linear-gradient(135deg, #ff5722 0%, #f43f5e 55%, #1b0909 100%)",
+    tokens: token(
+      "#130808",
+      "#221010",
+      "#331818",
+      "#ff5722",
+      "#ffffff",
+      "rgba(255,87,34,0.44)",
+      "#f43f5e",
+      "#ffffff",
+      "#fff1f0",
+      "rgba(232,195,195,0.7)",
+      "rgba(255,87,34,0.25)"
+    ),
   },
   {
     id: "theme-lavender",
     name: "Frosted Lavender",
-    hint: "Chilled violet floral",
-    desc: "Chilled violet floral moonlit glow",
-    preview: "bg-gradient-to-br from-violet-300 to-indigo-950",
-    tokens: token("#110e1a", "#1f1b30", "#2e2847", "#c7a4ff", "#1a0f2e", "rgba(199,164,255,0.4)", "#d8b4fe", "#1a0f2e", "#faf9fd", "#ab9ebf", "rgba(199,164,255,0.22)"),
+    hint: "Orchid lilac & periwinkle",
+    desc: "Dreamlike orchid lavender and soft periwinkle floating over twilight indigo",
+    preview: "linear-gradient(135deg, #c084fc 0%, #818cf8 55%, #130e24 100%)",
+    tokens: token(
+      "#0f0b1c",
+      "#1b1530",
+      "#282046",
+      "#c084fc",
+      "#19082b",
+      "rgba(192,132,252,0.42)",
+      "#818cf8",
+      "#090d2b",
+      "#faf7ff",
+      "rgba(210,198,236,0.7)",
+      "rgba(192,132,252,0.24)"
+    ),
   },
   {
     id: "theme-cobalt",
     name: "Midnight Cobalt",
-    hint: "Electric blue nebula",
-    desc: "Intense electric blue midnight nebula",
-    preview: "bg-gradient-to-br from-blue-500 to-indigo-950",
-    tokens: token("#050814", "#0c122b", "#141e45", "#1e88e5", "#ffffff", "rgba(30,136,229,0.4)", "#60a5fa", "#04122b", "#edf4fa", "#8ea1bf", "rgba(30,136,229,0.22)"),
+    hint: "Royal cobalt & electric indigo",
+    desc: "Deep-sea royal cobalt and electric indigo beams cutting through midnight",
+    preview: "linear-gradient(135deg, #3b82f6 0%, #6366f1 55%, #070c24 100%)",
+    tokens: token(
+      "#060a1c",
+      "#0e1634",
+      "#17234f",
+      "#3b82f6",
+      "#ffffff",
+      "rgba(59,130,246,0.45)",
+      "#6366f1",
+      "#ffffff",
+      "#eff6ff",
+      "rgba(180,200,238,0.7)",
+      "rgba(59,130,246,0.25)"
+    ),
   },
   {
     id: "theme-oasis",
     name: "Neon Oasis",
-    hint: "Synthetic digital cyan",
-    desc: "Futuristic synthetic digital oasis cyan",
-    preview: "bg-gradient-to-br from-teal-300 to-emerald-950",
-    tokens: token("#051210", "#0d2621", "#153d35", "#00ffcc", "#042a24", "rgba(0,255,204,0.35)", "#2dd4bf", "#042a24", "#edfbf7", "#8caea7", "rgba(0,255,204,0.22)"),
+    hint: "Aquamarine & tropical cyan",
+    desc: "Luminous tropical lagoon aquamarine and emerald-cyan over deep jungle slate",
+    preview: "linear-gradient(135deg, #00f5d4 0%, #06b6d4 55%, #051917 100%)",
+    tokens: token(
+      "#051311",
+      "#0c2420",
+      "#143832",
+      "#00f5d4",
+      "#02241f",
+      "rgba(0,245,212,0.4)",
+      "#06b6d4",
+      "#021e24",
+      "#edfdfb",
+      "rgba(176,224,216,0.7)",
+      "rgba(0,245,212,0.24)"
+    ),
   },
   {
     id: "theme-platinum",
     name: "Platinum Frost",
-    hint: "Ice metallic silver",
-    desc: "Bright ice metallic luxury silver frost",
-    preview: "bg-gradient-to-br from-slate-200 to-slate-700",
-    tokens: token("#10141a", "#1d232e", "#2b3342", "#e2e8f0", "#111827", "rgba(226,232,240,0.35)", "#cbd5e1", "#111827", "#f8fafc", "#94a3b8", "rgba(226,232,240,0.2)"),
+    hint: "Liquid chrome & titanium blue",
+    desc: "High-contrast brushed platinum and cool titanium-blue studio reflections",
+    preview: "linear-gradient(135deg, #e2e8f0 0%, #94a3b8 55%, #0f141d 100%)",
+    tokens: token(
+      "#0d1118",
+      "#171e2a",
+      "#232d3f",
+      "#e2e8f0",
+      "#0f172a",
+      "rgba(226,232,240,0.38)",
+      "#38bdf8",
+      "#041b29",
+      "#f8fafc",
+      "rgba(194,206,222,0.7)",
+      "rgba(226,232,240,0.22)"
+    ),
   },
   {
     id: "theme-sage",
     name: "Shadow Sage",
-    hint: "Deep herbal forest",
-    desc: "Organic botanical deep herbal forest calm",
-    preview: "bg-gradient-to-br from-green-400 to-emerald-950",
-    tokens: token("#0a0f0c", "#14211a", "#1e3328", "#78e08f", "#0d1f14", "rgba(120,224,143,0.4)", "#86efac", "#0d1f14", "#edfbf2", "#94bba2", "rgba(120,224,143,0.22)"),
+    hint: "Botanical jade & mint",
+    desc: "Lush rainforest jade and vibrant mint canopies over deep mossy charcoal",
+    preview: "linear-gradient(135deg, #34d399 0%, #84cc16 55%, #09140e 100%)",
+    tokens: token(
+      "#08110c",
+      "#112118",
+      "#1a3325",
+      "#34d399",
+      "#042115",
+      "rgba(52,211,153,0.42)",
+      "#a3e635",
+      "#112104",
+      "#ecfdf5",
+      "rgba(182,222,200,0.7)",
+      "rgba(52,211,153,0.24)"
+    ),
   },
   {
     id: "theme-solar",
     name: "Solar Flare",
-    hint: "Interstellar solar corona",
-    desc: "Blazing interstellar solar corona gold",
-    preview: "bg-gradient-to-br from-yellow-400 to-orange-950",
-    tokens: token("#141007", "#241d0e", "#362c15", "#f1c40f", "#2a1f03", "rgba(241,196,15,0.4)", "#fbbf24", "#2a1f03", "#fefcf3", "#bfb294", "rgba(241,196,15,0.22)"),
+    hint: "Helios gold & corona orange",
+    desc: "Radiant helios gold and stellar corona orange erupting across deep cosmos",
+    preview: "linear-gradient(135deg, #facc15 0%, #f97316 55%, #191306 100%)",
+    tokens: token(
+      "#130f06",
+      "#211a0b",
+      "#322811",
+      "#facc15",
+      "#211802",
+      "rgba(250,204,21,0.42)",
+      "#f97316",
+      "#1f0b02",
+      "#fefce8",
+      "rgba(230,218,180,0.7)",
+      "rgba(250,204,21,0.24)"
+    ),
   },
 ];
 
 function enrichTheme(seed: ThemeSeed): ThemeOption {
-  const dark = withGradient(softenDarkTokens(seed.tokens), "dark");
+  const dark = withGradient(tuneDarkTokens(seed.tokens), "dark");
   return {
     id: seed.id,
     name: seed.name,
@@ -368,7 +590,7 @@ export const THEME_OPTIONS: ThemeOption[] = THEME_SEEDS.map(enrichTheme);
 
 export const DEFAULT_THEME_ID: ThemeId = "theme-crimson";
 
-/** Product brand theme for splash / auth / profiles (locked crimson cinema) */
+/** Product brand theme for splash / auth / profiles */
 export const BRAND_THEME_ID: ThemeId = DEFAULT_THEME_ID;
 export const DEFAULT_APPEARANCE: AppearanceMode = "dark";
 export const APPEARANCE_STORAGE_KEY = "zoku_appearance";
@@ -464,6 +686,11 @@ const TOKEN_CSS_MAP: Record<keyof ThemeTokens, string> = {
   onSurfaceVariant: "--on-surface-variant",
   borderColor: "--border-color",
   backgroundGradient: "--background-gradient",
+  surfaceGradient: "--surface-gradient",
+  buttonGradient: "--button-gradient",
+  orbA: "--orb-a",
+  orbB: "--orb-b",
+  orbC: "--orb-c",
 };
 
 export function applyTheme(
@@ -506,19 +733,19 @@ export function applyTheme(
   } else {
     root.style.setProperty(
       "--shadow-glow",
-      `0 10px 28px color-mix(in srgb, ${tokens.primary} 28%, transparent)`
+      `0 10px 30px color-mix(in srgb, ${tokens.primary} 34%, transparent)`
     );
     root.style.setProperty(
       "--shadow-elevated",
-      "0 14px 36px rgba(0, 0, 0, 0.45)"
+      "0 16px 42px rgba(0, 0, 0, 0.52)"
     );
     root.style.setProperty(
       "--shadow-card",
-      "0 8px 22px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25)"
+      "0 8px 24px rgba(0, 0, 0, 0.44), 0 2px 8px rgba(0, 0, 0, 0.28)"
     );
     root.style.setProperty(
       "--shadow-card-hover",
-      `0 24px 52px color-mix(in srgb, ${tokens.primary} 36%, transparent), 0 14px 32px rgba(0, 0, 0, 0.5)`
+      `0 24px 52px color-mix(in srgb, ${tokens.primary} 40%, transparent), 0 14px 32px rgba(0, 0, 0, 0.52)`
     );
   }
 

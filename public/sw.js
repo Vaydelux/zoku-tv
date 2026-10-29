@@ -1,6 +1,5 @@
-const CACHE_NAME = "zoku-tv-cache-v2";
+const CACHE_NAME = "zoku-tv-cache-v3";
 const ASSETS_TO_CACHE = [
-  "/",
   "/manifest.webmanifest",
   "/api/pwa-icon?size=192&theme=theme-crimson",
   "/api/pwa-icon?size=512&theme=theme-crimson",
@@ -42,6 +41,15 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
+
+  // Never intercept Next.js build/HMR assets or React Server Component flight requests
+  if (
+    url.pathname.startsWith("/_next/") ||
+    request.headers.get("RSC") === "1" ||
+    url.searchParams.has("_rsc")
+  ) {
+    return;
+  }
 
   // PWA manifest and themed icons (network first so theme updates propagate)
   if (url.pathname === "/manifest.webmanifest" || url.pathname === "/api/pwa-icon") {

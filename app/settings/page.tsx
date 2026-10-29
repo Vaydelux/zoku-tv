@@ -241,7 +241,7 @@ function SettingsPageContent() {
   const isAnimeCatalog = localCatalogMode === "anime";
 
   return (
-    <div className="min-h-screen bg-background text-on-surface pb-16 transition-colors duration-300">
+    <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       {saving && <LoadingBanner message="Saving your settings..." />}
       <Navbar />
 
@@ -251,7 +251,7 @@ function SettingsPageContent() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push("/home")}
-            className="p-2 rounded-xl bg-surface hover:bg-surface-hover border border-border-custom text-on-surface hover:text-primary transition-all active:scale-95"
+            className="theme-panel p-2 rounded-xl hover:bg-surface-hover text-on-surface hover:text-primary transition-all active:scale-95"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -279,7 +279,7 @@ function SettingsPageContent() {
         <div className="flex flex-col md:flex-row gap-8 items-start pt-4">
           
           {/* Sub-nav Sidebar tabs */}
-          <div className="w-full md:w-64 flex flex-col gap-1.5 shrink-0 rounded-2xl border border-border-custom bg-surface/30 p-4">
+          <div className="glass-panel w-full md:w-64 flex flex-col gap-1.5 shrink-0 rounded-2xl p-4">
             <button
               onClick={() => { setActiveTab("theme"); applyFiltersQuery("theme"); }}
               className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
@@ -333,7 +333,7 @@ function SettingsPageContent() {
           </div>
 
           {/* Active Tab Panel */}
-          <div className="flex-1 w-full rounded-2xl border border-border-custom bg-surface p-6 sm:p-8 shadow-xl min-h-[400px]">
+          <div className="glass-panel flex-1 w-full rounded-2xl p-6 sm:p-8 shadow-xl min-h-[400px]">
             
             {activeTab === "theme" && (
               <div className="space-y-6">
@@ -396,15 +396,15 @@ function SettingsPageContent() {
                         key={theme.id}
                         onClick={() => handleThemeSelect(theme.id)}
                         disabled={saving}
-                        className={`group flex flex-col items-start p-4 rounded-xl border text-left transition-all relative overflow-hidden min-h-[108px] ${
+                        className={`group flex flex-col items-start p-4 rounded-xl border text-left transition-all relative overflow-hidden min-h-[114px] ${
                           isActive
-                            ? "border-primary bg-primary/5 ring-1 ring-primary"
-                            : "border-border-custom hover:border-primary bg-background/40 hover:bg-background/65"
+                            ? "border-primary bg-primary/10 ring-1 ring-primary"
+                            : "border-border-custom hover:border-primary bg-background/45 hover:bg-background/70"
                         }`}
                       >
                         <div
-                          className="absolute inset-x-0 top-0 h-1.5"
-                          style={{ backgroundImage: previewTokens.backgroundGradient }}
+                          className="absolute inset-x-0 top-0 h-2"
+                          style={{ backgroundImage: previewTokens.buttonGradient }}
                           aria-hidden
                         />
                         <div className="flex items-center justify-between w-full gap-2 pt-2">
@@ -414,10 +414,10 @@ function SettingsPageContent() {
                         <p className="text-[10px] sm:text-xs text-on-surface-variant mt-1 leading-relaxed line-clamp-2">
                           {theme.hint}
                         </p>
-                        <div className="flex gap-1 mt-3 w-full h-2 rounded overflow-hidden bg-black/10">
-                          <div className="flex-[2]" style={{ backgroundColor: previewTokens.primary }} />
-                          <div className="flex-[2]" style={{ backgroundColor: previewTokens.background }} />
-                          <div className="flex-[3]" style={{ backgroundColor: previewTokens.onSurface }} />
+                        <div className="flex gap-1 mt-3 w-full h-3 rounded-md overflow-hidden border border-white/10">
+                          <div className="flex-[3]" style={{ backgroundImage: previewTokens.buttonGradient }} />
+                          <div className="flex-[4]" style={{ backgroundImage: previewTokens.backgroundGradient }} />
+                          <div className="flex-[2]" style={{ backgroundColor: previewTokens.onSurface }} />
                         </div>
                       </button>
                     );
