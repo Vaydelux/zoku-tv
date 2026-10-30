@@ -128,19 +128,19 @@ export function Navbar() {
     <nav
       className={`site-nav sticky top-0 z-40 w-full border-b ${networkStatus.navBorderClass} bg-background/90 backdrop-blur-md transition-colors duration-300`}
     >
-      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between gap-4">
+      <div className="mx-auto w-full px-3 sm:px-6 lg:px-8">
+        <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4">
           
           {/* Logo & Main Nav */}
-          <div className="flex items-center gap-8">
-            <Link href="/home" className="flex flex-col gap-0.5 text-on-surface focus:outline-none">
-              <span className="flex items-center gap-2">
-                <Tv className="h-6 w-6 text-primary" />
-                <span className="font-display text-xl font-bold tracking-wider text-on-surface">
-                  ZOKU<span className="text-primary font-mono text-sm ml-0.5">TV</span>
+          <div className="flex min-w-0 items-center gap-4 lg:gap-8">
+            <Link href="/home" className="flex shrink-0 flex-col gap-0.5 text-on-surface focus:outline-none">
+              <span className="flex items-center gap-1.5 sm:gap-2">
+                <Tv className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+                <span className="font-display text-lg sm:text-xl font-bold tracking-wider text-on-surface">
+                  ZOKU<span className="text-primary font-mono text-xs sm:text-sm ml-0.5">TV</span>
                 </span>
               </span>
-              <span className="pl-8 text-[9px] font-mono uppercase tracking-widest text-on-surface-variant">
+              <span className="hidden xs:block pl-6 sm:pl-8 text-[8px] sm:text-[9px] font-mono uppercase tracking-widest text-on-surface-variant truncate">
                 {catalogLabel}
               </span>
             </Link>
@@ -164,7 +164,7 @@ export function Navbar() {
           </div>
 
           {/* Search, Connectivity Status Indicator & Profile */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             
             {/* Subtle Connectivity Status Indicator */}
             <div className={`relative ${isStatusPopoverOpen ? "z-50" : "z-20"}`} ref={statusRef}>
@@ -177,7 +177,7 @@ export function Navbar() {
                 data-testid="navbar-connection-indicator"
                 data-connection-state={networkStatus.state}
                 onClick={() => setIsStatusPopoverOpen((prev) => !prev)}
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-wider transition-all duration-300 ${networkStatus.badgeToneClass}`}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 sm:px-2.5 font-mono text-[9px] sm:text-[10px] font-medium uppercase tracking-wider transition-all duration-300 ${networkStatus.badgeToneClass}`}
               >
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span
@@ -397,6 +397,14 @@ export function Navbar() {
                       >
                         <Heart className="h-4 w-4 text-primary/80" />
                         <span>My Watchlist</span>
+                      </Link>
+                      <Link
+                        href="/watchlist?tab=history"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
+                      >
+                        <Clapperboard className="h-4 w-4 text-primary/80" />
+                        <span>Watch History</span>
                       </Link>
                     </div>
 

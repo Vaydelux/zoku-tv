@@ -14,12 +14,15 @@ import {
   Search,
   X,
   Sparkles,
+  History,
+  Bookmark,
 } from "lucide-react";
-import { useSessionStore, useWatchlistStore } from "@/stores";
+import { useSessionStore, useWatchlistStore, useWatchHistoryStore } from "@/stores";
 import { getWatchlistItemId } from "@/lib/media-types";
 import { Navbar } from "@/components/Navbar";
 import { TitleCard } from "@/components/TitleCard";
 import { AnimeCard } from "@/components/anime/AnimeCard";
+import { WatchHistoryRail } from "@/components/WatchHistoryRail";
 import type { AniListMedia } from "@/lib/anilist";
 import {
   sortWatchlistItems,
@@ -27,6 +30,11 @@ import {
   WATCHLIST_SORT_OPTIONS,
   type WatchlistSortOption,
 } from "@/lib/watchlist";
+import {
+  filterWatchHistoryByCatalog,
+  getWatchHistoryItemId,
+  type WatchHistoryItem,
+} from "@/lib/watch-history";
 import { WatchlistAnalyticsSection } from "@/components/watchlist/WatchlistAnalyticsSection";
 import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 
@@ -34,6 +42,10 @@ export default function WatchlistPage() {
   const router = useRouter();
   const { currentProfile } = useSessionStore();
   const { items, initWatchlist, clearWatchlist } = useWatchlistStore();
+  const watchHistoryItems = useWatchHistoryStore((state) => state.items);
+  const removeWatchHistoryItem = useWatchHistoryStore((state) => state.removeItem);
+
+  const [activeTab, setActiveTab] = useState<"watchlist" | "history">("watchlist");
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
@@ -45,6 +57,15 @@ export default function WatchlistPage() {
   const catalogMode = currentProfile?.catalogMode ?? "tmdb";
 
   useDropdownViewportClamp(isSortOpen, sortMenuRef);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "history") {
+        setActiveTab("history");
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (currentProfile) {
@@ -78,10 +99,6 @@ export default function WatchlistPage() {
     };
   }, []);
 
-  if (!currentProfile) {
-    return null;
-  }
-
   const catalogFilteredItems = useMemo(
     () =>
       items.filter((item) =>
@@ -90,6 +107,11 @@ export default function WatchlistPage() {
           : item.media_type !== "anime"
       ),
     [items, catalogMode]
+  );
+
+  const catalogFilteredHistory = useMemo(
+    () => filterWatchHistoryByCatalog(watchHistoryItems, catalogMode),
+    [watchHistoryItems, catalogMode]
   );
 
   const searchedItems = useMemo(
@@ -101,6 +123,16 @@ export default function WatchlistPage() {
     () => sortWatchlistItems(searchedItems, sortBy),
     [searchedItems, sortBy]
   );
+
+  if (!currentProfile) {
+    return null;
+  }
+
+  const handleQuickRemoveHistoryItem = async (item: WatchHistoryItem) => {
+    const itemId = getWatchHistoryItemId(item);
+    if (!itemId) return;
+    await removeWatchHistoryItem(item.media_type, itemId);
+  };
 
   const handleClearAllWatchlist = async () => {
     if (!confirmClear) {
@@ -123,13 +155,13 @@ export default function WatchlistPage() {
     <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
-      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Top Header Bar */}
-        <div className="border-b border-border-custom pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl md:text-3xl font-display font-bold text-on-surface uppercase tracking-wide">
-                My Watchlist
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+        {/* Top Header Bar with Watchlist / Watch History Tab Switcher */}
+        <div className="border-b border-border-custom pb-5 sm:pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-3 min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-bold text-on-surface uppercase tracking-wide">
+                {activeTab === "watchlist" ? "My Watchlist" : "Watch History"}
               </h1>
               {feedbackNotice && (
                 <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[11px] font-medium text-emerald-400 animate-fade-in">
@@ -138,26 +170,61 @@ export default function WatchlistPage() {
                 </span>
               )}
             </div>
+
+            <div
+              role="tablist"
+              aria-label="Library view tabs"
+              className="inline-flex w-full xs:w-auto max-w-full overflow-x-auto items-center rounded-xl border border-border-custom bg-surface p-1"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "watchlist"}
+                data-testid="tab-watchlist"
+                onClick={() => setActiveTab("watchlist")}
+                className={`inline-flex flex-1 xs:flex-initial items-center justify-center gap-1.5 sm:gap-2 rounded-lg px-3 sm:px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  activeTab === "watchlist"
+                    ? "bg-primary text-primary-contrast shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <Bookmark className="h-3.5 w-3.5 shrink-0" />
+                <span>My Watchlist</span>
+                <span className="font-mono text-[10px] opacity-85 tabular-nums">
+                  ({catalogFilteredItems.length})
+                </span>
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "history"}
+                data-testid="tab-watch-history"
+                onClick={() => setActiveTab("history")}
+                className={`inline-flex flex-1 xs:flex-initial items-center justify-center gap-1.5 sm:gap-2 rounded-lg px-3 sm:px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  activeTab === "history"
+                    ? "bg-primary text-primary-contrast shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <History className="h-3.5 w-3.5 shrink-0" />
+                <span>Watch History</span>
+                <span className="font-mono text-[10px] opacity-85 tabular-nums">
+                  ({catalogFilteredHistory.length})
+                </span>
+              </button>
+            </div>
+
             <p className="text-xs text-on-surface-variant">
-              {catalogMode === "anime" ? "Anime" : "Movies & TV"} saved by{" "}
+              {catalogMode === "anime" ? "Anime" : "Movies & TV"}{" "}
+              {activeTab === "watchlist" ? "saved by" : "watched by"}{" "}
               <span className="text-primary font-bold">{currentProfile.name}</span>.
-              <span className="ml-2 font-mono text-[11px] text-on-surface-variant/80">
-                {searchQuery ? (
-                  <>
-                    Showing <span className="text-primary font-bold">{sortedItems.length}</span> of {catalogFilteredItems.length} titles
-                  </>
-                ) : (
-                  <>
-                    ({catalogFilteredItems.length} {catalogFilteredItems.length === 1 ? "title" : "titles"})
-                  </>
-                )}
-              </span>
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
-            {/* Sorting Dropdown */}
-            {catalogFilteredItems.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            {/* Sorting Dropdown (Watchlist tab) */}
+            {activeTab === "watchlist" && catalogFilteredItems.length > 0 && (
               <div
                 className={`relative ${isSortOpen ? "z-50" : "z-20"}`}
                 ref={sortDropdownRef}
@@ -230,7 +297,7 @@ export default function WatchlistPage() {
               </div>
             )}
 
-            {catalogFilteredItems.length > 0 && (
+            {activeTab === "watchlist" && catalogFilteredItems.length > 0 && (
               <div className="flex items-center gap-1.5">
                 {confirmClear ? (
                   <div className="inline-flex items-center gap-1 rounded-xl border border-red-500/50 bg-red-500/10 p-1 animate-fade-in">
@@ -276,152 +343,187 @@ export default function WatchlistPage() {
           </div>
         </div>
 
-        {/* Live Search Input Bar at the top of the Watchlist */}
-        {catalogFilteredItems.length > 0 && (
-          <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="relative flex-1" role="search">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant">
-                <Search className="h-4 w-4 text-primary" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") setSearchQuery("");
-                }}
-                placeholder="Filter watchlist by title or creator name (e.g. Nolan, Arcane, MAPPA)..."
-                aria-label="Filter watchlist by title or creator name"
-                data-testid="watchlist-search-input"
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-border-custom bg-surface/70 text-on-surface placeholder:text-on-surface-variant/60 text-xs sm:text-sm focus:outline-none focus:border-primary/80 focus:ring-1 focus:ring-primary/40 transition-all duration-200"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  data-testid="watchlist-search-clear-btn"
-                  aria-label="Clear search"
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-on-surface-variant hover:text-primary transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            {searchQuery && (
-              <div className="flex items-center gap-2 text-xs font-mono text-on-surface-variant shrink-0">
-                <span className="rounded-xl bg-surface px-3 py-2 border border-border-custom">
-                  <span className="font-bold text-on-surface">{sortedItems.length}</span> of {catalogFilteredItems.length} matched
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="rounded-xl px-2.5 py-2 text-[11px] text-primary hover:bg-surface-hover font-semibold transition-colors"
-                >
-                  Clear
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Analytics Section with D3 Visualizations */}
-        {items.length > 0 && (
-          <WatchlistAnalyticsSection
-            items={items}
-            catalogFilteredItems={catalogFilteredItems}
-            catalogMode={catalogMode}
-          />
-        )}
-
-        {/* Titles Grid or Empty States */}
-        {sortedItems.length > 0 ? (
-          <div className="space-y-3">
-            {searchQuery && (
-              <div className="flex items-center justify-between text-xs font-mono text-on-surface-variant pt-2">
-                <span>
-                  Filtering by &quot;<span className="text-primary font-semibold">{searchQuery}</span>&quot;
-                </span>
-                <span>{sortedItems.length} {sortedItems.length === 1 ? "title" : "titles"} found</span>
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 pt-2 animate-fade-in">
-              {sortedItems.map((item) => (
-                <div key={`${item.media_type}_${getWatchlistItemId(item)}`} className="w-full">
-                  {item.media_type === "anime" ? (
-                    <AnimeCard
-                      fullWidth
-                      anime={{
-                        id: item.anilistId!,
-                        title: { english: item.title, romaji: item.title },
-                        coverImage: { large: item.poster_path },
-                        bannerImage: item.backdrop_path,
-                        averageScore: item.vote_average ? item.vote_average * 10 : null,
-                        media_type: "anime",
-                      } as AniListMedia}
-                    />
-                  ) : (
-                    <TitleCard
-                      fullWidth
-                      title={{
-                        id: item.tmdbId!,
-                        title: item.title || "",
-                        name: item.title || "",
-                        poster_path: item.poster_path || null,
-                        backdrop_path: item.backdrop_path || null,
-                        vote_average: item.vote_average || 0,
-                        media_type: item.media_type as "movie" | "tv",
-                        overview: "",
-                      }}
-                      mediaType={item.media_type as "movie" | "tv"}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : catalogFilteredItems.length > 0 ? (
-          /* Filter returned no matches */
-          <div
-            data-testid="watchlist-search-no-results"
-            className="glass-panel flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-border-custom rounded-2xl p-8 gap-4 max-w-lg mx-auto animate-fade-in"
-          >
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-              <Search className="h-6 w-6" />
-            </div>
-            <div className="space-y-1">
-              <p className="font-semibold text-sm">No matching saved titles</p>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                No items in your watchlist match &quot;<span className="text-primary font-bold">{searchQuery}</span>&quot; by title or creator name.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="mt-1 rounded-xl bg-primary hover:bg-opacity-95 text-primary-contrast py-2.5 px-5 text-xs font-bold transition-all shadow-md active:scale-95"
-            >
-              Clear Search Filter
-            </button>
+        {activeTab === "history" ? (
+          <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+            <WatchHistoryRail
+              items={catalogFilteredHistory}
+              catalogMode={catalogMode}
+              onQuickRemoveItem={handleQuickRemoveHistoryItem}
+            />
           </div>
         ) : (
-          /* Watchlist completely empty */
-          <div className="glass-panel flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-border-custom rounded-2xl p-8 gap-4 max-w-lg mx-auto">
-            <Film className="h-12 w-12 text-primary animate-pulse" />
-            <div className="space-y-1">
-              <p className="font-semibold text-sm">Your watchlist is vacant.</p>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Start discovering {catalogMode === "anime" ? "anime" : "movies and TV"} and add titles to your watchlist.
-              </p>
-            </div>
-            <button
-              onClick={() => router.push("/home")}
-              className="mt-2 rounded-xl bg-primary hover:bg-opacity-95 text-primary-contrast py-2.5 px-6 text-xs font-bold transition-all shadow-md active:scale-95"
-            >
-              Browse Home
-            </button>
-          </div>
+          <>
+            {/* Live Search Input Bar at the top of the Watchlist */}
+            {catalogFilteredItems.length > 0 && (
+              <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="relative flex-1" role="search">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant">
+                    <Search className="h-4 w-4 text-primary" />
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setSearchQuery("");
+                    }}
+                    placeholder="Filter watchlist by title or creator name (e.g. Nolan, Arcane, MAPPA)..."
+                    aria-label="Filter watchlist by title or creator name"
+                    data-testid="watchlist-search-input"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-border-custom bg-surface/70 text-on-surface placeholder:text-on-surface-variant/60 text-xs sm:text-sm focus:outline-none focus:border-primary/80 focus:ring-1 focus:ring-primary/40 transition-all duration-200"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      data-testid="watchlist-search-clear-btn"
+                      aria-label="Clear search"
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-on-surface-variant hover:text-primary transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                {searchQuery && (
+                  <div className="flex items-center gap-2 text-xs font-mono text-on-surface-variant shrink-0">
+                    <span className="rounded-xl bg-surface px-3 py-2 border border-border-custom">
+                      <span className="font-bold text-on-surface">{sortedItems.length}</span> of {catalogFilteredItems.length} matched
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="rounded-xl px-2.5 py-2 text-[11px] text-primary hover:bg-surface-hover font-semibold transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Analytics Section with D3 Visualizations */}
+            {items.length > 0 && (
+              <WatchlistAnalyticsSection
+                items={items}
+                catalogFilteredItems={catalogFilteredItems}
+                catalogMode={catalogMode}
+              />
+            )}
+
+            {/* Titles Grid or Empty States */}
+            {sortedItems.length > 0 ? (
+              <div className="space-y-3">
+                {searchQuery && (
+                  <div className="flex items-center justify-between text-xs font-mono text-on-surface-variant pt-2">
+                    <span>
+                      Filtering by &quot;<span className="text-primary font-semibold">{searchQuery}</span>&quot;
+                    </span>
+                    <span>{sortedItems.length} {sortedItems.length === 1 ? "title" : "titles"} found</span>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 pt-2 animate-fade-in">
+                  {sortedItems.map((item) => {
+                    const parsedYear = item.release_date
+                      ? Number.parseInt(item.release_date.split("-")[0] || "", 10)
+                      : undefined;
+                    const parsedMonth = item.release_date
+                      ? Number.parseInt(item.release_date.split("-")[1] || "", 10)
+                      : undefined;
+                    const parsedDay = item.release_date
+                      ? Number.parseInt(item.release_date.split("-")[2] || "", 10)
+                      : undefined;
+
+                    return (
+                      <div key={`${item.media_type}_${getWatchlistItemId(item)}`} className="w-full">
+                        {item.media_type === "anime" ? (
+                          <AnimeCard
+                            fullWidth
+                            anime={{
+                              id: item.anilistId!,
+                              title: { english: item.title, romaji: item.title },
+                              coverImage: { large: item.poster_path },
+                              bannerImage: item.backdrop_path,
+                              averageScore: item.vote_average ? item.vote_average * 10 : null,
+                              seasonYear: Number.isFinite(parsedYear) ? parsedYear : null,
+                              startDate: Number.isFinite(parsedYear)
+                                ? {
+                                    year: parsedYear,
+                                    month: Number.isFinite(parsedMonth) ? parsedMonth : 1,
+                                    day: Number.isFinite(parsedDay) ? parsedDay : 1,
+                                  }
+                                : null,
+                              media_type: "anime",
+                            } as AniListMedia}
+                          />
+                        ) : (
+                          <TitleCard
+                            fullWidth
+                            title={{
+                              id: item.tmdbId!,
+                              title: item.title || "",
+                              name: item.title || "",
+                              poster_path: item.poster_path || null,
+                              backdrop_path: item.backdrop_path || null,
+                              vote_average: item.vote_average || 0,
+                              release_date: item.release_date ?? undefined,
+                              first_air_date: item.release_date ?? undefined,
+                              media_type: item.media_type as "movie" | "tv",
+                              overview: "",
+                            }}
+                            mediaType={item.media_type as "movie" | "tv"}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : catalogFilteredItems.length > 0 ? (
+              /* Filter returned no matches */
+              <div
+                data-testid="watchlist-search-no-results"
+                className="glass-panel flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-border-custom rounded-2xl p-8 gap-4 max-w-lg mx-auto animate-fade-in"
+              >
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                  <Search className="h-6 w-6" />
+                </div>
+                <div className="space-y-1">
+                  <p className="font-semibold text-sm">No matching saved titles</p>
+                  <p className="text-xs text-on-surface-variant leading-relaxed">
+                    No items in your watchlist match &quot;<span className="text-primary font-bold">{searchQuery}</span>&quot; by title or creator name.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="mt-1 rounded-xl bg-primary hover:bg-opacity-95 text-primary-contrast py-2.5 px-5 text-xs font-bold transition-all shadow-md active:scale-95"
+                >
+                  Clear Search Filter
+                </button>
+              </div>
+            ) : (
+              /* Watchlist completely empty */
+              <div className="glass-panel flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-border-custom rounded-2xl p-8 gap-4 max-w-lg mx-auto">
+                <Film className="h-12 w-12 text-primary animate-pulse" />
+                <div className="space-y-1">
+                  <p className="font-semibold text-sm">Your watchlist is vacant.</p>
+                  <p className="text-xs text-on-surface-variant leading-relaxed">
+                    Start discovering {catalogMode === "anime" ? "anime" : "movies and TV"} and add titles to your watchlist.
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push("/home")}
+                  className="mt-2 rounded-xl bg-primary hover:bg-opacity-95 text-primary-contrast py-2.5 px-6 text-xs font-bold transition-all shadow-md active:scale-95"
+                >
+                  Browse Home
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
   );
 }
+

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Check, Star, Play, CheckCircle2 } from "lucide-react";
 import { useWatchlistStore, useWatchHistoryStore } from "@/stores";
 import { getTitleDetails, TMDBTitle } from "@/lib/tmdb";
+import { isReleasedWithinLast30Days } from "@/lib/media-types";
 
 interface TitleCardProps {
   title: TMDBTitle;
@@ -33,8 +34,9 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
     : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=900";
 
   const rating = title.vote_average ? title.vote_average.toFixed(1) : "N/A";
-  const releaseYear =
-    (title.release_date || title.first_air_date || "").split("-")[0] || "N/A";
+  const rawReleaseDate = title.release_date || title.first_air_date || null;
+  const releaseYear = (rawReleaseDate || "").split("-")[0] || "N/A";
+  const isRecentRelease = isReleasedWithinLast30Days(rawReleaseDate);
 
   const isInWatchlist = hasItem(actualMediaType, title.id);
   const watchedCompleted = isCompleted(actualMediaType, title.id);
@@ -71,6 +73,7 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
 
   const handleWatchlistToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if (isInWatchlist) {
       removeItem(actualMediaType, title.id);
     } else {
@@ -82,13 +85,14 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
         poster_path: title.poster_path,
         backdrop_path: resolvedBackdrop || title.backdrop_path,
         vote_average: title.vote_average,
-        release_date: title.release_date || title.first_air_date || null,
+        release_date: rawReleaseDate,
       });
     }
   };
 
   const handleHistoryToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     void toggleCompleted({
       media_type: actualMediaType,
       tmdbId: title.id,
@@ -121,7 +125,7 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
 
   const widthClasses = fullWidth
     ? "w-full"
-    : "w-[240px] sm:w-[276px] md:w-[308px] lg:w-[328px] flex-shrink-0";
+    : "w-[228px] xs:w-[244px] sm:w-[276px] md:w-[308px] lg:w-[328px] flex-shrink-0";
 
   return (
     <div
@@ -153,22 +157,63 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
         loading="lazy"
       />
 
-      {/* Minimal resting state */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-3.5 pb-3.5 pt-10 transition-opacity duration-250 group-hover/card:opacity-0 group-focus-within/card:opacity-0">
-        <div className="flex items-center gap-1.5 font-mono text-[10px] text-white/70 tabular-nums">
-          <span>{releaseYear}</span>
-          <span>·</span>
-          <span className="uppercase text-primary font-semibold">{actualMediaType}</span>
-          {watchedCompleted && (
+      {/* Corner 'New' badge in resting state for releases within the last 30 days */}
+      {isRecentRelease && (
+        <div
+          data-testid="recent-release-tag"
+          title="Released within the last 30 days"
+          className="pointer-events-none absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 rounded-md border border-emerald-400/45 bg-black/80 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-400 shadow-sm backdrop-blur-md transition-opacity duration-250 group-hover/card:opacity-0 group-focus-within/card:opacity-0"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          <span>New</span>
+        </div>
+      )}
+
+      {/* Minimal resting state overlay with Quick Add button */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-2 bg-gradient-to-t from-black/95 via-black/70 to-transparent px-3 pb-3 pt-10 sm:px-3.5 sm:pb-3.5 transition-opacity duration-250 group-hover/card:opacity-0 group-focus-within/card:opacity-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] text-white/70 tabular-nums">
+            <span>{releaseYear}</span>
+            <span>·</span>
+            <span className="uppercase text-primary font-semibold">{actualMediaType}</span>
+            {watchedCompleted && (
+              <>
+                <span>·</span>
+                <span className="text-emerald-400 font-semibold uppercase">Watched</span>
+              </>
+            )}
+          </div>
+          <h3 className="mt-0.5 line-clamp-1 font-display text-xs sm:text-sm font-bold tracking-tight text-white">
+            {name}
+          </h3>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleWatchlistToggle}
+          onKeyDown={(e) => e.stopPropagation()}
+          data-testid="resting-quick-add-btn"
+          aria-pressed={isInWatchlist}
+          aria-label={isInWatchlist ? "Remove from Watchlist" : "Quick Add to Watchlist"}
+          title={isInWatchlist ? "In Watchlist (Click to remove)" : "Quick Add to Watchlist"}
+          className={`pointer-events-auto inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold backdrop-blur-md transition-all active:scale-95 ${
+            isInWatchlist
+              ? "border-primary bg-primary text-primary-contrast shadow-sm"
+              : "border-white/25 bg-black/75 text-white/95 hover:border-primary hover:bg-primary hover:text-primary-contrast"
+          }`}
+        >
+          {isInWatchlist ? (
             <>
-              <span>·</span>
-              <span className="text-emerald-400 font-semibold uppercase">Watched</span>
+              <Check className="h-3 w-3 shrink-0" />
+              <span>Added</span>
+            </>
+          ) : (
+            <>
+              <Plus className="h-3 w-3 shrink-0" />
+              <span>Quick Add</span>
             </>
           )}
-        </div>
-        <h3 className="mt-0.5 line-clamp-1 font-display text-sm font-bold tracking-tight text-white">
-          {name}
-        </h3>
+        </button>
       </div>
 
       {/* Hover & TV D-Pad Focus overlay */}
@@ -224,6 +269,14 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
 
         <div className="min-w-0 space-y-1">
           <div className="flex items-center gap-1.5 font-mono text-[10px] text-white/70 tabular-nums">
+            {isRecentRelease && (
+              <>
+                <span className="font-bold uppercase tracking-wider text-emerald-400">
+                  New
+                </span>
+                <span>·</span>
+              </>
+            )}
             <span>{releaseYear}</span>
             <span>·</span>
             <span className="uppercase text-primary font-semibold">{actualMediaType}</span>

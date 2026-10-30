@@ -7,6 +7,12 @@ export interface AniListTitle {
   native?: string | null;
 }
 
+export interface AniListStudioNode {
+  id: number;
+  name: string;
+  isAnimationStudio?: boolean | null;
+}
+
 export interface AniListMedia {
   id: number;
   type?: string | null;
@@ -22,9 +28,11 @@ export interface AniListMedia {
   episodes?: number | null;
   status?: string | null;
   format?: string | null;
+  source?: string | null;
   season?: string | null;
   seasonYear?: number | null;
   startDate?: { year?: number | null; month?: number | null; day?: number | null } | null;
+  studios?: { nodes?: AniListStudioNode[] | null } | null;
   media_type?: "anime";
 }
 
@@ -60,6 +68,9 @@ export type AniListBrowseFilters = {
   genres?: string[];
   season?: string;
   seasonYear?: number;
+  format?: string;
+  source?: string;
+  studio?: string;
   sort?: string[];
   page?: number;
   perPage?: number;
@@ -72,6 +83,48 @@ export const ANILIST_GENRES = [
 ];
 
 export const ANILIST_SEASONS = ["WINTER", "SPRING", "SUMMER", "FALL"] as const;
+
+export const ANILIST_FORMATS = [
+  { value: "TV", label: "TV Series" },
+  { value: "MOVIE", label: "Movie" },
+  { value: "OVA", label: "OVA" },
+  { value: "ONA", label: "ONA" },
+  { value: "SPECIAL", label: "Special" },
+  { value: "TV_SHORT", label: "TV Short" },
+] as const;
+
+export const ANILIST_SOURCES = [
+  { value: "MANGA", label: "Manga" },
+  { value: "LIGHT_NOVEL", label: "Light Novel" },
+  { value: "ORIGINAL", label: "Original" },
+  { value: "VISUAL_NOVEL", label: "Visual Novel" },
+  { value: "VIDEO_GAME", label: "Video Game" },
+  { value: "WEB_NOVEL", label: "Web Novel" },
+  { value: "NOVEL", label: "Novel" },
+] as const;
+
+export const ANILIST_STUDIOS = [
+  "MAPPA",
+  "ufotable",
+  "Kyoto Animation",
+  "Madhouse",
+  "Bones",
+  "Wit Studio",
+  "CloverWorks",
+  "A-1 Pictures",
+  "Production I.G",
+  "Studio Pierrot",
+  "Toei Animation",
+  "Trigger",
+  "Shaft",
+  "Sunrise",
+  "White Fox",
+  "J.C.Staff",
+  "David Production",
+  "Science SARU",
+  "P.A. Works",
+  "Studio Ghibli",
+] as const;
 
 const cache: Record<string, { data: unknown; expiry: number }> = {};
 const inflight: Record<string, Promise<unknown>> = {};
@@ -168,6 +221,7 @@ async function anilistFetch<T>(query: string, variables: Record<string, unknown>
 
 const BROWSE_MEDIA_FIELDS = `
   id
+  type
   title { romaji english native }
   coverImage { large extraLarge color }
   bannerImage
@@ -178,16 +232,58 @@ const BROWSE_MEDIA_FIELDS = `
   episodes
   status
   format
+  source
   season
   seasonYear
+  startDate { year month day }
+  studios(isMain: true) {
+    nodes {
+      id
+      name
+      isAnimationStudio
+    }
+  }
 `;
 
 const BROWSE_QUERY = `
-query ($page: Int, $perPage: Int, $search: String, $genre_in: [String], $season: MediaSeason, $seasonYear: Int, $sort: [MediaSort]) {
+query (
+  $page: Int,
+  $perPage: Int,
+  $search: String,
+  $genre_in: [String],
+  $season: MediaSeason,
+  $seasonYear: Int,
+  $format: MediaFormat,
+  $source: MediaSource,
+  $sort: [MediaSort]
+) {
   Page(page: $page, perPage: $perPage) {
     pageInfo { total currentPage lastPage hasNextPage }
-    media(search: $search, genre_in: $genre_in, season: $season, seasonYear: $seasonYear, type: ANIME, sort: $sort) {
+    media(
+      search: $search,
+      genre_in: $genre_in,
+      season: $season,
+      seasonYear: $seasonYear,
+      format: $format,
+      source: $source,
+      type: ANIME,
+      sort: $sort
+    ) {
       ${BROWSE_MEDIA_FIELDS}
+    }
+  }
+}`;
+
+const STUDIO_BROWSE_QUERY = `
+query ($studio: String, $page: Int, $perPage: Int, $sort: [MediaSort]) {
+  Studio(search: $studio) {
+    id
+    name
+    media(isMain: true, sort: $sort, page: $page, perPage: $perPage) {
+      pageInfo { total currentPage lastPage hasNextPage }
+      nodes {
+        ${BROWSE_MEDIA_FIELDS}
+      }
     }
   }
 }`;
@@ -207,9 +303,17 @@ query ($id: Int) {
     episodes
     status
     format
+    source
     season
     seasonYear
     startDate { year month day }
+    studios(isMain: true) {
+      nodes {
+        id
+        name
+        isAnimationStudio
+      }
+    }
     trailer { id site thumbnail }
     streamingEpisodes { title thumbnail url site }
     relations {
@@ -245,6 +349,74 @@ query ($id: Int) {
 }`;
 
 export async function browseAnime(filters: AniListBrowseFilters = {}) {
+  const studioFilter = filters.studio?.trim();
+
+  if (studioFilter) {
+    try {
+      const studioData = await anilistFetch<{
+        Studio: {
+          id: number;
+          name: string;
+          media: {
+            pageInfo: { total: number; currentPage: number; lastPage: number; hasNextPage: boolean };
+            nodes: AniListMedia[];
+          };
+        } | null;
+      }>(STUDIO_BROWSE_QUERY, {
+        studio: studioFilter,
+        page: filters.page ?? 1,
+        perPage: 50,
+        sort: filters.sort ?? ["POPULARITY_DESC"],
+      });
+
+      if (studioData.Studio?.media?.nodes) {
+        let nodes = studioData.Studio.media.nodes.filter(
+          (item) => !item.type || item.type === "ANIME"
+        );
+
+        if (filters.format) {
+          nodes = nodes.filter((item) => item.format === filters.format);
+        }
+        if (filters.source) {
+          nodes = nodes.filter((item) => item.source === filters.source);
+        }
+        if (filters.season) {
+          nodes = nodes.filter((item) => item.season === filters.season);
+        }
+        if (filters.seasonYear) {
+          nodes = nodes.filter((item) => item.seasonYear === filters.seasonYear);
+        }
+        if (filters.genres?.length) {
+          nodes = nodes.filter((item) =>
+            filters.genres!.every((g) => item.genres?.includes(g))
+          );
+        }
+        if (filters.search) {
+          const q = filters.search.toLowerCase();
+          nodes = nodes.filter(
+            (item) =>
+              item.title.english?.toLowerCase().includes(q) ||
+              item.title.romaji?.toLowerCase().includes(q) ||
+              item.title.native?.toLowerCase().includes(q)
+          );
+        }
+
+        const media = nodes.map((item) => ({
+          ...item,
+          media_type: "anime" as const,
+          description: stripHtml(item.description),
+        }));
+
+        return {
+          pageInfo: studioData.Studio.media.pageInfo,
+          media,
+        };
+      }
+    } catch {
+      // Fallback to standard Page.media query with client-side studio filtering
+    }
+  }
+
   const data = await anilistFetch<{
     Page: {
       pageInfo: { total: number; currentPage: number; lastPage: number; hasNextPage: boolean };
@@ -252,15 +424,25 @@ export async function browseAnime(filters: AniListBrowseFilters = {}) {
     };
   }>(BROWSE_QUERY, {
     page: filters.page ?? 1,
-    perPage: filters.perPage ?? 20,
+    perPage: studioFilter ? 50 : (filters.perPage ?? 20),
     search: filters.search || undefined,
     genre_in: filters.genres?.length ? filters.genres : undefined,
     season: filters.season || undefined,
     seasonYear: filters.seasonYear || undefined,
+    format: filters.format || undefined,
+    source: filters.source || undefined,
     sort: filters.sort ?? ["POPULARITY_DESC"],
   });
 
-  const media = (data.Page?.media ?? []).map((item) => ({
+  let rawMedia = data.Page?.media ?? [];
+  if (studioFilter) {
+    const normalizedStudio = studioFilter.toLowerCase();
+    rawMedia = rawMedia.filter((item) =>
+      item.studios?.nodes?.some((s) => s.name.toLowerCase().includes(normalizedStudio))
+    );
+  }
+
+  const media = rawMedia.map((item) => ({
     ...item,
     media_type: "anime" as const,
     description: stripHtml(item.description),

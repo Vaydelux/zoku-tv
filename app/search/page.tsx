@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, Suspense } from "react";
+import { useEffect, useState, useMemo, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
@@ -8,10 +8,10 @@ import {
   History,
   ArrowRight,
   Film,
-  Tv,
   Sparkles,
   Layers,
   Shield,
+  X,
 } from "lucide-react";
 import { useSessionStore, useSearchHistoryStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
@@ -31,6 +31,49 @@ type SearchFilterTab = "all" | "movies_tv" | "anime";
 type CombinedSearchResult =
   | { kind: "movie" | "tv"; data: TMDBTitle }
   | { kind: "anime"; data: AniListMedia };
+
+interface SavedSearchSession {
+  query: string;
+  results: TMDBTitle[];
+  animeResults: AniListMedia[];
+  activeFilter: SearchFilterTab;
+  page: number;
+  isKidMode: boolean;
+}
+
+const SEARCH_SESSION_STORAGE_KEY = "zoku_last_search_session_v1";
+let memorySearchSession: SavedSearchSession | null = null;
+
+function readSavedSearchSession(): SavedSearchSession | null {
+  if (memorySearchSession) return memorySearchSession;
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SEARCH_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SavedSearchSession;
+    if (parsed && typeof parsed.query === "string") {
+      memorySearchSession = parsed;
+      return parsed;
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return null;
+}
+
+function writeSavedSearchSession(session: SavedSearchSession | null) {
+  memorySearchSession = session;
+  if (typeof window === "undefined") return;
+  try {
+    if (!session || !session.query.trim()) {
+      sessionStorage.removeItem(SEARCH_SESSION_STORAGE_KEY);
+    } else {
+      sessionStorage.setItem(SEARCH_SESSION_STORAGE_KEY, JSON.stringify(session));
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
 
 export default function SearchPage() {
   return (
@@ -53,15 +96,71 @@ function SearchPageContent() {
   const { history, loadHistory, addQuery, clearHistory } = useSearchHistoryStore();
   const isKidMode = Boolean(currentProfile?.kidMode);
 
-  const queryParam = searchParams.get("q") || "";
-  const [inputValue, setInputValue] = useState(queryParam);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const restoredOnMountRef = useRef(false);
+
+  const savedInitial = useMemo(() => readSavedSearchSession(), []);
+  const urlQueryParam = searchParams.get("q") || "";
+  const effectiveInitialQuery = urlQueryParam || savedInitial?.query || "";
+
+  const hasMatchingSavedResults = Boolean(
+    savedInitial &&
+      effectiveInitialQuery &&
+      savedInitial.query.trim().toLowerCase() === effectiveInitialQuery.trim().toLowerCase() &&
+      savedInitial.isKidMode === isKidMode &&
+      (savedInitial.results.length > 0 || savedInitial.animeResults.length > 0)
+  );
+
+  const [inputValue, setInputValue] = useState(effectiveInitialQuery);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [results, setResults] = useState<TMDBTitle[]>([]);
-  const [animeResults, setAnimeResults] = useState<AniListMedia[]>([]);
-  const [activeFilter, setActiveFilter] = useState<SearchFilterTab>("all");
+  const [results, setResults] = useState<TMDBTitle[]>(() =>
+    hasMatchingSavedResults && savedInitial ? savedInitial.results : []
+  );
+  const [animeResults, setAnimeResults] = useState<AniListMedia[]>(() =>
+    hasMatchingSavedResults && savedInitial ? savedInitial.animeResults : []
+  );
+  const [activeFilter, setActiveFilter] = useState<SearchFilterTab>(() =>
+    hasMatchingSavedResults && savedInitial ? savedInitial.activeFilter : "all"
+  );
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState<number>(() =>
+    hasMatchingSavedResults && savedInitial ? savedInitial.page : 1
+  );
+
+  const activeQuery = urlQueryParam || inputValue.trim();
+
+  // Automatically focus the search input on mount / back navigation
+  useEffect(() => {
+    const inputEl = searchInputRef.current;
+    if (inputEl) {
+      inputEl.focus({ preventScroll: true });
+      const len = inputEl.value.length;
+      try {
+        inputEl.setSelectionRange(len, len);
+      } catch {
+        // ignore selection range errors on non-text inputs
+      }
+    }
+  }, []);
+
+  // Restore URL query parameter if returning to /search with a saved session
+  useEffect(() => {
+    if (restoredOnMountRef.current) return;
+    restoredOnMountRef.current = true;
+
+    if (!urlQueryParam && savedInitial?.query?.trim()) {
+      const restoredQ = savedInitial.query.trim();
+      setInputValue(restoredQ);
+      if (savedInitial.isKidMode === isKidMode) {
+        setResults(savedInitial.results);
+        setAnimeResults(savedInitial.animeResults);
+        setActiveFilter(savedInitial.activeFilter || "all");
+        setPage(savedInitial.page || 1);
+      }
+      router.replace(`/search?q=${encodeURIComponent(restoredQ)}`, { scroll: false });
+    }
+  }, [urlQueryParam, savedInitial, isKidMode, router]);
 
   useEffect(() => {
     if (currentProfile) {
@@ -70,34 +169,64 @@ function SearchPageContent() {
   }, [currentProfile, loadHistory]);
 
   useEffect(() => {
-    if (queryParam !== inputValue) {
-      setInputValue(queryParam);
+    if (urlQueryParam && urlQueryParam !== inputValue) {
+      setInputValue(urlQueryParam);
     }
-  }, [queryParam]);
+  }, [urlQueryParam]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       const trimmed = inputValue.trim();
-      if (trimmed !== queryParam) {
+      if (trimmed !== urlQueryParam) {
         if (trimmed) {
-          router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+          router.replace(`/search?q=${encodeURIComponent(trimmed)}`, { scroll: false });
         } else {
-          router.push("/search");
+          writeSavedSearchSession(null);
+          router.replace("/search", { scroll: false });
         }
       }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [inputValue, queryParam, router]);
+  }, [inputValue, urlQueryParam, router]);
+
+  // Persist current search state to sessionStorage whenever results or filter change
+  useEffect(() => {
+    const trimmed = activeQuery.trim();
+    if (!trimmed) return;
+    if (results.length === 0 && animeResults.length === 0) return;
+
+    writeSavedSearchSession({
+      query: trimmed,
+      results,
+      animeResults,
+      activeFilter,
+      page,
+      isKidMode,
+    });
+  }, [activeQuery, results, animeResults, activeFilter, page, isKidMode]);
 
   useEffect(() => {
-    setPage(1);
-  }, [queryParam]);
+    const trimmed = urlQueryParam.trim();
+    if (!trimmed) {
+      if (!inputValue.trim()) {
+        setResults([]);
+        setAnimeResults([]);
+      }
+      return;
+    }
 
-  useEffect(() => {
-    if (!queryParam.trim()) {
-      setResults([]);
-      setAnimeResults([]);
+    // Check if we already have cached results for this exact query on page 1
+    const cached = readSavedSearchSession();
+    if (
+      page === 1 &&
+      cached &&
+      cached.query.trim().toLowerCase() === trimmed.toLowerCase() &&
+      cached.isKidMode === isKidMode &&
+      (cached.results.length > 0 || cached.animeResults.length > 0)
+    ) {
+      setResults(cached.results);
+      setAnimeResults(cached.animeResults);
       return;
     }
 
@@ -111,22 +240,27 @@ function SearchPageContent() {
       }
       try {
         const [tmdbPromise, animePromise] = await Promise.allSettled([
-          searchMulti(queryParam, page),
-          searchAnime(queryParam, page, 18),
+          searchMulti(trimmed, page),
+          searchAnime(trimmed, page, 18),
         ]);
 
         if (cancelled) return;
+
+        let nextTmdbResults: TMDBTitle[] = [];
+        let nextAnimeResults: AniListMedia[] = [];
 
         if (tmdbPromise.status === "fulfilled") {
           const filtered = filterTmdbForKidsMode(tmdbPromise.value, isKidMode);
 
           if (page === 1) {
+            nextTmdbResults = filtered;
             setResults(filtered);
           } else {
             setResults((prev) => {
               const existingIds = new Set(prev.map((p) => p.id));
               const newItems = filtered.filter((f) => !existingIds.has(f.id));
-              return [...prev, ...newItems];
+              nextTmdbResults = [...prev, ...newItems];
+              return nextTmdbResults;
             });
           }
         }
@@ -137,12 +271,14 @@ function SearchPageContent() {
             isKidMode
           );
           if (page === 1) {
+            nextAnimeResults = filteredAnime;
             setAnimeResults(filteredAnime);
           } else {
             setAnimeResults((prev) => {
               const existingIds = new Set(prev.map((p) => p.id));
               const newItems = filteredAnime.filter((f) => !existingIds.has(f.id));
-              return [...prev, ...newItems];
+              nextAnimeResults = [...prev, ...newItems];
+              return nextAnimeResults;
             });
           }
         }
@@ -161,7 +297,7 @@ function SearchPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [queryParam, page, currentProfile, isKidMode]);
+  }, [urlQueryParam, page, currentProfile, isKidMode]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,23 +305,47 @@ function SearchPageContent() {
     const trimmed = inputValue.trim();
     if (trimmed) {
       void addQuery(trimmed);
-      router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+      setPage(1);
+      router.replace(`/search?q=${encodeURIComponent(trimmed)}`, { scroll: false });
     } else {
-      router.push("/search");
+      writeSavedSearchSession(null);
+      setResults([]);
+      setAnimeResults([]);
+      router.replace("/search", { scroll: false });
     }
+  };
+
+  const handleClearSearch = () => {
+    setInputValue("");
+    setShowAutocomplete(false);
+    setResults([]);
+    setAnimeResults([]);
+    setPage(1);
+    writeSavedSearchSession(null);
+    router.replace("/search", { scroll: false });
+    searchInputRef.current?.focus();
   };
 
   const handleQueryClick = (q: string) => {
     setShowAutocomplete(false);
     setInputValue(q);
+    setPage(1);
     void addQuery(q);
-    router.push(`/search?q=${encodeURIComponent(q)}`);
+    router.replace(`/search?q=${encodeURIComponent(q)}`, { scroll: false });
   };
 
   const handlePosterResultClick = () => {
-    const trimmed = queryParam.trim() || inputValue.trim();
+    const trimmed = activeQuery.trim();
     if (trimmed) {
       void addQuery(trimmed);
+      writeSavedSearchSession({
+        query: trimmed,
+        results,
+        animeResults,
+        activeFilter,
+        page,
+        isKidMode,
+      });
     }
   };
 
@@ -205,6 +365,7 @@ function SearchPageContent() {
   }, [results, animeResults]);
 
   const totalResultsCount = results.length + animeResults.length;
+  const queryParam = activeQuery;
 
   return (
     <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
@@ -232,29 +393,47 @@ function SearchPageContent() {
 
           <form onSubmit={handleSearchSubmit} className="relative w-full mt-2">
             <input
+              ref={searchInputRef}
               type="text"
+              autoFocus
+              data-testid="search-page-input"
               placeholder="Search movies, TV shows, anime series, franchises..."
               value={inputValue}
               onChange={(e) => {
-                setInputValue(e.target.value);
-                setShowAutocomplete(true);
+                const val = e.target.value;
+                setInputValue(val);
+                setPage(1);
+                setShowAutocomplete(val.trim().length >= 2);
               }}
-              onFocus={() => {
-                if (inputValue.trim().length >= 2) {
+              onClick={() => {
+                if (inputValue.trim().length >= 2 && totalResultsCount === 0) {
                   setShowAutocomplete(true);
                 }
               }}
-              className="glass-panel w-full rounded-2xl py-3.5 pl-5 pr-24 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
+              className="glass-panel w-full rounded-2xl py-3.5 pl-5 pr-28 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              {inputValue && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  data-testid="search-clear-btn"
+                  className="p-1.5 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface transition-colors"
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
               <VoiceSearchButton
                 onTranscript={(text) => {
                   const trimmed = text.trim();
                   setInputValue(trimmed);
                   setShowAutocomplete(false);
                   if (trimmed) {
+                    setPage(1);
                     void addQuery(trimmed);
-                    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+                    router.replace(`/search?q=${encodeURIComponent(trimmed)}`, { scroll: false });
                   }
                 }}
               />
@@ -273,17 +452,26 @@ function SearchPageContent() {
               onClose={() => setShowAutocomplete(false)}
               onSelectSuggestion={(suggestion) => {
                 setShowAutocomplete(false);
-                setInputValue(suggestion.title);
-                void addQuery(suggestion.title);
+                const savedQuery = inputValue.trim() || suggestion.title;
+                void addQuery(savedQuery);
+                writeSavedSearchSession({
+                  query: savedQuery,
+                  results,
+                  animeResults,
+                  activeFilter,
+                  page,
+                  isKidMode,
+                });
                 router.push(suggestion.href);
               }}
               onViewAll={(q) => {
                 setShowAutocomplete(false);
                 setInputValue(q);
+                setPage(1);
                 if (q.trim()) {
                   void addQuery(q.trim());
                 }
-                router.push(`/search?q=${encodeURIComponent(q)}`);
+                router.replace(`/search?q=${encodeURIComponent(q)}`, { scroll: false });
               }}
             />
           </form>

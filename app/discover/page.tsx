@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SlidersHorizontal, Star, Clock, Calendar, RotateCcw, Shield } from "lucide-react";
+import { SlidersHorizontal, Star, Clock, Calendar, RotateCcw, Shield, Sparkles } from "lucide-react";
 import { useSessionStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { TitleCard } from "@/components/TitleCard";
@@ -35,9 +35,15 @@ export default function DiscoverPage() {
 }
 
 function DiscoverPageContent() {
+  const searchParams = useSearchParams();
   const { currentProfile } = useSessionStore();
+  const typeParam = searchParams.get("type");
 
-  if ((currentProfile?.catalogMode ?? "tmdb") === "anime") {
+  const isAnimeTab =
+    typeParam === "anime" ||
+    (!typeParam && (currentProfile?.catalogMode ?? "tmdb") === "anime");
+
+  if (isAnimeTab) {
     return <AnimeDiscoverContent />;
   }
 
@@ -57,7 +63,8 @@ function TmdbDiscoverContent() {
   const [page, setPage] = useState(1);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(true);
 
-  const mediaType = (searchParams.get("type") as "movie" | "tv") || "movie";
+  const rawType = searchParams.get("type");
+  const mediaType: "movie" | "tv" = rawType === "tv" ? "tv" : "movie";
   const sortBy = searchParams.get("sort_by") || "popularity.desc";
   const withGenres = searchParams.get("with_genres") || "";
   const yearFrom = searchParams.get("year_from") || "";
@@ -122,8 +129,6 @@ function TmdbDiscoverContent() {
   ]);
 
   useEffect(() => {
-    if (!currentProfile) return;
-
     let cancelled = false;
 
     async function performDiscovery() {
@@ -280,8 +285,12 @@ function TmdbDiscoverContent() {
               </span>
             )}
 
-            <div className="theme-panel flex rounded-xl p-1">
+            <div className="theme-panel flex rounded-xl p-1" role="tablist" aria-label="Discover Media Type">
               <button
+                type="button"
+                role="tab"
+                aria-selected={mediaType === "movie"}
+                data-testid="discover-tab-movie"
                 onClick={() => applyFilters({ type: "movie", with_genres: "" })}
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   mediaType === "movie"
@@ -292,6 +301,10 @@ function TmdbDiscoverContent() {
                 Movies
               </button>
               <button
+                type="button"
+                role="tab"
+                aria-selected={mediaType === "tv"}
+                data-testid="discover-tab-tv"
                 onClick={() => applyFilters({ type: "tv", with_genres: "" })}
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   mediaType === "tv"
@@ -300,6 +313,17 @@ function TmdbDiscoverContent() {
                 }`}
               >
                 TV Series
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={false}
+                data-testid="discover-tab-anime"
+                onClick={() => router.push("/discover?type=anime")}
+                className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all text-on-surface-variant hover:text-on-surface flex items-center gap-1.5"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <span>Anime</span>
               </button>
             </div>
 

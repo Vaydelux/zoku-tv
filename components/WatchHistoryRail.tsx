@@ -169,12 +169,12 @@ export function WatchHistoryRail({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <div className="flex w-full sm:w-auto flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
           {/* Media Type Filter: All / Movies Only / TV Series Only */}
           <div
             role="tablist"
             aria-label="Filter watch history by media type"
-            className="inline-flex items-center rounded-xl border border-border-custom bg-surface p-0.5"
+            className="custom-scrollbar inline-flex max-w-full overflow-x-auto items-center rounded-xl border border-border-custom bg-surface p-0.5"
             data-testid="watch-history-type-filter"
           >
             {(
@@ -193,7 +193,7 @@ export function WatchHistoryRail({
                   aria-selected={active}
                   data-testid={`watch-history-filter-${tab.id}`}
                   onClick={() => setTypeFilter(tab.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all ${
+                  className={`inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all ${
                     active
                       ? "bg-primary text-primary-contrast shadow-sm"
                       : "text-on-surface-variant hover:text-on-surface"
@@ -218,7 +218,7 @@ export function WatchHistoryRail({
           <div
             role="tablist"
             aria-label="Filter watch history"
-            className="inline-flex items-center rounded-xl border border-border-custom bg-surface p-0.5"
+            className="custom-scrollbar inline-flex max-w-full overflow-x-auto items-center rounded-xl border border-border-custom bg-surface p-0.5"
           >
             {(
               [
@@ -235,7 +235,7 @@ export function WatchHistoryRail({
                   role="tab"
                   aria-selected={active}
                   onClick={() => setStatusFilter(tab.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all ${
+                  className={`inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all ${
                     active
                       ? "bg-primary text-primary-contrast shadow-sm"
                       : "text-on-surface-variant hover:text-on-surface"

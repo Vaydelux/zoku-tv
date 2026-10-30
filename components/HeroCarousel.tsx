@@ -177,7 +177,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
         <div className="hero-media-scrim" aria-hidden />
       </div>
 
-      <div className="relative z-[1] mx-auto flex w-full min-h-[clamp(340px,52dvh,680px)] flex-col justify-end px-4 pb-10 pt-20 sm:px-6 sm:pb-12 sm:pt-24 lg:px-8 lg:pb-14">
+      <div className="relative z-[1] mx-auto flex w-full min-h-[clamp(320px,50dvh,680px)] flex-col justify-end px-4 pb-12 pt-14 sm:px-6 sm:pb-12 sm:pt-24 lg:px-8 lg:pb-14">
         {loading && !current ? (
           <div className="flex w-full max-w-3xl flex-col gap-4 animate-pulse">
             <div className="h-6 w-40 rounded-full bg-surface" />
@@ -196,7 +196,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: reducedMotion ? 0 : -8 }}
               transition={{ duration: reducedMotion ? 0 : 0.45, ease: "easeOut" }}
-              className="hero-copy flex w-full max-w-3xl flex-col items-start gap-3 sm:gap-4"
+              className="hero-copy flex w-full max-w-3xl flex-col items-start gap-2.5 sm:gap-4"
             >
               <div className="hero-meta-chip flex flex-wrap items-center gap-2 sm:gap-3 rounded-full px-3 py-1 text-[10px] sm:text-xs md:text-sm font-mono text-on-surface-variant tabular-nums">
                 <span className="text-primary font-bold uppercase">{heroMediaType}</span>
@@ -210,7 +210,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
               </div>
 
               <h1
-                className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight text-on-surface leading-[1.05] line-clamp-3 sm:line-clamp-none"
+                className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight text-on-surface leading-[1.08] line-clamp-2 sm:line-clamp-none"
                 aria-live="polite"
               >
                 {heroName}
@@ -223,23 +223,23 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
               <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 pt-1 sm:pt-2">
                 <button
                   onClick={() => router.push(`/watch/${heroMediaType}/${current.id}`)}
-                  className="flex items-center gap-2 rounded-xl bg-primary py-2.5 px-5 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-primary-contrast active:scale-95 transition-all duration-300"
+                  className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-primary py-2 px-4 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-primary-contrast active:scale-95 transition-all duration-300"
                 >
-                  <Play className="h-4 w-4 fill-current" />
+                  <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current shrink-0" />
                   <span>{heroMediaType === "tv" ? "Play Show" : "Play Movie"}</span>
                 </button>
 
                 <button
                   onClick={() => router.push(`/title/${heroMediaType}/${current.id}`)}
-                  className="flex items-center gap-2 rounded-xl bg-surface hover:bg-surface-hover border border-border-custom py-2.5 px-5 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-on-surface hover:text-primary active:scale-95 transition-all duration-300"
+                  className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-surface hover:bg-surface-hover border border-border-custom py-2 px-4 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-on-surface hover:text-primary active:scale-95 transition-all duration-300"
                 >
-                  <Info className="h-4 w-4" />
+                  <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
                   <span>More Info</span>
                 </button>
 
                 <button
                   onClick={handleWatchlistToggle}
-                  className={`p-2.5 sm:p-3 rounded-xl border transition-all duration-300 ${
+                  className={`p-2 sm:p-3 rounded-xl border transition-all duration-300 ${
                     isInWatchlist
                       ? "bg-primary/20 border-primary text-primary"
                       : "bg-surface border-border-custom hover:border-primary text-on-surface"
@@ -247,19 +247,19 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
                   title="Add/Remove Watchlist"
                   aria-label={isInWatchlist ? "Remove from watchlist" : "Add to watchlist"}
                 >
-                  {isInWatchlist ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                  {isInWatchlist ? <Check className="h-4 w-4 sm:h-5 sm:w-5" /> : <Plus className="h-4 w-4 sm:h-5 sm:w-5" />}
                 </button>
 
                 <button
                   onClick={handleHistoryToggle}
-                  className={`flex items-center gap-1.5 rounded-xl border py-2.5 px-3.5 sm:py-3 sm:px-4 text-xs font-semibold transition-all duration-300 ${
+                  className={`flex items-center gap-1.5 rounded-xl border py-2 px-3 sm:py-3 sm:px-4 text-xs font-semibold transition-all duration-300 ${
                     isInHistoryCompleted
                       ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-400"
                       : "bg-surface border-border-custom hover:border-primary text-on-surface-variant hover:text-on-surface"
                   }`}
                   title={isInHistoryCompleted ? "Completed in Watch History" : "Mark as Watched (Add to Watch History)"}
                 >
-                  <CheckCircle2 className="h-4 w-4" />
+                  <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
                   <span>{isInHistoryCompleted ? "Watched" : "Mark Watched"}</span>
                 </button>
               </div>
@@ -270,7 +270,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
 
       {slideCount > 1 && (
         <div
-          className="absolute bottom-4 right-4 z-[3] flex items-center gap-1.5 sm:bottom-8 sm:right-8 sm:gap-2"
+          className="absolute bottom-5 right-4 z-[3] flex items-center gap-1.5 sm:bottom-8 sm:right-8 sm:gap-2"
           role="tablist"
           aria-label="Carousel slides"
         >

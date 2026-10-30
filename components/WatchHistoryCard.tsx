@@ -123,7 +123,7 @@ export function WatchHistoryCard({ item, onQuickRemove }: WatchHistoryCardProps)
       aria-label={`Watch ${item.title} (${episodeLabel})`}
       onClick={() => handleRewatch()}
       onKeyDown={handleKeyDown}
-      className="poster-card group/card relative aspect-video w-[240px] sm:w-[276px] md:w-[308px] lg:w-[328px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border-custom bg-surface select-none transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary focus-visible:-translate-y-1 focus-visible:scale-[1.02] focus-visible:border-primary"
+      className="poster-card group/card relative aspect-video w-[228px] xs:w-[244px] sm:w-[276px] md:w-[308px] lg:w-[328px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border-custom bg-surface select-none transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary focus-visible:-translate-y-1 focus-visible:scale-[1.02] focus-visible:border-primary"
     >
       {!imageLoaded && (
         <div className="absolute inset-0 flex animate-pulse items-center justify-center bg-neutral-900/90">
@@ -142,7 +142,7 @@ export function WatchHistoryCard({ item, onQuickRemove }: WatchHistoryCardProps)
       />
 
       {/* Minimal resting state */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-3.5 pb-3.5 pt-10 transition-opacity duration-250 group-hover/card:opacity-0 group-focus-within/card:opacity-0">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-3 pb-3 pt-10 sm:px-3.5 sm:pb-3.5 transition-opacity duration-250 group-hover/card:opacity-0 group-focus-within/card:opacity-0">
         <div className="flex items-center justify-between gap-2 font-mono text-[10px] text-white/70 tabular-nums">
           <div className="flex items-center gap-1.5 truncate">
             <span className="font-semibold uppercase text-primary">{episodeLabel}</span>
@@ -153,7 +153,7 @@ export function WatchHistoryCard({ item, onQuickRemove }: WatchHistoryCardProps)
           </div>
           <span className="shrink-0 text-white/55">{formatWatchedTimeAgo(item.last_watched_at)}</span>
         </div>
-        <h3 className="mt-0.5 line-clamp-1 font-display text-sm font-bold tracking-tight text-white">
+        <h3 className="mt-0.5 line-clamp-1 font-display text-xs sm:text-sm font-bold tracking-tight text-white">
           {item.title}
         </h3>
       </div>

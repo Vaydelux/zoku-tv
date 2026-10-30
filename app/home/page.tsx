@@ -270,6 +270,7 @@ export default function HomePage() {
           id: `genre_${genre}`,
           label: genre,
         })),
+        { id: "history", label: `Watch History (${filteredHistory.length})` },
       ];
     }
     return [
@@ -280,8 +281,9 @@ export default function HomePage() {
         id: `genre_${genre.id}`,
         label: genre.name,
       })),
+      { id: "history", label: `Watch History (${filteredHistory.length})` },
     ];
-  }, [catalogMode, animeGenreRails, genreRails]);
+  }, [catalogMode, animeGenreRails, genreRails, filteredHistory.length]);
 
   useEffect(() => {
     setFilterOptions(filterChips);
@@ -298,39 +300,39 @@ export default function HomePage() {
         <HeroCarousel slides={heroSlides} loading={loadingTrending} />
       )}
 
-      {/* Focused Catalog & Filter Bar (18-theme palette moved to Settings per Phase 3) */}
-      <div className="relative z-20 mx-auto -mt-4 w-full px-4 sm:px-6 lg:px-8">
-        <div className="glass-panel rounded-2xl p-3 sm:p-4 shadow-xl">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      {/* Focused Catalog & Filter Bar */}
+      <div className="relative z-20 mx-auto -mt-3 sm:-mt-4 w-full px-3 sm:px-6 lg:px-8">
+        <div className="glass-panel rounded-2xl p-2.5 sm:p-4 shadow-xl">
+          <div className="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
             {/* Dual Catalog Switcher + Settings Theme Shortcut + Live Profile Telemetry */}
             <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-3 shrink-0">
               <div
                 role="group"
                 aria-label="Catalog mode switcher"
-                className="inline-flex items-center rounded-xl border border-border-custom bg-background/70 p-1 backdrop-blur-md"
+                className="inline-flex flex-1 xs:flex-initial items-center rounded-xl border border-border-custom bg-background/70 p-1 backdrop-blur-md"
               >
                 <button
                   type="button"
                   onClick={() => handleCatalogToggle("tmdb")}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                  className={`inline-flex flex-1 xs:flex-initial items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                     catalogMode === "tmdb"
                       ? "bg-primary text-primary-contrast shadow-sm"
                       : "text-on-surface-variant hover:text-on-surface"
                   }`}
                 >
-                  <Film className="h-3.5 w-3.5" />
+                  <Film className="h-3.5 w-3.5 shrink-0" />
                   <span>Cinema & TV</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleCatalogToggle("anime")}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                  className={`inline-flex flex-1 xs:flex-initial items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                     catalogMode === "anime"
                       ? "bg-primary text-primary-contrast shadow-sm"
                       : "text-on-surface-variant hover:text-on-surface"
                   }`}
                 >
-                  <Sparkles className="h-3.5 w-3.5" />
+                  <Sparkles className="h-3.5 w-3.5 shrink-0" />
                   <span>AniList Anime</span>
                 </button>
               </div>
@@ -340,23 +342,23 @@ export default function HomePage() {
                   data-testid="home-kids-mode-badge"
                   className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-300"
                 >
-                  <Shield className="h-3 w-3" />
+                  <Shield className="h-3 w-3 shrink-0" />
                   <span>Kids Mode Active</span>
                 </span>
               )}
 
-              {/* Settings Theme & Appearance Shortcut (Swapped to left beside Catalog Switcher) */}
+              {/* Settings Theme & Appearance Shortcut */}
               <div className="flex items-center gap-1.5 shrink-0">
                 <Link
                   href="/settings?section=theme"
-                  className="theme-panel inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold text-on-surface transition-colors hover:border-primary hover:text-primary cursor-pointer"
+                  className="theme-panel inline-flex items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-on-surface transition-colors hover:border-primary hover:text-primary cursor-pointer"
                   title="Customize Theme in Settings"
                 >
                   <span
                     className="h-3 w-3 rounded-full border border-white/25 shrink-0"
                     style={{ backgroundImage: currentTheme.preview }}
                   />
-                  <Palette className="h-3.5 w-3.5 text-primary" />
+                  <Palette className="h-3.5 w-3.5 text-primary shrink-0" />
                   <span className="hidden sm:inline">{currentTheme.name}</span>
                 </Link>
 
@@ -375,27 +377,41 @@ export default function HomePage() {
                 </button>
               </div>
 
-              {/* Real Profile Archive Counters */}
-              <div className="hidden xl:flex items-center gap-2 font-mono text-[11px] text-on-surface-variant tabular-nums">
-                <span className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background/60 px-2.5 py-1">
-                  <History className="h-3 w-3 text-primary" />
-                  <strong className="text-on-surface">{filteredHistory.length}</strong> History
-                </span>
+              {/* Real Profile Archive Counters (Responsive across mobile & desktop) */}
+              <div className="flex items-center gap-1.5 sm:gap-2 font-mono text-[10px] sm:text-[11px] text-on-surface-variant tabular-nums">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedRailFilter(selectedRailFilter === "history" ? "all" : "history")
+                  }
+                  className={`inline-flex items-center gap-1 rounded-lg border px-2 sm:px-2.5 py-1 transition-colors cursor-pointer ${
+                    selectedRailFilter === "history"
+                      ? "border-primary bg-primary text-primary-contrast"
+                      : "border-border-custom bg-background/60 hover:border-primary/50"
+                  }`}
+                >
+                  <History className={`h-3 w-3 shrink-0 ${selectedRailFilter === "history" ? "text-primary-contrast" : "text-primary"}`} />
+                  <strong className={selectedRailFilter === "history" ? "text-primary-contrast" : "text-on-surface"}>
+                    {filteredHistory.length}
+                  </strong>{" "}
+                  <span>History</span>
+                </button>
                 <Link
                   href="/watchlist"
-                  className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background/60 px-2.5 py-1 hover:border-primary/50 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background/60 px-2 sm:px-2.5 py-1 hover:border-primary/50 transition-colors cursor-pointer"
                 >
-                  <Bookmark className="h-3 w-3 text-primary" />
-                  <strong className="text-on-surface">{catalogWatchlist.length}</strong> Watchlist
+                  <Bookmark className="h-3 w-3 shrink-0 text-primary" />
+                  <strong className="text-on-surface">{catalogWatchlist.length}</strong>{" "}
+                  <span>Watchlist</span>
                 </Link>
               </div>
             </div>
 
-            {/* Category Rail Filter Track (Swapped to right with visible horizontal scrollbar) */}
+            {/* Category Rail Filter Track */}
             <div className="flex flex-1 items-center min-w-0">
               <div
                 data-testid="command-deck-rail-filters"
-                className="custom-scrollbar flex w-full max-w-full items-center gap-1.5 overflow-x-auto touch-pan-x pt-1 pb-2 px-0.5 scroll-smooth"
+                className="custom-scrollbar flex w-full max-w-full items-center gap-1.5 overflow-x-auto touch-pan-x pt-0.5 pb-1.5 px-0.5 scroll-smooth"
               >
                 {filterChips.map((chip) => {
                   const active = selectedRailFilter === chip.id;
@@ -405,7 +421,7 @@ export default function HomePage() {
                       type="button"
                       onClick={() => setSelectedRailFilter(chip.id)}
                       data-testid={`deck-rail-filter-${chip.id}`}
-                      className={`shrink-0 rounded-full md:rounded-lg border px-3 md:px-2.5 py-1 text-xs font-semibold md:font-medium transition-all whitespace-nowrap active:scale-95 cursor-pointer ${
+                      className={`shrink-0 rounded-full md:rounded-lg border px-3 md:px-2.5 py-1 text-[11px] sm:text-xs font-semibold md:font-medium transition-all whitespace-nowrap active:scale-95 cursor-pointer ${
                         active
                           ? "border-primary bg-primary text-primary-contrast shadow-sm shadow-primary/20"
                           : "border-border-custom bg-background/55 text-on-surface-variant hover:border-primary/50 hover:text-on-surface"
@@ -436,83 +452,89 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* 1. Continue Watching Rail (unfinished in-progress items) */}
-        {filteredCw.length > 0 && <ContinueWatchingRail items={filteredCw} />}
-
-        {/* 2. Watch History Rail */}
-        <WatchHistoryRail
-          items={filteredHistory}
-          catalogMode={catalogMode}
-          onQuickRemoveItem={handleQuickRemoveHistoryItem}
-          onClearCache={handleRefreshWatchHistoryCache}
-        />
-
-        {/* 3. Watchlist Preview Rail */}
-        {catalogMode === "tmdb" && tmdbWatchlistPreview.length > 0 && selectedRailFilter === "all" && (
-          <TitleRail title="From Your Watchlist" items={tmdbWatchlistPreview} />
-        )}
-
-        {/* 4. Catalog Rails with Smooth Horizontal Scroll & Edge Fade Effects */}
-        {loadingTrending ? (
-          <div className="space-y-8 px-4 sm:px-6 lg:px-8 w-full mx-auto">
-            {[1, 2].map((railIdx) => (
-              <div key={railIdx} className="space-y-4">
-                <div className="h-4 w-48 bg-surface rounded animate-pulse" />
-                <div className="flex gap-3.5 sm:gap-4 overflow-x-auto py-2">
-                  {[1, 2, 3, 4, 5].map((cardIdx) => (
-                    <div
-                      key={cardIdx}
-                      className="w-[240px] sm:w-[276px] md:w-[308px] lg:w-[328px] aspect-video rounded-xl bg-surface border border-border-custom animate-pulse shrink-0"
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : catalogMode === "anime" ? (
-          <div className="space-y-2">
-            {(selectedRailFilter === "all" || selectedRailFilter === "trending") && (
-              <AnimeRail title="Trending Anime" items={animeTrending} />
-            )}
-            {(selectedRailFilter === "all" || selectedRailFilter === "popular") && (
-              <AnimeRail title="Popular Anime" items={animePopular} />
-            )}
-            {animeGenreRails
-              .filter(
-                ({ genre }) =>
-                  selectedRailFilter === "all" || selectedRailFilter === `genre_${genre}`
-              )
-              .map(({ genre, items }) => (
-                <AnimeRail key={genre} title={`${genre} Anime`} items={items} />
-              ))}
-          </div>
+        {selectedRailFilter === "history" ? (
+          /* Dedicated Watch History Tab View */
+          <WatchHistoryRail
+            items={filteredHistory}
+            catalogMode={catalogMode}
+            onQuickRemoveItem={handleQuickRemoveHistoryItem}
+            onClearCache={handleRefreshWatchHistoryCache}
+          />
         ) : (
-          <div className="space-y-2">
-            {(selectedRailFilter === "all" || selectedRailFilter === "movies") && (
-              <TitleRail title="Trending Movies" items={trendingMovies} mediaType="movie" />
+          <>
+            {/* 1. Continue Watching Rail (unfinished in-progress items) */}
+            {selectedRailFilter === "all" && filteredCw.length > 0 && (
+              <ContinueWatchingRail items={filteredCw} />
             )}
-            {(selectedRailFilter === "all" || selectedRailFilter === "tv") && (
-              <TitleRail title="Trending TV Shows" items={trendingTV} mediaType="tv" />
+
+            {/* 2. Watchlist Preview Rail */}
+            {catalogMode === "tmdb" && tmdbWatchlistPreview.length > 0 && selectedRailFilter === "all" && (
+              <TitleRail title="From Your Watchlist" items={tmdbWatchlistPreview} />
             )}
-            {loadingGenreRails ? (
-              <div className="h-32 bg-surface animate-pulse mx-4 rounded-xl" />
+
+            {/* 3. Catalog Rails with Smooth Horizontal Scroll & Edge Fade Effects */}
+            {loadingTrending ? (
+              <div className="space-y-8 px-4 sm:px-6 lg:px-8 w-full mx-auto">
+                {[1, 2].map((railIdx) => (
+                  <div key={railIdx} className="space-y-4">
+                    <div className="h-4 w-48 bg-surface rounded animate-pulse" />
+                    <div className="flex gap-3.5 sm:gap-4 overflow-x-auto py-2">
+                      {[1, 2, 3, 4, 5].map((cardIdx) => (
+                        <div
+                          key={cardIdx}
+                          className="w-[240px] sm:w-[276px] md:w-[308px] lg:w-[328px] aspect-video rounded-xl bg-surface border border-border-custom animate-pulse shrink-0"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : catalogMode === "anime" ? (
+              <div className="space-y-2">
+                {(selectedRailFilter === "all" || selectedRailFilter === "trending") && (
+                  <AnimeRail title="Trending Anime" items={animeTrending} />
+                )}
+                {(selectedRailFilter === "all" || selectedRailFilter === "popular") && (
+                  <AnimeRail title="Popular Anime" items={animePopular} />
+                )}
+                {animeGenreRails
+                  .filter(
+                    ({ genre }) =>
+                      selectedRailFilter === "all" || selectedRailFilter === `genre_${genre}`
+                  )
+                  .map(({ genre, items }) => (
+                    <AnimeRail key={genre} title={`${genre} Anime`} items={items} />
+                  ))}
+              </div>
             ) : (
-              genreRails
-                .filter(
-                  ({ genre }) =>
-                    selectedRailFilter === "all" ||
-                    selectedRailFilter === `genre_${genre.id}`
-                )
-                .map(({ genre, titles }) => (
-                  <TitleRail
-                    key={genre.id}
-                    title={`${genre.name} Masterpieces`}
-                    items={titles}
-                    genreId={genre.id}
-                  />
-                ))
+              <div className="space-y-2">
+                {(selectedRailFilter === "all" || selectedRailFilter === "movies") && (
+                  <TitleRail title="Trending Movies" items={trendingMovies} mediaType="movie" />
+                )}
+                {(selectedRailFilter === "all" || selectedRailFilter === "tv") && (
+                  <TitleRail title="Trending TV Shows" items={trendingTV} mediaType="tv" />
+                )}
+                {loadingGenreRails ? (
+                  <div className="h-32 bg-surface animate-pulse mx-4 rounded-xl" />
+                ) : (
+                  genreRails
+                    .filter(
+                      ({ genre }) =>
+                        selectedRailFilter === "all" ||
+                        selectedRailFilter === `genre_${genre.id}`
+                    )
+                    .map(({ genre, titles }) => (
+                      <TitleRail
+                        key={genre.id}
+                        title={`${genre.name} Masterpieces`}
+                        items={titles}
+                        genreId={genre.id}
+                      />
+                    ))
+                )}
+              </div>
             )}
-          </div>
+          </>
         )}
       </section>
     </div>

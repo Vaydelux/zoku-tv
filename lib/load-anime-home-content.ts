@@ -6,7 +6,7 @@ import {
 } from "@/lib/anilist";
 
 const DEFAULT_ANIME_GENRES = ["Action", "Fantasy", "Romance", "Comedy"];
-const ANIME_HOME_CACHE_KEY = "zoku_home_anime_v1";
+const ANIME_HOME_CACHE_KEY = "zoku_home_anime_v2";
 const CACHE_TTL_MS = 10 * 60 * 1000;
 
 export type AnimeHomeContent = {
