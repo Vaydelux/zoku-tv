@@ -393,11 +393,11 @@ function SearchPageContent() {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                {[1, 2, 3, 4, 5, 6].map((idx) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
                   <div
                     key={idx}
-                    className="aspect-[2/3] rounded-xl bg-surface border border-border-custom animate-pulse"
+                    className="aspect-video rounded-xl bg-surface border border-border-custom animate-pulse"
                   />
                 ))}
               </div>
@@ -416,7 +416,7 @@ function SearchPageContent() {
             ) : (
               <div className="space-y-8">
                 {activeFilter === "all" && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                     {combinedItems.map((item, idx) => (
                       <div
                         key={
@@ -425,31 +425,12 @@ function SearchPageContent() {
                             : `tmdb_${item.data.id}_${idx}`
                         }
                         onClickCapture={handlePosterResultClick}
-                        className="relative flex justify-center group/search-card"
+                        className="w-full"
                       >
-                        <div className="pointer-events-none absolute left-2.5 top-2.5 z-30 drop-shadow-md">
-                          {item.kind === "anime" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-white uppercase shadow-md shadow-fuchsia-950/60 border border-fuchsia-300/50 backdrop-blur-md">
-                              <Sparkles className="h-2.5 w-2.5 text-yellow-300" />
-                              <span>Anime</span>
-                            </span>
-                          ) : item.kind === "tv" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-950/80 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-sky-200 uppercase shadow-md shadow-sky-950/60 border border-sky-400/60 backdrop-blur-md">
-                              <Tv className="h-2.5 w-2.5 text-sky-300" />
-                              <span>TV Series</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-950/80 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-amber-200 uppercase shadow-md shadow-amber-950/60 border border-amber-400/60 backdrop-blur-md">
-                              <Film className="h-2.5 w-2.5 text-amber-300" />
-                              <span>Movie</span>
-                            </span>
-                          )}
-                        </div>
-
                         {item.kind === "anime" ? (
-                          <AnimeCard anime={item.data} />
+                          <AnimeCard anime={item.data} fullWidth />
                         ) : (
-                          <TitleCard title={item.data} mediaType={item.kind} />
+                          <TitleCard title={item.data} mediaType={item.kind} fullWidth />
                         )}
                       </div>
                     ))}
@@ -458,27 +439,14 @@ function SearchPageContent() {
 
                 {activeFilter === "movies_tv" &&
                   (results.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                       {results.map((title) => (
                         <div
                           key={title.id}
                           onClickCapture={handlePosterResultClick}
-                          className="relative flex justify-center group/search-card"
+                          className="w-full"
                         >
-                          <div className="pointer-events-none absolute left-2.5 top-2.5 z-30 drop-shadow-md">
-                            {title.media_type === "tv" ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-sky-950/80 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-sky-200 uppercase shadow-md shadow-sky-950/60 border border-sky-400/60 backdrop-blur-md">
-                                <Tv className="h-2.5 w-2.5 text-sky-300" />
-                                <span>TV Series</span>
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-950/80 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-amber-200 uppercase shadow-md shadow-amber-950/60 border border-amber-400/60 backdrop-blur-md">
-                                <Film className="h-2.5 w-2.5 text-amber-300" />
-                                <span>Movie</span>
-                              </span>
-                            )}
-                          </div>
-                          <TitleCard title={title} mediaType={title.media_type} />
+                          <TitleCard title={title} mediaType={title.media_type} fullWidth />
                         </div>
                       ))}
                     </div>
@@ -493,20 +461,14 @@ function SearchPageContent() {
 
                 {activeFilter === "anime" &&
                   (animeResults.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                       {animeResults.map((anime) => (
                         <div
                           key={anime.id}
                           onClickCapture={handlePosterResultClick}
-                          className="relative flex justify-center group/search-card"
+                          className="w-full"
                         >
-                          <div className="pointer-events-none absolute left-2.5 top-2.5 z-30 drop-shadow-md">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-white uppercase shadow-md shadow-fuchsia-950/60 border border-fuchsia-300/50 backdrop-blur-md">
-                              <Sparkles className="h-2.5 w-2.5 text-yellow-300" />
-                              <span>Anime</span>
-                            </span>
-                          </div>
-                          <AnimeCard anime={anime} />
+                          <AnimeCard anime={anime} fullWidth />
                         </div>
                       ))}
                     </div>

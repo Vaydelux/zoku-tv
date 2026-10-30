@@ -146,16 +146,16 @@ export function WatchHistoryRail({
   return (
     <section
       aria-label="Watch History"
-      className="group/rail relative space-y-2.5 py-3 sm:space-y-3 sm:py-4"
+      className="group/rail relative space-y-2.5 py-2.5 sm:space-y-3 sm:py-3"
     >
       <div className="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <h2 className="flex items-center gap-2 border-l-2 border-primary pl-2.5 font-display text-xs font-semibold uppercase tracking-wide text-on-surface sm:text-sm">
             <History className="h-4 w-4 shrink-0 text-primary" />
             <span>Watch History</span>
           </h2>
-          <span className="hidden rounded-md border border-border-custom bg-surface px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-on-surface-variant md:inline-block">
-            Re-watch & Archive
+          <span className="font-mono text-[10px] uppercase tracking-wider text-on-surface-variant tabular-nums">
+            · {visibleItems.length} Archived
           </span>
           {statusNotice && (
             <span

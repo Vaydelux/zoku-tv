@@ -1,5 +1,6 @@
 "use client";
 
+import { Film, Tv, Bookmark } from "lucide-react";
 import { TitleCard } from "./TitleCard";
 import { RailNavButton } from "@/components/RailNavButton";
 import { useSmoothRailScroll } from "@/hooks/useSmoothRailScroll";
@@ -14,33 +15,15 @@ interface TitleRailProps {
   genreId?: number;
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.04,
-      delayChildren: 0.05,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 8, scale: 0.98 },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      type: "spring",
-      stiffness: 110,
-      damping: 14,
-    },
-  },
-};
-
 export function TitleRail({ title, items, mediaType, genreId }: TitleRailProps) {
-  const IconComponent = genreId ? getGenreIcon(genreId) : null;
+  const GenreIcon = genreId ? getGenreIcon(genreId) : null;
+  const FallbackIcon = title.toLowerCase().includes("watchlist")
+    ? Bookmark
+    : mediaType === "tv"
+    ? Tv
+    : Film;
+  const IconComponent = GenreIcon || FallbackIcon;
+
   const {
     rowRef,
     showLeftArrow,
@@ -54,19 +37,22 @@ export function TitleRail({ title, items, mediaType, genreId }: TitleRailProps) 
   if (items.length === 0) return null;
 
   return (
-    <div className="group/rail relative space-y-2 py-2 sm:space-y-3 sm:py-3">
-      <div className="mx-auto flex w-full items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-        <h2 className="flex items-center gap-2 border-l-2 border-primary pl-2.5 font-display text-xs font-semibold uppercase tracking-wide text-on-surface sm:text-sm">
-          {IconComponent && (
-            <IconComponent className="h-4 w-4 shrink-0 text-primary sm:h-4.5 sm:w-4.5" />
-          )}
-          <span className="truncate">{title}</span>
-        </h2>
+    <section
+      aria-label={title}
+      className="group/rail relative space-y-2.5 py-2.5 sm:space-y-3 sm:py-3"
+    >
+      <div className="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-2.5">
+          <h2 className="flex items-center gap-2 border-l-2 border-primary pl-2.5 font-display text-xs font-semibold uppercase tracking-wide text-on-surface sm:text-sm">
+            <IconComponent className="h-4 w-4 shrink-0 text-primary" />
+            <span className="truncate">{title}</span>
+          </h2>
+          <span className="font-mono text-[10px] uppercase tracking-wider text-on-surface-variant tabular-nums">
+            · {items.length} {items.length === 1 ? "Title" : "Titles"}
+          </span>
+        </div>
 
         <div className="flex items-center gap-2.5">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-on-surface-variant tabular-nums">
-            {items.length} Titles
-          </span>
           {(showLeftArrow || showRightArrow) && (
             <div
               className="hidden h-1 w-14 overflow-hidden rounded-full bg-surface sm:block"
@@ -98,7 +84,7 @@ export function TitleRail({ title, items, mediaType, genreId }: TitleRailProps) 
         <div
           ref={rowRef}
           data-scrolling={isScrolling ? (scrollDirection ?? "right") : undefined}
-          className="rail-scroll-track custom-scrollbar flex gap-3 overflow-x-auto overflow-y-visible px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8"
+          className="rail-scroll-track custom-scrollbar flex gap-3.5 overflow-x-auto overflow-y-visible px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8"
         >
           {items.map((item, idx) => (
             <motion.div
@@ -130,7 +116,6 @@ export function TitleRail({ title, items, mediaType, genreId }: TitleRailProps) 
           onClick={() => handleScroll("right")}
         />
       </div>
-    </div>
+    </section>
   );
 }
-

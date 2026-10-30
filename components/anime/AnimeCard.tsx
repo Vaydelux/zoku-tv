@@ -9,36 +9,55 @@ import { getAnimeDetails, getAnimeDisplayTitle, getAnimePoster } from "@/lib/ani
 
 interface AnimeCardProps {
   anime: AniListMedia;
+  fullWidth?: boolean;
 }
 
-export function AnimeCard({ anime }: AnimeCardProps) {
+export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
   const router = useRouter();
   const { addItem, removeItem, hasItem } = useWatchlistStore();
   const { isCompleted, toggleCompleted } = useWatchHistoryStore();
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [synopsis, setSynopsis] = useState(anime.description?.trim() || "");
+  const [resolvedBanner, setResolvedBanner] = useState<string | null>(
+    anime.bannerImage ?? null
+  );
 
   const name = getAnimeDisplayTitle(anime);
-  const posterPath = getAnimePoster(anime) || "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=500";
+  const posterFallback = getAnimePoster(anime);
+  const imagePath =
+    resolvedBanner ||
+    anime.bannerImage ||
+    posterFallback ||
+    "https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=900";
+
   const rating = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : "N/A";
-  const year = anime.seasonYear ? String(anime.seasonYear) : "N/A";
+  const year = anime.seasonYear
+    ? String(anime.seasonYear)
+    : anime.startDate?.year
+    ? String(anime.startDate.year)
+    : "N/A";
   const isInWatchlist = hasItem("anime", anime.id);
   const watchedCompleted = isCompleted("anime", anime.id);
 
   useEffect(() => {
     setSynopsis(anime.description?.trim() || "");
-  }, [anime.id, anime.description]);
+    setResolvedBanner(anime.bannerImage ?? null);
+  }, [anime.id, anime.description, anime.bannerImage]);
 
   useEffect(() => {
-    if (!isHovered || synopsis) return;
+    if (!isHovered || (synopsis && resolvedBanner)) return;
     let cancelled = false;
 
     async function loadOverview() {
       try {
         const data = await getAnimeDetails(anime.id);
-        if (!cancelled && data?.description) {
+        if (cancelled || !data) return;
+        if (!synopsis && data.description) {
           setSynopsis(data.description);
+        }
+        if (!resolvedBanner && data.bannerImage) {
+          setResolvedBanner(data.bannerImage);
         }
       } catch (err) {
         console.error("Failed to load anime synopsis", err);
@@ -49,7 +68,7 @@ export function AnimeCard({ anime }: AnimeCardProps) {
     return () => {
       cancelled = true;
     };
-  }, [isHovered, synopsis, anime.id]);
+  }, [isHovered, synopsis, resolvedBanner, anime.id]);
 
   const handleWatchlistToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -66,8 +85,8 @@ export function AnimeCard({ anime }: AnimeCardProps) {
         anilistId: anime.id,
         title: name,
         genres: anime.genres || null,
-        poster_path: getAnimePoster(anime),
-        backdrop_path: anime.bannerImage ?? null,
+        poster_path: posterFallback,
+        backdrop_path: resolvedBanner || anime.bannerImage || null,
         vote_average: anime.averageScore ? anime.averageScore / 10 : undefined,
         release_date: relDate,
       });
@@ -84,18 +103,27 @@ export function AnimeCard({ anime }: AnimeCardProps) {
       title: name,
       overview: synopsis || anime.description || null,
       vote_average: anime.averageScore ? anime.averageScore / 10 : null,
-      poster_path: getAnimePoster(anime),
-      backdrop_path: anime.bannerImage ?? null,
+      poster_path: posterFallback,
+      backdrop_path: resolvedBanner || anime.bannerImage || null,
     });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.target !== e.currentTarget) return;
-    if (e.key === "Enter" || e.key === " " || e.key === "Select" || e.keyCode === 23) {
+    if (
+      e.key === "Enter" ||
+      e.key === " " ||
+      e.key === "Select" ||
+      e.keyCode === 23
+    ) {
       e.preventDefault();
       router.push(`/anime/${anime.id}`);
     }
   };
+
+  const widthClasses = fullWidth
+    ? "w-full"
+    : "w-[240px] sm:w-[276px] md:w-[308px] lg:w-[328px] flex-shrink-0";
 
   return (
     <div
@@ -109,16 +137,16 @@ export function AnimeCard({ anime }: AnimeCardProps) {
       onBlur={() => setIsHovered(false)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="poster-card group/card relative aspect-[2/3] w-[128px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border-custom bg-surface transition-all duration-300 select-none hover:-translate-y-1.5 hover:scale-[1.03] hover:border-primary focus-visible:-translate-y-1.5 focus-visible:scale-[1.03] focus-visible:border-primary sm:w-[160px] md:w-[180px] lg:w-[200px]"
+      className={`poster-card group/card relative aspect-video ${widthClasses} cursor-pointer overflow-hidden rounded-xl border border-border-custom bg-surface select-none transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary focus-visible:-translate-y-1 focus-visible:scale-[1.02] focus-visible:border-primary`}
     >
       {imageLoading && (
         <div className="absolute inset-0 flex animate-pulse items-center justify-center bg-neutral-900/90">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
         </div>
       )}
 
       <img
-        src={posterPath}
+        src={imagePath}
         alt={name}
         onLoad={() => setImageLoading(false)}
         className={`h-full w-full object-cover transition-all duration-500 group-hover/card:scale-105 group-focus-within/card:scale-105 ${
@@ -127,74 +155,105 @@ export function AnimeCard({ anime }: AnimeCardProps) {
         loading="lazy"
       />
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/70 to-transparent px-3 pb-3.5 pt-10 transition-opacity duration-250 group-hover/card:opacity-0 group-focus-within/card:opacity-0">
-        <div className="flex items-center gap-2 font-mono text-[9px] text-white/60">
+      {/* Minimal resting state */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-3.5 pb-3.5 pt-10 transition-opacity duration-250 group-hover/card:opacity-0 group-focus-within/card:opacity-0">
+        <div className="flex items-center gap-1.5 font-mono text-[10px] text-white/70 tabular-nums">
           <span>{year}</span>
-          <span className="h-1 w-1 rounded-full bg-white/40" />
-          <span className="uppercase">anime</span>
+          <span>·</span>
+          <span className="uppercase text-primary font-semibold">Anime</span>
+          {anime.episodes ? (
+            <>
+              <span>·</span>
+              <span>{anime.episodes} EP</span>
+            </>
+          ) : null}
+          {watchedCompleted && (
+            <>
+              <span>·</span>
+              <span className="text-emerald-400 font-semibold uppercase">Watched</span>
+            </>
+          )}
         </div>
-        <h3 className="mt-0.5 line-clamp-2 break-words text-xs font-semibold leading-tight text-white">
+        <h3 className="mt-0.5 line-clamp-1 font-display text-sm font-bold tracking-tight text-white">
           {name}
         </h3>
       </div>
 
-      <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between bg-gradient-to-t from-black/95 via-black/55 to-black/25 p-3.5 opacity-0 transition-opacity duration-250 group-hover/card:pointer-events-auto group-hover/card:opacity-100 group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100">
-        <div className="flex items-start justify-between">
-          <span className="flex items-center gap-1 rounded border border-white/15 bg-black/70 px-2 py-0.5 font-mono text-[9px] text-white backdrop-blur-md">
-            <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />
+      {/* Hover & TV D-Pad Focus overlay */}
+      <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between bg-gradient-to-t from-black/95 via-black/70 to-black/30 p-3.5 opacity-0 transition-opacity duration-250 group-hover/card:pointer-events-auto group-hover/card:opacity-100 group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100">
+        <div className="flex items-start justify-between gap-2">
+          <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/75 px-2 py-0.5 font-mono text-[10px] font-semibold text-white backdrop-blur-md tabular-nums">
+            <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
             <span>{rating}</span>
           </span>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               tabIndex={-1}
               onClick={handleHistoryToggle}
-              className={`rounded-full border p-1.5 transition-colors ${
+              className={`rounded-lg border p-1.5 backdrop-blur-md transition-colors ${
                 watchedCompleted
-                  ? "border-emerald-500 bg-emerald-500/25 text-emerald-300"
-                  : "border-white/20 bg-black/60 text-white hover:border-primary hover:bg-primary"
+                  ? "border-emerald-500/60 bg-emerald-500/25 text-emerald-300"
+                  : "border-white/20 bg-black/70 text-white/90 hover:border-primary hover:bg-primary hover:text-primary-contrast"
               }`}
-              title={watchedCompleted ? "Completed in Watch History" : "Mark as Watched (Add to History)"}
-              aria-label={watchedCompleted ? "Completed in Watch History" : "Mark as Watched"}
+              title={
+                watchedCompleted
+                  ? "Completed in Watch History"
+                  : "Mark as Watched (Add to History)"
+              }
+              aria-label={
+                watchedCompleted ? "Completed in Watch History" : "Mark as Watched"
+              }
             >
-              <CheckCircle2 className="h-3 w-3" />
+              <CheckCircle2 className="h-3.5 w-3.5" />
             </button>
 
             <button
               type="button"
               tabIndex={-1}
               onClick={handleWatchlistToggle}
-              className={`rounded-full border p-1.5 transition-colors ${
+              className={`rounded-lg border p-1.5 backdrop-blur-md transition-colors ${
                 isInWatchlist
                   ? "border-primary bg-primary text-primary-contrast"
-                  : "border-white/20 bg-black/60 text-white hover:border-primary hover:bg-primary"
+                  : "border-white/20 bg-black/70 text-white/90 hover:border-primary hover:bg-primary hover:text-primary-contrast"
               }`}
               title={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+              aria-label={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
             >
-              {isInWatchlist ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+              {isInWatchlist ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <Plus className="h-3.5 w-3.5" />
+              )}
             </button>
           </div>
         </div>
 
-        <div className="min-w-0 space-y-1.5">
-          <div className="flex items-center gap-2 font-mono text-[9px] text-white/60">
+        <div className="min-w-0 space-y-1">
+          <div className="flex items-center gap-1.5 font-mono text-[10px] text-white/70 tabular-nums">
             <span>{year}</span>
-            <span className="h-1 w-1 rounded-full bg-white/40" />
-            <span className="uppercase">anime</span>
+            <span>·</span>
+            <span className="uppercase text-primary font-semibold">Anime</span>
+            {anime.episodes ? (
+              <>
+                <span>·</span>
+                <span>{anime.episodes} EP</span>
+              </>
+            ) : null}
           </div>
 
-          <h3 className="line-clamp-2 break-words text-xs font-semibold leading-tight text-white">
+          <h3 className="line-clamp-1 font-display text-sm font-bold tracking-tight text-white">
             {name}
           </h3>
 
-          <p className="line-clamp-4 overflow-hidden break-words text-[10px] leading-snug text-white/85 hyphens-auto whitespace-normal">
+          <p className="line-clamp-2 overflow-hidden break-words text-[11px] leading-snug text-white/80">
             {synopsis || "Synopsis unavailable."}
           </p>
 
-          <span className="inline-flex items-center gap-1 pt-0.5 text-[10px] font-semibold text-primary">
-            <Play className="h-2.5 w-2.5 fill-primary" />
-            Details & Watch
+          <span className="inline-flex items-center gap-1.5 pt-0.5 text-[11px] font-semibold text-primary">
+            <Play className="h-3 w-3 fill-primary" />
+            <span>Details & Watch</span>
           </span>
         </div>
       </div>

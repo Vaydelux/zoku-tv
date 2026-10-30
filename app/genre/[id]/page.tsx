@@ -102,20 +102,23 @@ export default function GenrePage({ params }: GenrePageProps) {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pt-4">
-            {[1, 2, 3, 4, 5, 6].map((idx) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 pt-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
               <div
                 key={idx}
-                className="aspect-[2/3] rounded-xl bg-surface border border-border-custom animate-pulse"
+                className="aspect-video rounded-xl bg-surface border border-border-custom animate-pulse"
               />
             ))}
           </div>
         ) : items.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pt-4 animate-fade-in">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 pt-4 animate-fade-in">
             {items.map((title) => (
-              <div key={`${title.media_type}_${title.id}`} className="flex justify-center">
-                <TitleCard title={title} mediaType={title.media_type} />
-              </div>
+              <TitleCard
+                key={`${title.media_type}_${title.id}`}
+                title={title}
+                mediaType={title.media_type}
+                fullWidth
+              />
             ))}
           </div>
         ) : (

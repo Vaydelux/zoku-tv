@@ -461,21 +461,19 @@ function TmdbDiscoverContent() {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
                   <div
                     key={idx}
-                    className="aspect-[2/3] rounded-xl bg-surface border border-border-custom animate-pulse"
+                    className="aspect-video rounded-xl bg-surface border border-border-custom animate-pulse"
                   />
                 ))}
               </div>
             ) : results.length > 0 ? (
               <div className="space-y-8">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                   {results.map((title) => (
-                    <div key={title.id} className="flex justify-center">
-                      <TitleCard title={title} mediaType={mediaType} />
-                    </div>
+                    <TitleCard key={title.id} title={title} mediaType={mediaType} fullWidth />
                   ))}
                 </div>
 

@@ -458,11 +458,11 @@ export default function HomePage() {
             {[1, 2].map((railIdx) => (
               <div key={railIdx} className="space-y-4">
                 <div className="h-4 w-48 bg-surface rounded animate-pulse" />
-                <div className="flex gap-3 sm:gap-4 overflow-x-auto py-2">
-                  {[1, 2, 3, 4, 5, 6].map((cardIdx) => (
+                <div className="flex gap-3.5 sm:gap-4 overflow-x-auto py-2">
+                  {[1, 2, 3, 4, 5].map((cardIdx) => (
                     <div
                       key={cardIdx}
-                      className="w-[128px] sm:w-[160px] md:w-[180px] lg:w-[200px] aspect-[2/3] rounded-xl bg-surface border border-border-custom animate-pulse shrink-0"
+                      className="w-[240px] sm:w-[276px] md:w-[308px] lg:w-[328px] aspect-video rounded-xl bg-surface border border-border-custom animate-pulse shrink-0"
                     />
                   ))}
                 </div>

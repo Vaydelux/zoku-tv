@@ -345,11 +345,12 @@ export default function WatchlistPage() {
                 <span>{sortedItems.length} {sortedItems.length === 1 ? "title" : "titles"} found</span>
               </div>
             )}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pt-2 animate-fade-in">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 pt-2 animate-fade-in">
               {sortedItems.map((item) => (
-                <div key={`${item.media_type}_${getWatchlistItemId(item)}`} className="flex justify-center">
+                <div key={`${item.media_type}_${getWatchlistItemId(item)}`} className="w-full">
                   {item.media_type === "anime" ? (
                     <AnimeCard
+                      fullWidth
                       anime={{
                         id: item.anilistId!,
                         title: { english: item.title, romaji: item.title },
@@ -361,6 +362,7 @@ export default function WatchlistPage() {
                     />
                   ) : (
                     <TitleCard
+                      fullWidth
                       title={{
                         id: item.tmdbId!,
                         title: item.title || "",
