@@ -29,7 +29,7 @@ export function AnimeHeroBanner({ slides, loading = false }: AnimeHeroBannerProp
       style={{ backgroundImage: banner ? `url(${banner})` : undefined }}
     >
       <div className="hero-media-scrim" aria-hidden />
-      <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto flex h-full w-full items-center px-4 sm:px-6 lg:px-8">
         <div className="hero-copy max-w-xl space-y-4">
           <p className="text-[10px] font-mono uppercase tracking-widest text-primary">Featured Anime</p>
           <h2 className="text-3xl sm:text-5xl font-display font-bold text-on-surface">{title}</h2>

@@ -299,11 +299,11 @@ export default function HomePage() {
       )}
 
       {/* Focused Catalog & Filter Bar (18-theme palette moved to Settings per Phase 3) */}
-      <div className="relative z-20 mx-auto -mt-4 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="relative z-20 mx-auto -mt-4 w-full px-4 sm:px-6 lg:px-8">
         <div className="glass-panel rounded-2xl p-3 sm:p-4 shadow-xl">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            {/* Dual Catalog Switcher + Live Profile Telemetry */}
-            <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-3">
+            {/* Dual Catalog Switcher + Settings Theme Shortcut + Live Profile Telemetry */}
+            <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-3 shrink-0">
               <div
                 role="group"
                 aria-label="Catalog mode switcher"
@@ -312,7 +312,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => handleCatalogToggle("tmdb")}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
                     catalogMode === "tmdb"
                       ? "bg-primary text-primary-contrast shadow-sm"
                       : "text-on-surface-variant hover:text-on-surface"
@@ -324,7 +324,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => handleCatalogToggle("anime")}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
                     catalogMode === "anime"
                       ? "bg-primary text-primary-contrast shadow-sm"
                       : "text-on-surface-variant hover:text-on-surface"
@@ -345,52 +345,11 @@ export default function HomePage() {
                 </span>
               )}
 
-              {/* Real Profile Archive Counters */}
-              <div className="hidden xl:flex items-center gap-2 font-mono text-[11px] text-on-surface-variant tabular-nums">
-                <span className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background/60 px-2.5 py-1">
-                  <History className="h-3 w-3 text-primary" />
-                  <strong className="text-on-surface">{filteredHistory.length}</strong> History
-                </span>
-                <Link
-                  href="/watchlist"
-                  className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background/60 px-2.5 py-1 hover:border-primary/50 transition-colors"
-                >
-                  <Bookmark className="h-3 w-3 text-primary" />
-                  <strong className="text-on-surface">{catalogWatchlist.length}</strong> Watchlist
-                </Link>
-              </div>
-            </div>
-
-            {/* Category Rail Filter Track + Settings Theme Shortcut */}
-            <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
-              <div
-                data-testid="command-deck-rail-filters"
-                className="no-scrollbar flex max-w-full items-center gap-1.5 overflow-x-auto touch-pan-x py-1 px-0.5 scroll-smooth"
-              >
-                {filterChips.map((chip) => {
-                  const active = selectedRailFilter === chip.id;
-                  return (
-                    <button
-                      key={chip.id}
-                      type="button"
-                      onClick={() => setSelectedRailFilter(chip.id)}
-                      data-testid={`deck-rail-filter-${chip.id}`}
-                      className={`shrink-0 rounded-full md:rounded-lg border px-3 md:px-2.5 py-1 text-xs font-semibold md:font-medium transition-all whitespace-nowrap active:scale-95 ${
-                        active
-                          ? "border-primary bg-primary text-primary-contrast shadow-sm shadow-primary/20"
-                          : "border-border-custom bg-background/55 text-on-surface-variant hover:border-primary/50 hover:text-on-surface"
-                      }`}
-                    >
-                      {chip.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
+              {/* Settings Theme & Appearance Shortcut (Swapped to left beside Catalog Switcher) */}
+              <div className="flex items-center gap-1.5 shrink-0">
                 <Link
                   href="/settings?section=theme"
-                  className="theme-panel inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold text-on-surface transition-colors hover:border-primary hover:text-primary"
+                  className="theme-panel inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold text-on-surface transition-colors hover:border-primary hover:text-primary cursor-pointer"
                   title="Customize Theme in Settings"
                 >
                   <span
@@ -406,7 +365,7 @@ export default function HomePage() {
                   onClick={handleAppearanceToggle}
                   aria-label={`Switch to ${currentAppearance === "dark" ? "light" : "dark"} mode`}
                   title={`Appearance: ${currentAppearance}`}
-                  className="theme-panel inline-flex items-center justify-center rounded-xl p-1.5 text-on-surface transition-colors hover:border-primary hover:text-primary"
+                  className="theme-panel inline-flex items-center justify-center rounded-xl p-1.5 text-on-surface transition-colors hover:border-primary hover:text-primary cursor-pointer"
                 >
                   {currentAppearance === "dark" ? (
                     <Sun className="h-4 w-4" />
@@ -415,6 +374,48 @@ export default function HomePage() {
                   )}
                 </button>
               </div>
+
+              {/* Real Profile Archive Counters */}
+              <div className="hidden xl:flex items-center gap-2 font-mono text-[11px] text-on-surface-variant tabular-nums">
+                <span className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background/60 px-2.5 py-1">
+                  <History className="h-3 w-3 text-primary" />
+                  <strong className="text-on-surface">{filteredHistory.length}</strong> History
+                </span>
+                <Link
+                  href="/watchlist"
+                  className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background/60 px-2.5 py-1 hover:border-primary/50 transition-colors cursor-pointer"
+                >
+                  <Bookmark className="h-3 w-3 text-primary" />
+                  <strong className="text-on-surface">{catalogWatchlist.length}</strong> Watchlist
+                </Link>
+              </div>
+            </div>
+
+            {/* Category Rail Filter Track (Swapped to right with visible horizontal scrollbar) */}
+            <div className="flex flex-1 items-center min-w-0">
+              <div
+                data-testid="command-deck-rail-filters"
+                className="custom-scrollbar flex w-full max-w-full items-center gap-1.5 overflow-x-auto touch-pan-x pt-1 pb-2 px-0.5 scroll-smooth"
+              >
+                {filterChips.map((chip) => {
+                  const active = selectedRailFilter === chip.id;
+                  return (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={() => setSelectedRailFilter(chip.id)}
+                      data-testid={`deck-rail-filter-${chip.id}`}
+                      className={`shrink-0 rounded-full md:rounded-lg border px-3 md:px-2.5 py-1 text-xs font-semibold md:font-medium transition-all whitespace-nowrap active:scale-95 cursor-pointer ${
+                        active
+                          ? "border-primary bg-primary text-primary-contrast shadow-sm shadow-primary/20"
+                          : "border-border-custom bg-background/55 text-on-surface-variant hover:border-primary/50 hover:text-on-surface"
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -422,7 +423,7 @@ export default function HomePage() {
 
       <section className="relative z-10 bg-transparent pt-2 sm:pt-4 space-y-2 md:space-y-3 pb-16">
         {isOffline && (
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
             <div className="glass-panel rounded-2xl border border-amber-500/30 p-5 space-y-2 shadow-xl">
               <div className="flex items-center gap-2 text-amber-400">
                 <AlertTriangle className="h-5 w-5" />
@@ -453,7 +454,7 @@ export default function HomePage() {
 
         {/* 4. Catalog Rails with Smooth Horizontal Scroll & Edge Fade Effects */}
         {loadingTrending ? (
-          <div className="space-y-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <div className="space-y-8 px-4 sm:px-6 lg:px-8 w-full mx-auto">
             {[1, 2].map((railIdx) => (
               <div key={railIdx} className="space-y-4">
                 <div className="h-4 w-48 bg-surface rounded animate-pulse" />

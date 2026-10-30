@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
+import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 
 export interface CustomSelectOption {
   value: string | number;
@@ -35,7 +36,10 @@ export function CustomSelect({
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const listId = useId();
+
+  useDropdownViewportClamp(open, menuRef);
 
   const selectedOption =
     options.find((opt) => String(opt.value) === String(value)) ?? null;
@@ -48,6 +52,15 @@ export function CustomSelect({
       (opt) => String(opt.value) === String(value)
     );
     setHighlightedIndex(currentIdx >= 0 ? currentIdx : 0);
+
+    requestAnimationFrame(() => {
+      const selectedEl = menuRef.current?.querySelector(
+        '[aria-selected="true"]'
+      ) as HTMLElement | null;
+      if (selectedEl && menuRef.current) {
+        selectedEl.scrollIntoView({ block: "nearest" });
+      }
+    });
 
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
@@ -97,13 +110,16 @@ export function CustomSelect({
 
   const menuAlignmentClass =
     align === "right"
-      ? "left-0 sm:left-auto sm:right-0 w-full sm:w-64 max-w-[calc(100vw-2rem)]"
+      ? "left-0 sm:left-auto sm:right-0 w-full sm:w-64 min-w-[min(13rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)]"
       : align === "left"
-        ? "left-0 w-full sm:w-64 max-w-[calc(100vw-2rem)]"
-        : "inset-x-0 w-full min-w-[11rem] max-w-[calc(100vw-2rem)]";
+        ? "left-0 w-full sm:w-64 min-w-[min(13rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)]"
+        : "left-0 right-0 w-full min-w-[min(12rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)]";
 
   return (
-    <div ref={rootRef} className={`relative min-w-0 ${className}`}>
+    <div
+      ref={rootRef}
+      className={`relative min-w-0 ${open ? "z-50" : "z-10"} ${className}`}
+    >
       {label && (
         <label className="mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
           {label}
@@ -140,10 +156,11 @@ export function CustomSelect({
 
       {open && (
         <div
+          ref={menuRef}
           id={listId}
           role="listbox"
           aria-label={ariaLabel || label || placeholder}
-          className={`glass-panel absolute top-[calc(100%+0.45rem)] z-50 max-h-[min(58dvh,19rem)] overflow-y-auto rounded-xl p-1.5 shadow-2xl animate-scale-up ${menuAlignmentClass}`}
+          className={`glass-panel absolute top-[calc(100%+0.45rem)] z-50 max-h-[min(56dvh,19rem)] overflow-x-hidden overflow-y-auto rounded-2xl border border-border-custom bg-surface/95 p-1.5 shadow-2xl backdrop-blur-2xl animate-scale-up ${menuAlignmentClass}`}
         >
           {options.map((opt, idx) => {
             const isSelected = String(opt.value) === String(value);
@@ -156,7 +173,7 @@ export function CustomSelect({
                 aria-selected={isSelected}
                 onMouseEnter={() => setHighlightedIndex(idx)}
                 onClick={() => handleSelect(opt.value)}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors ${
+                className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors ${
                   isSelected
                     ? "bg-primary text-primary-contrast font-semibold shadow-sm"
                     : isHighlighted

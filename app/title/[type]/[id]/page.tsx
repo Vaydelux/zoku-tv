@@ -261,7 +261,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
       </div>
 
       {/* 2. Core Profile Grid */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 sm:-mt-32 md:-mt-40 lg:-mt-48 space-y-12">
+      <div className="relative z-10 w-full mx-auto px-4 sm:px-6 lg:px-8 -mt-24 sm:-mt-32 md:-mt-40 lg:-mt-48 space-y-12">
         <div className="flex flex-col md:flex-row gap-8 items-start">
           <div className="w-48 sm:w-64 aspect-[2/3] rounded-2xl overflow-hidden border-2 border-border-custom shadow-2xl shrink-0 mx-auto md:mx-0">
             <img src={posterUrl} alt={name} className="h-full w-full object-cover" />
@@ -444,7 +444,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
               <span>Spotlight Cast Members</span>
             </h2>
 
-            <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+            <div className="custom-scrollbar flex gap-4 overflow-x-auto pb-3">
               {cast.map((actor) => {
                 const profileUrl = actor.profile_path
                   ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`

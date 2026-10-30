@@ -23,7 +23,7 @@ service cloud.firestore {
         && (!('iframeModePreference' in data) || data.iframeModePreference in ['Strict', 'Compatibility'])
         && (!('catalogMode' in data) || data.catalogMode in ['tmdb', 'anime'])
         && (!('homeGenreRailPreferences' in data)
-          || (data.homeGenreRailPreferences is list && data.homeGenreRailPreferences.size() <= 6))
+          || (data.homeGenreRailPreferences is list && data.homeGenreRailPreferences.size() <= 50))
         && (!('createdAt' in data) || data.createdAt is string)
         && (!('updatedAt' in data) || data.updatedAt is string);
     }

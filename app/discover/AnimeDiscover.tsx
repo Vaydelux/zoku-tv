@@ -150,7 +150,7 @@ export function AnimeDiscoverContent() {
     <div className="app-page-shell text-on-surface pb-16">
       <Navbar />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border-custom pb-6">
           <div>
             <h1 className="text-2xl font-display font-bold uppercase tracking-wide">

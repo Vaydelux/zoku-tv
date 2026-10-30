@@ -215,13 +215,20 @@ function SettingsPageContent() {
     if (nextGenres.includes(genreId)) {
       nextGenres = nextGenres.filter((id) => id !== genreId);
     } else {
-      if (nextGenres.length >= 6) {
-        notifyError("You can select up to 6 custom genre rails to keep home loading fast.");
-        return;
-      }
       nextGenres.push(genreId);
     }
     setSelectedGenreIds(nextGenres);
+  };
+
+  const handleSelectAllGenres = () => {
+    setSelectedGenreIds(availableGenres.map((g) => g.id));
+  };
+
+  const handleResetDefaultGenres = () => {
+    const defaults = [28, 12, 16, 35, 80, 18].filter((id) =>
+      availableGenres.some((g) => g.id === id)
+    );
+    setSelectedGenreIds(defaults.length > 0 ? defaults : availableGenres.slice(0, 6).map((g) => g.id));
   };
 
   const saveGenrePreferences = async () => {
@@ -654,16 +661,41 @@ function SettingsPageContent() {
 
             {activeTab === "genre-rails" && (
               <div className="space-y-6">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold text-on-surface">
-                    Home Genre Channels Selection
-                  </h2>
-                  <p className="text-xs text-on-surface-variant">
-                    Pick up to 6 genre categories to show on your home dashboard. Tailored exclusively for this profile.
-                  </p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <h2 className="text-base font-semibold text-on-surface">
+                      Home Genre Channels Selection
+                    </h2>
+                    <p className="text-xs text-on-surface-variant">
+                      Select any or all genre categories to display on your home dashboard (cached &amp; batch-optimized for zero lag).
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleSelectAllGenres}
+                      disabled={
+                        availableGenres.length > 0 &&
+                        selectedGenreIds.length === availableGenres.length
+                      }
+                      data-testid="select-all-genres-btn"
+                      className="rounded-xl border border-primary/50 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary hover:text-primary-contrast transition-all disabled:opacity-45"
+                    >
+                      Select All ({availableGenres.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetDefaultGenres}
+                      data-testid="reset-default-genres-btn"
+                      className="rounded-xl border border-border-custom bg-background/50 px-3 py-1.5 text-xs font-semibold text-on-surface-variant hover:border-primary/40 hover:text-on-surface transition-all"
+                    >
+                      Reset Default
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-80 overflow-y-auto p-2 border border-border-custom rounded-xl bg-background/40">
+                <div className="custom-scrollbar grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-80 overflow-y-auto p-2 border border-border-custom rounded-xl bg-background/40">
                   {availableGenres.map((g) => {
                     const isChecked = selectedGenreIds.includes(g.id);
                     const GenreIcon = getGenreIcon(g.id);
@@ -700,9 +732,9 @@ function SettingsPageContent() {
                   })}
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-border-custom">
-                  <span className="text-[10px] font-mono text-on-surface-variant">
-                    Selected: {selectedGenreIds.length} / 6 Genres
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-border-custom">
+                  <span className="text-[11px] font-mono text-on-surface-variant">
+                    Selected: <strong className="text-primary">{selectedGenreIds.length}</strong> / {availableGenres.length} Genres (No Limit)
                   </span>
                   <button
                     onClick={saveGenrePreferences}

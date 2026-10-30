@@ -258,7 +258,7 @@ function TmdbDiscoverContent() {
     <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-custom pb-6 mb-6">
           <div className="space-y-1">
             <h1 className="text-2xl font-display font-bold tracking-tight text-on-surface">
@@ -432,7 +432,7 @@ function TmdbDiscoverContent() {
                 <label className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
                   Catalog Genres
                 </label>
-                <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pr-1 no-scrollbar border border-border-custom rounded-xl p-2 bg-background/50">
+                <div className="custom-scrollbar flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pr-1 border border-border-custom rounded-xl p-2 bg-background/50">
                   {availableGenres.map((g) => {
                     const isSelected = selectedGenres.includes(String(g.id));
                     return (

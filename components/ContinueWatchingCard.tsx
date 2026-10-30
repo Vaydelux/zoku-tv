@@ -93,16 +93,32 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
     };
   }, [hovered, overview, rating, item.media_type, item.tmdbId, item.anilistId]);
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "Enter" || e.key === " " || e.key === "Select" || e.keyCode === 23) {
+      e.preventDefault();
+      router.push(buildWatchUrl(item));
+    }
+  };
+
   return (
     <div
+      role="button"
+      tabIndex={0}
+      data-tv-focusable="true"
+      aria-label={`Resume ${item.title} (${episodeLabel})`}
       onClick={() => router.push(buildWatchUrl(item))}
+      onKeyDown={handleKeyDown}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="poster-card group/card relative aspect-[2/3] w-[128px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border-custom bg-surface transition-all duration-300 select-none hover:-translate-y-1.5 hover:scale-[1.03] hover:border-primary sm:w-[160px] md:w-[180px] lg:w-[200px]"
+      className="poster-card group/card relative aspect-[2/3] w-[128px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border-custom bg-surface transition-all duration-300 select-none hover:-translate-y-1.5 hover:scale-[1.03] hover:border-primary focus-visible:-translate-y-1.5 focus-visible:scale-[1.03] focus-visible:border-primary sm:w-[160px] md:w-[180px] lg:w-[200px]"
     >
       {/* Quick Remove button */}
       <button
         type="button"
+        tabIndex={-1}
         onClick={handleRemove}
         aria-label={`Remove ${item.title} from Continue Watching`}
         title="Remove from Continue Watching"
@@ -121,7 +137,7 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
         src={posterPath}
         alt={item.title}
         onLoad={() => setImageLoading(false)}
-        className={`h-full w-full object-cover transition-all duration-500 group-hover/card:scale-105 ${
+        className={`h-full w-full object-cover transition-all duration-500 group-hover/card:scale-105 group-focus-within/card:scale-105 ${
           imageLoading ? "scale-95 opacity-0 blur-md" : "scale-100 opacity-100 blur-0"
         }`}
         loading="lazy"
@@ -136,7 +152,7 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
         </div>
       )}
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/70 to-transparent px-3 pb-3.5 pt-10 transition-opacity duration-250 group-hover/card:opacity-0">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/70 to-transparent px-3 pb-3.5 pt-10 transition-opacity duration-250 group-hover/card:opacity-0 group-focus-within/card:opacity-0">
         <span className="font-mono text-[9px] uppercase text-white/60">{episodeLabel}</span>
         <h3 className="mt-0.5 line-clamp-2 break-words text-xs font-semibold leading-tight text-white">
           {item.title}
@@ -147,7 +163,7 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
         </span>
       </div>
 
-      <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between bg-gradient-to-t from-black/95 via-black/55 to-black/25 p-3.5 opacity-0 transition-opacity duration-250 group-hover/card:pointer-events-auto group-hover/card:opacity-100">
+      <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between bg-gradient-to-t from-black/95 via-black/55 to-black/25 p-3.5 opacity-0 transition-opacity duration-250 group-hover/card:pointer-events-auto group-hover/card:opacity-100 group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100">
         <div className="flex justify-start pr-7">
           <span className="flex items-center gap-1 rounded border border-white/15 bg-black/70 px-2 py-0.5 font-mono text-[9px] text-white backdrop-blur-md">
             <Star className="h-2.5 w-2.5 fill-yellow-500 text-yellow-500" />

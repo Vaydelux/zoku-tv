@@ -3,6 +3,7 @@ import "./globals.css";
 import { ClientInitializer } from "@/components/ClientInitializer";
 import { AuthGate } from "@/components/AuthGate";
 import { SiteChrome } from "@/components/SiteChrome";
+import { TVSpatialNavProvider } from "@/components/TVSpatialNavProvider";
 import { DEFAULT_THEME_ID } from "@/lib/themes";
 import { getPwaIconUrl } from "@/lib/pwa-brand";
 import { INLINE_FETCH_AND_EXTENSION_GUARD_SCRIPT } from "@/lib/runtime-guards";
@@ -73,6 +74,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ClientInitializer />
+        <TVSpatialNavProvider />
         <AuthGate>
           <SiteChrome>{children}</SiteChrome>
         </AuthGate>

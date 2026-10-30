@@ -241,28 +241,28 @@ export default function WatchTvPage({
   };
 
   return (
-    <div className="min-h-screen bg-[#070a10] text-white pt-16 pb-16">
+    <div className="min-h-screen bg-[#070a10] text-white pt-28 md:pt-20 pb-16">
       <Navbar />
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-3 sm:px-6 lg:px-8">
         {/* Top Header Bar */}
-        <header className="flex items-center justify-between gap-4 py-4">
-          <div className="flex items-center gap-3 min-w-0">
+        <header className="flex items-start sm:items-center justify-between gap-2.5 sm:gap-4 py-3 sm:py-4">
+          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <button
               type="button"
               onClick={() => router.push(`/title/tv/${id}`)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+              className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/10 hover:text-white transition-colors"
               aria-label="Back to series details"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-base sm:text-lg font-display font-bold tracking-tight text-white truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                <h1 className="text-sm sm:text-lg font-display font-bold tracking-tight text-white whitespace-nowrap">
                   Now Watching
                 </h1>
                 <span
                   data-testid="player-container-status"
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium border ${
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium whitespace-nowrap border ${
                     hasConfirmedPlayback
                       ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
                       : iframeReady
@@ -278,7 +278,7 @@ export default function WatchTvPage({
                   }
                 >
                   <span
-                    className={`h-1.5 w-1.5 rounded-full ${
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                       hasConfirmedPlayback
                         ? "bg-emerald-400"
                         : iframeReady
@@ -289,20 +289,20 @@ export default function WatchTvPage({
                   {containerStatusLabel}
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-white/60 truncate">
+              <p className="mt-0.5 text-xs sm:text-sm text-white/60 truncate">
                 {displayTitle} · Season {seasonNum} · Episode {episodeNum}
                 {currentEp?.name ? ` — ${currentEp.name}` : ""}
               </p>
             </div>
           </div>
 
-          <div className="relative flex items-center gap-2">
+          <div className={`relative flex items-center gap-2 shrink-0 ${showToolsPanel ? "z-50" : "z-20"}`}>
             <button
               type="button"
               onClick={() => setShowToolsPanel((prev) => !prev)}
               aria-expanded={showToolsPanel}
               aria-label="Player container settings and troubleshooting"
-              className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-colors ${
+              className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border transition-colors ${
                 showToolsPanel || useSandbox
                   ? "border-primary/50 bg-primary/15 text-primary"
                   : "border-white/10 bg-white/[0.04] text-white/75 hover:bg-white/10 hover:text-white"
@@ -312,7 +312,7 @@ export default function WatchTvPage({
             </button>
 
             {showToolsPanel && (
-              <div className="absolute right-0 top-12 z-30 w-80 rounded-2xl border border-white/15 bg-[#0e131d]/95 p-4 shadow-2xl backdrop-blur-xl">
+              <div className="glass-panel absolute right-0 top-11 sm:top-12 z-50 w-[min(19rem,calc(100vw-1.5rem))] rounded-2xl border border-border-custom bg-surface/95 p-4 shadow-2xl backdrop-blur-2xl animate-scale-up">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
                     Container Controls
@@ -422,56 +422,57 @@ export default function WatchTvPage({
         </div>
 
         {/* Control Bar Below Player */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-4 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
           {/* Left: Server selector + Retry + Next Server */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <ServerSelect
               value={currentServerObj.id}
               onChange={handleServerChange}
               newServers={newServers}
               defaultServers={defaultServers}
               serverHealth={serverHealth}
+              className="flex-1 sm:flex-initial"
             />
 
             <button
               type="button"
               onClick={handleRetryFrame}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#141923] px-4 text-xs font-semibold text-white/90 hover:border-white/20 hover:bg-[#1b2230] transition-colors"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#141923] px-3 sm:px-4 text-xs font-semibold text-white/90 hover:border-white/20 hover:bg-[#1b2230] transition-colors"
               aria-label="Retry loading current server"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <RotateCcw className="h-3.5 w-3.5 shrink-0" />
               <span>Retry</span>
             </button>
 
             <button
               type="button"
               onClick={handleNextServer}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#141923] px-3.5 text-xs font-semibold text-white/75 hover:border-white/20 hover:bg-[#1b2230] hover:text-white transition-colors"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#141923] px-3 sm:px-3.5 text-xs font-semibold text-white/75 hover:border-white/20 hover:bg-[#1b2230] hover:text-white transition-colors"
               aria-label="Switch to next server"
             >
-              <SkipForward className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Next Server</span>
+              <SkipForward className="h-3.5 w-3.5 shrink-0" />
+              <span>Next Server</span>
             </button>
           </div>
 
           {/* Right: Mark Watched + Previous + Next > */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             {isCurrentWatched ? (
               <button
                 type="button"
                 onClick={handleRewatch}
-                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-green-500/30 bg-green-500/15 px-3.5 text-xs font-semibold text-green-300 hover:bg-green-500/25 transition-colors"
+                className="flex-1 sm:flex-initial inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-green-500/30 bg-green-500/15 px-3 sm:px-3.5 text-xs font-semibold text-green-300 hover:bg-green-500/25 transition-colors"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
+                <RotateCcw className="h-3.5 w-3.5 shrink-0" />
                 <span>Rewatch</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleMarkWatchedAndAdvance}
-                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-[#141923] px-3.5 text-xs font-semibold text-white/85 hover:border-white/20 hover:bg-[#1b2230] transition-colors"
+                className="flex-1 sm:flex-initial inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#141923] px-3 sm:px-3.5 text-xs font-semibold text-white/85 hover:border-white/20 hover:bg-[#1b2230] transition-colors"
               >
-                <Check className="h-3.5 w-3.5" />
+                <Check className="h-3.5 w-3.5 shrink-0" />
                 <span>{nextEp ? "Watched · Next" : "Mark Watched"}</span>
               </button>
             )}
@@ -483,7 +484,7 @@ export default function WatchTvPage({
                 prevEp &&
                 router.push(`/watch/tv/${id}/${seasonNum}/${prevEp.episode_number}`)
               }
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-white/10 bg-[#141923] px-4 text-xs font-semibold text-white/90 hover:border-white/20 hover:bg-[#1b2230] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+              className="flex-1 sm:flex-initial inline-flex h-10 items-center justify-center rounded-xl border border-white/10 bg-[#141923] px-3.5 sm:px-4 text-xs font-semibold text-white/90 hover:border-white/20 hover:bg-[#1b2230] disabled:opacity-40 disabled:pointer-events-none transition-colors"
             >
               Previous
             </button>
@@ -495,10 +496,10 @@ export default function WatchTvPage({
                 nextEp &&
                 router.push(`/watch/tv/${id}/${seasonNum}/${nextEp.episode_number}`)
               }
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-primary/30 bg-[#1b263b] px-4 text-xs font-semibold text-white hover:bg-[#23314d] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+              className="flex-1 sm:flex-initial inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-primary/30 bg-[#1b263b] px-3.5 sm:px-4 text-xs font-semibold text-white hover:bg-[#23314d] disabled:opacity-40 disabled:pointer-events-none transition-colors"
             >
               <span>Next</span>
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
             </button>
           </div>
         </div>

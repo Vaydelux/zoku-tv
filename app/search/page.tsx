@@ -146,10 +146,6 @@ function SearchPageContent() {
             });
           }
         }
-
-        if (page === 1) {
-          addQuery(queryParam.trim());
-        }
       } catch (err) {
         console.error("Search failed:", err);
       } finally {
@@ -165,13 +161,14 @@ function SearchPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [queryParam, page, currentProfile, isKidMode, addQuery]);
+  }, [queryParam, page, currentProfile, isKidMode]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setShowAutocomplete(false);
     const trimmed = inputValue.trim();
     if (trimmed) {
+      void addQuery(trimmed);
       router.push(`/search?q=${encodeURIComponent(trimmed)}`);
     } else {
       router.push("/search");
@@ -181,7 +178,15 @@ function SearchPageContent() {
   const handleQueryClick = (q: string) => {
     setShowAutocomplete(false);
     setInputValue(q);
+    void addQuery(q);
     router.push(`/search?q=${encodeURIComponent(q)}`);
+  };
+
+  const handlePosterResultClick = () => {
+    const trimmed = queryParam.trim() || inputValue.trim();
+    if (trimmed) {
+      void addQuery(trimmed);
+    }
   };
 
   const combinedItems: CombinedSearchResult[] = useMemo(() => {
@@ -205,7 +210,7 @@ function SearchPageContent() {
     <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
         <div className="flex flex-col items-center max-w-2xl mx-auto text-center gap-4 py-6">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-on-surface">
@@ -244,9 +249,13 @@ function SearchPageContent() {
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
               <VoiceSearchButton
                 onTranscript={(text) => {
-                  setInputValue(text);
+                  const trimmed = text.trim();
+                  setInputValue(trimmed);
                   setShowAutocomplete(false);
-                  router.push(`/search?q=${encodeURIComponent(text)}`);
+                  if (trimmed) {
+                    void addQuery(trimmed);
+                    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+                  }
                 }}
               />
               <button
@@ -265,11 +274,15 @@ function SearchPageContent() {
               onSelectSuggestion={(suggestion) => {
                 setShowAutocomplete(false);
                 setInputValue(suggestion.title);
+                void addQuery(suggestion.title);
                 router.push(suggestion.href);
               }}
               onViewAll={(q) => {
                 setShowAutocomplete(false);
                 setInputValue(q);
+                if (q.trim()) {
+                  void addQuery(q.trim());
+                }
                 router.push(`/search?q=${encodeURIComponent(q)}`);
               }}
             />
@@ -411,6 +424,7 @@ function SearchPageContent() {
                             ? `anime_${item.data.id}`
                             : `tmdb_${item.data.id}_${idx}`
                         }
+                        onClickCapture={handlePosterResultClick}
                         className="relative flex justify-center group/search-card"
                       >
                         <div className="pointer-events-none absolute left-2.5 top-2.5 z-30 drop-shadow-md">
@@ -448,6 +462,7 @@ function SearchPageContent() {
                       {results.map((title) => (
                         <div
                           key={title.id}
+                          onClickCapture={handlePosterResultClick}
                           className="relative flex justify-center group/search-card"
                         >
                           <div className="pointer-events-none absolute left-2.5 top-2.5 z-30 drop-shadow-md">
@@ -482,6 +497,7 @@ function SearchPageContent() {
                       {animeResults.map((anime) => (
                         <div
                           key={anime.id}
+                          onClickCapture={handlePosterResultClick}
                           className="relative flex justify-center group/search-card"
                         >
                           <div className="pointer-events-none absolute left-2.5 top-2.5 z-30 drop-shadow-md">

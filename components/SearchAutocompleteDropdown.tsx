@@ -8,6 +8,7 @@ import {
   fetchRealtimeAutocomplete,
   type AutocompleteSuggestion,
 } from "@/lib/autocomplete";
+import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 
 interface SearchAutocompleteDropdownProps {
   query: string;
@@ -34,6 +35,9 @@ export function SearchAutocompleteDropdown({
   const [loading, setLoading] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isDropdownVisible = isOpen && query.trim().length >= 2;
+
+  useDropdownViewportClamp(isDropdownVisible, containerRef);
 
   // Debounced real-time fetch from TMDB & AniList
   useEffect(() => {
@@ -142,26 +146,28 @@ export function SearchAutocompleteDropdown({
       ref={containerRef}
       role="listbox"
       aria-label="Search suggestions"
-      className={`glass-panel absolute left-0 right-0 top-full mt-2.5 z-50 overflow-hidden rounded-2xl border border-border-custom bg-surface/95 p-2 shadow-2xl backdrop-blur-2xl transition-all duration-200 animate-fade-in ${className}`}
+      className={`glass-panel absolute top-full mt-2.5 z-50 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-border-custom bg-surface/95 p-2 shadow-2xl backdrop-blur-2xl transition-all duration-200 animate-fade-in ${
+        className ? className : "left-0 right-0 w-full"
+      }`}
     >
       {/* Header bar */}
       <div className="flex items-center justify-between border-b border-border-custom/80 px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
         <span className="flex items-center gap-1.5 text-primary">
-          <Sparkles className="h-3 w-3" />
-          <span>Real-time Suggestions</span>
+          <Sparkles className="h-3 w-3 shrink-0" />
+          <span className="truncate">Real-time Suggestions</span>
         </span>
         {loading ? (
-          <span className="flex items-center gap-1 text-primary">
+          <span className="flex items-center gap-1 shrink-0 text-primary">
             <Loader2 className="h-2.5 w-2.5 animate-spin" />
             <span>Scanning...</span>
           </span>
         ) : (
-          <span>{suggestions.length} titles</span>
+          <span className="shrink-0">{suggestions.length} titles</span>
         )}
       </div>
 
       {/* Suggestions List */}
-      <div className="max-h-80 overflow-y-auto py-1 divide-y divide-border-custom/40">
+      <div className="max-h-[min(52dvh,19rem)] overflow-y-auto py-1 divide-y divide-border-custom/40">
         {suggestions.length > 0 ? (
           suggestions.map((item, index) => {
             const isHighlighted = highlightedIndex === index;

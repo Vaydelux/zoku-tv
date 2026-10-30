@@ -20,6 +20,32 @@ export function isDirectionalKey(key: string): key is DirectionalKey {
 }
 
 /**
+ * Detects Android TV System WebView, Fire TV, Google TV, Shield TV, and Smart TV browsers.
+ */
+export function isAndroidTvOrSmartTvUserAgent(ua: string): boolean {
+  if (!ua) return false;
+  return (
+    /\b(Android\s+TV|GoogleTV|SmartTV|SMART-TV|BRAVIA|AFT[A-Z0-9]+|SHIELD\s+Android\s+TV|Chromecast|MiBox|MIBOX|ADT-\d|Tizen|Web0S|webOS|NetCast|Viera|HbbTV|TV\s*Bro|BrowseHere|Puffin\s*TV)\b/i.test(
+      ua
+    ) ||
+    (/Android/i.test(ua) && /\b(TV|Large\s+Screen)\b/i.test(ua))
+  );
+}
+
+/**
+ * Recognizes Enter, Space, and Android TV remote DPAD_CENTER (keyCode 23 / "Select")
+ */
+export function isTvSelectKey(event: { key?: string; keyCode?: number }): boolean {
+  return (
+    event.key === "Enter" ||
+    event.key === "Select" ||
+    event.key === " " ||
+    event.keyCode === 23 ||
+    event.keyCode === 66
+  );
+}
+
+/**
  * Computes the next focusable item index within a 1D horizontal rail or 2D grid.
  */
 export function getNextGridFocusIndex(params: {

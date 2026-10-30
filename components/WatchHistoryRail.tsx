@@ -148,7 +148,7 @@ export function WatchHistoryRail({
       aria-label="Watch History"
       className="group/rail relative space-y-2.5 py-3 sm:space-y-3 sm:py-4"
     >
-      <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           <h2 className="flex items-center gap-2 border-l-2 border-primary pl-2.5 font-display text-xs font-semibold uppercase tracking-wide text-on-surface sm:text-sm">
             <History className="h-4 w-4 shrink-0 text-primary" />
@@ -329,7 +329,7 @@ export function WatchHistoryRail({
         </div>
       </div>
 
-      <div className="relative mx-auto w-full max-w-7xl">
+      <div className="relative mx-auto w-full">
         {visibleItems.length === 0 ? (
           <div className="mx-4 sm:mx-6 lg:mx-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-border-custom bg-surface/80 p-5 backdrop-blur-md">
             <div className="space-y-1">
@@ -381,7 +381,7 @@ export function WatchHistoryRail({
             <div
               ref={rowRef}
               data-scrolling={isScrolling ? (scrollDirection ?? "right") : undefined}
-              className="rail-scroll-track no-scrollbar flex gap-3.5 overflow-x-auto overflow-y-visible px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8"
+              className="rail-scroll-track custom-scrollbar flex gap-3.5 overflow-x-auto overflow-y-visible px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8"
             >
               {visibleItems.map((item, idx) => (
                 <motion.div

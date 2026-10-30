@@ -28,6 +28,7 @@ import {
   type WatchlistSortOption,
 } from "@/lib/watchlist";
 import { WatchlistAnalyticsSection } from "@/components/watchlist/WatchlistAnalyticsSection";
+import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 
 export default function WatchlistPage() {
   const router = useRouter();
@@ -40,7 +41,10 @@ export default function WatchlistPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
   const catalogMode = currentProfile?.catalogMode ?? "tmdb";
+
+  useDropdownViewportClamp(isSortOpen, sortMenuRef);
 
   useEffect(() => {
     if (currentProfile) {
@@ -49,9 +53,9 @@ export default function WatchlistPage() {
     }
   }, [currentProfile, initWatchlist]);
 
-  // Close sorting dropdown on click outside
+  // Close sorting dropdown on click outside or Escape
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
       if (
         sortDropdownRef.current &&
         !sortDropdownRef.current.contains(e.target as Node)
@@ -59,8 +63,19 @@ export default function WatchlistPage() {
         setIsSortOpen(false);
       }
     }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setIsSortOpen(false);
+      }
+    }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   if (!currentProfile) {
@@ -108,7 +123,7 @@ export default function WatchlistPage() {
     <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Top Header Bar */}
         <div className="border-b border-border-custom pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
@@ -143,22 +158,27 @@ export default function WatchlistPage() {
           <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
             {/* Sorting Dropdown */}
             {catalogFilteredItems.length > 0 && (
-              <div className="relative" ref={sortDropdownRef}>
+              <div
+                className={`relative ${isSortOpen ? "z-50" : "z-20"}`}
+                ref={sortDropdownRef}
+              >
                 <button
                   type="button"
                   onClick={() => setIsSortOpen((prev) => !prev)}
                   aria-haspopup="listbox"
                   aria-expanded={isSortOpen}
                   data-testid="watchlist-sort-dropdown-trigger"
-                  className="theme-panel inline-flex items-center gap-2 rounded-xl border border-border-custom px-3.5 py-2.5 text-xs font-semibold text-on-surface hover:border-primary/60 hover:text-primary transition-all duration-300"
+                  className={`theme-panel inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-semibold text-on-surface hover:border-primary/60 hover:text-primary transition-all duration-300 ${
+                    isSortOpen ? "border-primary ring-1 ring-primary/40" : "border-border-custom"
+                  }`}
                 >
-                  <ArrowDownAZ className="h-4 w-4 text-primary" />
+                  <ArrowDownAZ className="h-4 w-4 shrink-0 text-primary" />
                   <span className="text-on-surface-variant hidden xs:inline">Sort:</span>
-                  <span className="font-bold text-on-surface">
+                  <span className="font-bold text-on-surface truncate">
                     {WATCHLIST_SORT_OPTIONS.find((opt) => opt.id === sortBy)?.label}
                   </span>
                   <ChevronDown
-                    className={`h-3.5 w-3.5 text-primary transition-transform duration-200 ${
+                    className={`h-3.5 w-3.5 shrink-0 text-primary transition-transform duration-200 ${
                       isSortOpen ? "rotate-180" : ""
                     }`}
                   />
@@ -166,9 +186,10 @@ export default function WatchlistPage() {
 
                 {isSortOpen && (
                   <div
+                    ref={sortMenuRef}
                     role="listbox"
                     aria-label="Sort watchlist titles"
-                    className="glass-panel absolute right-0 mt-2 w-52 rounded-2xl p-1.5 shadow-2xl z-30 animate-scale-up border border-border-custom bg-surface/95 backdrop-blur-md"
+                    className="glass-panel absolute left-0 right-auto top-[calc(100%+0.45rem)] w-56 max-w-[calc(100vw-1.5rem)] rounded-2xl p-1.5 shadow-2xl z-50 animate-scale-up border border-border-custom bg-surface/95 backdrop-blur-2xl"
                   >
                     <div className="px-3 py-1.5 border-b border-border-custom/60 mb-1">
                       <p className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
@@ -180,6 +201,7 @@ export default function WatchlistPage() {
                       return (
                         <button
                           key={option.id}
+                          type="button"
                           role="option"
                           aria-selected={active}
                           data-testid={`watchlist-sort-${option.id}`}
@@ -187,19 +209,19 @@ export default function WatchlistPage() {
                             setSortBy(option.id);
                             setIsSortOpen(false);
                           }}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-semibold transition-all ${
+                          className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-left text-xs font-semibold transition-all ${
                             active
                               ? "bg-primary text-primary-contrast shadow-sm"
                               : "text-on-surface hover:bg-surface-hover hover:text-primary"
                           }`}
                         >
-                          <span className="flex items-center gap-2">
-                            {option.id === "recently_added" && <Clock className="h-3.5 w-3.5" />}
-                            {option.id === "alphabetical" && <ArrowDownAZ className="h-3.5 w-3.5" />}
-                            {option.id === "release_date" && <Calendar className="h-3.5 w-3.5" />}
-                            <span>{option.label}</span>
+                          <span className="flex items-center gap-2 min-w-0">
+                            {option.id === "recently_added" && <Clock className="h-3.5 w-3.5 shrink-0" />}
+                            {option.id === "alphabetical" && <ArrowDownAZ className="h-3.5 w-3.5 shrink-0" />}
+                            {option.id === "release_date" && <Calendar className="h-3.5 w-3.5 shrink-0" />}
+                            <span className="truncate">{option.label}</span>
                           </span>
-                          {active && <Check className="h-3.5 w-3.5 text-primary-contrast" />}
+                          {active && <Check className="h-3.5 w-3.5 shrink-0 text-primary-contrast" />}
                         </button>
                       );
                     })}

@@ -2,6 +2,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   isDirectionalKey,
+  isAndroidTvOrSmartTvUserAgent,
+  isTvSelectKey,
   getNextGridFocusIndex,
   findNearestSpatialCandidate,
   type SpatialRect,
@@ -57,6 +59,34 @@ describe("TV Browser & Directional Navigation Logic (Phase 9)", () => {
 
     const upHit = findNearestSpatialCandidate(rail2Card2, all, "ArrowUp");
     assert.equal(upHit?.id, "r1-c2");
+  });
+
+  it("detects Android TV System WebView, Fire TV, Shield TV, and Smart TV user agents", () => {
+    assert.equal(
+      isAndroidTvOrSmartTvUserAgent(
+        "Mozilla/5.0 (Linux; Android 11; SHIELD Android TV Build/RQ1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/120.0.0.0 Mobile Safari/537.36"
+      ),
+      true
+    );
+    assert.equal(
+      isAndroidTvOrSmartTvUserAgent(
+        "Mozilla/5.0 (Linux; Android 9; AFTMM Build/PS7233) AppleWebKit/537.36"
+      ),
+      true
+    );
+    assert.equal(
+      isAndroidTvOrSmartTvUserAgent(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"
+      ),
+      false
+    );
+  });
+
+  it("recognizes Android TV remote DPAD_CENTER (keyCode 23 / Select) and Enter", () => {
+    assert.equal(isTvSelectKey({ key: "Enter" }), true);
+    assert.equal(isTvSelectKey({ key: "Select" }), true);
+    assert.equal(isTvSelectKey({ keyCode: 23 }), true);
+    assert.equal(isTvSelectKey({ key: "ArrowRight" }), false);
   });
 });
 

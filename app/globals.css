@@ -132,12 +132,56 @@ html, body {
   box-shadow: var(--shadow-card);
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+/* Full 100% width layout instead of max-w-7xl cap */
+.max-w-7xl {
+  max-width: 100% !important;
+  width: 100%;
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+
+/* Visible, theme-reactive horizontal & vertical scrollbars for all scrollable containers */
+.custom-scrollbar,
+.rail-scroll-track,
+.no-scrollbar,
+[class*="overflow-x-auto"],
+[class*="overflow-y-auto"] {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--primary) 65%, var(--on-surface-variant))
+    color-mix(in srgb, var(--on-surface) 8%, transparent);
+}
+
+.custom-scrollbar::-webkit-scrollbar,
+.rail-scroll-track::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar,
+[class*="overflow-x-auto"]::-webkit-scrollbar,
+[class*="overflow-y-auto"]::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track,
+.rail-scroll-track::-webkit-scrollbar-track,
+.no-scrollbar::-webkit-scrollbar-track,
+[class*="overflow-x-auto"]::-webkit-scrollbar-track,
+[class*="overflow-y-auto"]::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--on-surface) 8%, transparent);
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb,
+.rail-scroll-track::-webkit-scrollbar-thumb,
+.no-scrollbar::-webkit-scrollbar-thumb,
+[class*="overflow-x-auto"]::-webkit-scrollbar-thumb,
+[class*="overflow-y-auto"]::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 60%, var(--on-surface-variant));
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+.rail-scroll-track::-webkit-scrollbar-thumb:hover,
+.no-scrollbar::-webkit-scrollbar-thumb:hover,
+[class*="overflow-x-auto"]::-webkit-scrollbar-thumb:hover,
+[class*="overflow-y-auto"]::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
 
 /* Readable text on filled primary surfaces across all themes */
@@ -149,11 +193,16 @@ html, body {
 /* Tokenized custom select & watch server picker */
 .zoku-server-select {
   position: relative;
+  z-index: 20;
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  max-width: min(100%, 16rem);
+  max-width: 100%;
   min-width: 0;
+}
+
+.zoku-server-select.is-open {
+  z-index: 60;
 }
 
 .zoku-server-select__eyebrow {
@@ -172,10 +221,11 @@ html, body {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  min-width: 0;
+  min-width: 7.25rem;
+  height: 2.5rem;
   width: 100%;
   max-width: 100%;
-  padding: 0.45rem 0.75rem;
+  padding: 0.45rem 0.85rem;
   border-radius: 0.75rem;
   border: 1px solid var(--border-color);
   background-color: color-mix(in srgb, var(--surface) 86%, transparent);
@@ -208,6 +258,7 @@ html, body {
   font-size: 0.75rem;
   font-weight: 600;
   text-align: left;
+  color: var(--on-surface);
 }
 
 .zoku-server-select__icon {
@@ -226,22 +277,28 @@ html, body {
 .zoku-server-select__picker {
   position: absolute;
   top: calc(100% + 0.45rem);
-  right: 0;
+  left: 0;
+  right: auto;
   z-index: 60;
-  width: max(100%, 16rem);
-  max-width: min(92vw, 19rem);
-  max-height: min(58dvh, 22rem);
+  width: clamp(13.5rem, 78vw, 17rem);
+  max-width: calc(100vw - 2rem);
+  max-height: min(55dvh, 20rem);
   overflow-x: hidden;
   overflow-y: auto;
   border-radius: 0.9rem;
   border: 1px solid var(--border-color);
-  background-color: color-mix(in srgb, var(--surface) 96%, var(--background));
+  background-color: color-mix(in srgb, var(--surface) 97%, var(--background));
   background-image: var(--surface-gradient);
   backdrop-filter: blur(24px);
   box-shadow: var(--shadow-elevated);
   animation: scale-up 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--primary) 45%, transparent) transparent;
+}
+
+.zoku-server-select--right .zoku-server-select__picker {
+  left: auto;
+  right: 0;
 }
 
 .zoku-server-select__group + .zoku-server-select__group {
@@ -259,7 +316,7 @@ html, body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--on-surface-variant);
-  background-color: color-mix(in srgb, var(--surface) 96%, var(--background));
+  background-color: color-mix(in srgb, var(--surface) 97%, var(--background));
   border-bottom: 1px solid color-mix(in srgb, var(--border-color) 65%, transparent);
 }
 
@@ -275,7 +332,7 @@ html, body {
   background: transparent;
   color: var(--on-surface);
   font-size: 0.75rem;
-  font-weight: 550;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
   transition:
@@ -298,14 +355,16 @@ html, body {
   background-color: var(--primary);
   background-image: var(--button-gradient);
   color: var(--primary-contrast);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .zoku-server-select__option-label {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: inherit;
 }
 
 .zoku-server-select__checkmark {
@@ -315,25 +374,43 @@ html, body {
   opacity: 0.95;
 }
 
-@media (max-width: 640px) {
-  .zoku-server-select {
-    max-width: min(100%, 12.5rem);
+@media (max-width: 480px) {
+  .zoku-server-select__trigger {
+    min-width: 6.5rem;
+    padding: 0.4rem 0.7rem;
   }
 
   .zoku-server-select__picker {
-    right: 0;
-    left: auto;
-    width: min(92vw, 17rem);
+    left: 0;
+    right: auto;
+    width: min(86vw, 15.5rem);
+    max-width: calc(100vw - 1.5rem);
   }
 }
 
-/* Global buttons: pointer + hover elevation */
+/* Global buttons & interactive controls: pointer cursor + hover elevation */
 button,
 input[type="button"],
 input[type="submit"],
 input[type="reset"],
-[role="button"] {
-  cursor: pointer;
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"],
+select,
+summary,
+a[href],
+label[for],
+[role="button"],
+[role="option"],
+[role="tab"],
+[role="menuitem"],
+[role="switch"],
+[role="status"],
+.poster-card,
+.rail-nav-btn,
+.zoku-server-select__trigger,
+.zoku-server-select__option {
+  cursor: pointer !important;
   transition:
     box-shadow 0.22s ease,
     transform 0.22s ease,
@@ -341,6 +418,17 @@ input[type="reset"],
     border-color 0.2s ease,
     color 0.2s ease,
     opacity 0.2s ease;
+}
+
+button:not(:disabled) *,
+a[href] *,
+[role="button"]:not([aria-disabled="true"]) *,
+[role="option"]:not([aria-disabled="true"]) *,
+[role="tab"]:not([aria-disabled="true"]) *,
+[role="menuitem"]:not([aria-disabled="true"]) *,
+[role="switch"]:not([aria-disabled="true"]) *,
+[role="status"] * {
+  cursor: pointer !important;
 }
 
 button:hover:not(:disabled),
@@ -427,33 +515,50 @@ input[type="reset"]:hover:not(:disabled),
   background: color-mix(in srgb, var(--primary) 45%, var(--on-surface));
 }
 
-.rail-nav-btn {
+/* Rail navigation buttons — stationary vertical anchor to prevent hover oscillation */
+.rail-nav-btn,
+.appearance-light .rail-nav-btn {
+  top: 50%;
+  translate: none !important;
+  transform: translateY(-50%) !important;
   background-color: color-mix(in srgb, var(--surface) 92%, transparent);
   background-image: var(--surface-gradient);
   color: var(--on-surface);
   border-color: var(--border-color);
   box-shadow: var(--shadow-card);
+  transition:
+    opacity 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.rail-nav-btn:hover {
+.appearance-light .rail-nav-btn {
+  background-color: color-mix(in srgb, var(--surface) 96%, transparent);
+  border-color: rgba(18, 18, 24, 0.16);
+}
+
+.rail-nav-btn:hover:not(:disabled),
+.appearance-light .rail-nav-btn:hover:not(:disabled),
+.rail-nav-btn:focus-visible,
+.appearance-light .rail-nav-btn:focus-visible {
+  translate: none !important;
+  transform: translateY(-50%) !important;
   background-color: var(--surface);
   color: var(--primary);
   border-color: var(--primary);
   box-shadow: var(--shadow-glow);
-  transform: translateY(-50%) scale(1.06);
-}
-
-.appearance-light .rail-nav-btn {
-  background: color-mix(in srgb, var(--surface) 96%, transparent);
-  color: var(--on-surface);
-  border-color: rgba(18, 18, 24, 0.16);
 }
 
 button:disabled,
+button:disabled *,
 input[type="button"]:disabled,
 input[type="submit"]:disabled,
-input[type="reset"]:disabled {
-  cursor: not-allowed;
+input[type="reset"]:disabled,
+[aria-disabled="true"],
+[aria-disabled="true"] * {
+  cursor: not-allowed !important;
 }
 
 /* Theme-reactive ambient atmosphere orbs (shared by Login/BrandShell and all in-app pages) */
@@ -614,7 +719,6 @@ input[type="reset"]:disabled {
   }
 }
 
-
 /* Default Font Stack Variables & Standardized Keyboard / 10-Foot TV Focus Ring System */
 :root {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -627,17 +731,41 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
-[tabindex]:focus-visible {
-  outline: 2px solid var(--primary);
+[tabindex]:focus-visible,
+html[data-tv-mode="true"] a:focus,
+html[data-tv-mode="true"] button:focus,
+html[data-tv-mode="true"] input:focus,
+html[data-tv-mode="true"] select:focus,
+html[data-tv-mode="true"] [tabindex]:focus {
+  outline: 2.5px solid var(--primary);
   outline-offset: 2px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 26%, transparent), var(--shadow-glow);
 }
 
-[data-tv-focusable="true"]:focus-visible {
+[data-tv-focusable="true"]:focus-visible,
+html[data-tv-mode="true"] [data-tv-focusable="true"]:focus {
   outline: 3px solid var(--primary);
   outline-offset: 3px;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 28%, transparent), var(--shadow-glow);
-  transform: scale(1.03);
-  z-index: 20;
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 34%, transparent), var(--shadow-glow);
+  transform: translateY(-4px) scale(1.035);
+  z-index: 25;
+}
+
+/* Android TV System WebView & Smart TV GPU / 10-Foot Optimizations */
+html[data-tv-webview="true"] .ambient-orb,
+html[data-tv-webview="true"] .ambient-dot {
+  animation: none !important;
+  filter: blur(36px);
+}
+
+html[data-tv-webview="true"] .glass-panel,
+html[data-tv-webview="true"] .theme-panel,
+html[data-tv-webview="true"] .site-nav {
+  backdrop-filter: blur(8px);
+}
+
+html[data-tv-mode="true"] .rail-nav-btn {
+  opacity: 0.92;
 }
 
 .safe-area-bottom {

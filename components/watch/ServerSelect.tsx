@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
+import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 
 export interface ServerSelectOption {
   id: string;
@@ -16,6 +17,7 @@ interface ServerSelectProps {
   serverHealth?: Record<string, { status: "good" | "failing"; lastTested: number }>;
   className?: string;
   label?: string;
+  align?: "left" | "right";
 }
 
 function optionLabel(
@@ -47,11 +49,14 @@ export function ServerSelect({
   serverHealth,
   className = "",
   label = "Server",
+  align = "left",
 }: ServerSelectProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
   const listId = useId();
+  useDropdownViewportClamp(open, pickerRef);
   const selected = findSelected(value, newServers, defaultServers);
   const selectedLabel = selected
     ? optionLabel(selected, serverHealth)
@@ -75,6 +80,16 @@ export function ServerSelect({
     if (!open) return;
     const idx = flatOptions.findIndex((s) => s.id === value);
     setActiveIndex(idx >= 0 ? idx : 0);
+
+    // Scroll active option into view within the picker container
+    requestAnimationFrame(() => {
+      const selectedEl = pickerRef.current?.querySelector(
+        '[aria-selected="true"]'
+      ) as HTMLElement | null;
+      if (selectedEl && pickerRef.current) {
+        selectedEl.scrollIntoView({ block: "nearest" });
+      }
+    });
 
     const onPointerDown = (event: MouseEvent | TouchEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
@@ -154,10 +169,12 @@ export function ServerSelect({
   return (
     <div
       ref={rootRef}
-      className={`zoku-server-select ${open ? "is-open" : ""} ${className}`}
+      className={`zoku-server-select ${open ? "is-open" : ""} ${
+        align === "right" ? "zoku-server-select--right" : "zoku-server-select--left"
+      } ${className}`}
       data-testid="server-select"
     >
-      <span className="zoku-server-select__eyebrow hidden sm:inline">{label}</span>
+      <span className="zoku-server-select__eyebrow hidden md:inline">{label}</span>
       <button
         ref={triggerRef}
         type="button"
@@ -174,6 +191,7 @@ export function ServerSelect({
 
       {open && (
         <div
+          ref={pickerRef}
           id={listId}
           role="listbox"
           aria-label={`${label} options`}

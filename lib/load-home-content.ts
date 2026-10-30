@@ -4,8 +4,10 @@ export type GenreRail = { genre: TMDBGenre; titles: TMDBTitle[] };
 
 const HERO_SLIDE_COUNT = 6;
 const TRENDING_CACHE_KEY = "zoku_home_tmdb_trending_v1";
-const GENRE_CACHE_PREFIX = "zoku_home_tmdb_genres_v1_";
+const GENRE_CATALOG_CACHE_KEY = "zoku_home_tmdb_genre_catalog_v2";
+const GENRE_ITEM_CACHE_PREFIX = "zoku_home_tmdb_genre_rail_v2_";
 const CACHE_TTL_MS = 10 * 60 * 1000;
+const CONCURRENCY_BATCH_SIZE = 6;
 
 function readSessionCache<T>(key: string): T | null {
   if (typeof window === "undefined") return null;
@@ -64,10 +66,9 @@ export async function loadHomeTrending(): Promise<{
   return result;
 }
 
-export async function loadHomeGenreRails(prefGenreIds: number[]): Promise<GenreRail[]> {
-  const cacheKey = GENRE_CACHE_PREFIX + prefGenreIds.join(",");
-  const cached = readSessionCache<GenreRail[]>(cacheKey);
-  if (cached) return cached;
+async function loadAllTmdbGenres(): Promise<TMDBGenre[]> {
+  const cached = readSessionCache<TMDBGenre[]>(GENRE_CATALOG_CACHE_KEY);
+  if (cached && cached.length > 0) return cached;
 
   const [movieGenres, tvGenres] = await Promise.all([getGenres("movie"), getGenres("tv")]);
   const allGenres = [...movieGenres, ...tvGenres].reduce((acc, genre) => {
@@ -75,24 +76,54 @@ export async function loadHomeGenreRails(prefGenreIds: number[]): Promise<GenreR
     return acc;
   }, [] as TMDBGenre[]);
 
-  const railResults = await Promise.all(
-    prefGenreIds.map(async (genreId) => {
-      const matchedGenre = allGenres.find((genre) => genre.id === genreId);
-      if (!matchedGenre) return null;
+  if (allGenres.length > 0) {
+    writeSessionCache(GENRE_CATALOG_CACHE_KEY, allGenres);
+  }
+  return allGenres;
+}
 
-      const mediaType: "movie" | "tv" = genreId % 2 === 0 ? "movie" : "tv";
-      const titles = await discoverMedia(mediaType, {
-        with_genres: String(genreId),
-        sort_by: "popularity.desc",
-        page: 1,
-      });
+export async function loadHomeGenreRails(prefGenreIds: number[]): Promise<GenreRail[]> {
+  if (prefGenreIds.length === 0) return [];
 
-      if (titles.length === 0) return null;
-      return { genre: matchedGenre, titles };
-    })
-  );
+  const allGenres = await loadAllTmdbGenres();
+  const resultsById = new Map<number, GenreRail>();
+  const uncachedGenreIds: number[] = [];
 
-  const rails = railResults.filter((rail): rail is GenreRail => rail !== null);
-  writeSessionCache(cacheKey, rails);
-  return rails;
+  for (const genreId of prefGenreIds) {
+    const cachedRail = readSessionCache<GenreRail>(`${GENRE_ITEM_CACHE_PREFIX}${genreId}`);
+    if (cachedRail && cachedRail.titles?.length > 0) {
+      resultsById.set(genreId, cachedRail);
+    } else {
+      uncachedGenreIds.push(genreId);
+    }
+  }
+
+  // Fetch uncached genres in controlled batches of 6 to prevent API rate-limiting or UI lag
+  // even when all 19+ genres are selected.
+  for (let i = 0; i < uncachedGenreIds.length; i += CONCURRENCY_BATCH_SIZE) {
+    const batch = uncachedGenreIds.slice(i, i + CONCURRENCY_BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (genreId) => {
+        const matchedGenre = allGenres.find((genre) => genre.id === genreId);
+        if (!matchedGenre) return;
+
+        const mediaType: "movie" | "tv" = genreId % 2 === 0 ? "movie" : "tv";
+        const titles = await discoverMedia(mediaType, {
+          with_genres: String(genreId),
+          sort_by: "popularity.desc",
+          page: 1,
+        });
+
+        if (titles.length > 0) {
+          const rail: GenreRail = { genre: matchedGenre, titles };
+          resultsById.set(genreId, rail);
+          writeSessionCache(`${GENRE_ITEM_CACHE_PREFIX}${genreId}`, rail);
+        }
+      })
+    );
+  }
+
+  return prefGenreIds
+    .map((id) => resultsById.get(id))
+    .filter((rail): rail is GenreRail => Boolean(rail));
 }

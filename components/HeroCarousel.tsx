@@ -177,7 +177,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
         <div className="hero-media-scrim" aria-hidden />
       </div>
 
-      <div className="relative z-[1] mx-auto flex w-full max-w-7xl min-h-[clamp(340px,52dvh,680px)] flex-col justify-end px-4 pb-10 pt-20 sm:px-6 sm:pb-12 sm:pt-24 lg:px-8 lg:pb-14">
+      <div className="relative z-[1] mx-auto flex w-full min-h-[clamp(340px,52dvh,680px)] flex-col justify-end px-4 pb-10 pt-20 sm:px-6 sm:pb-12 sm:pt-24 lg:px-8 lg:pb-14">
         {loading && !current ? (
           <div className="flex w-full max-w-3xl flex-col gap-4 animate-pulse">
             <div className="h-6 w-40 rounded-full bg-surface" />

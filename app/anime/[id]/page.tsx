@@ -182,7 +182,7 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
         style={{ backgroundImage: banner ? `url(${banner})` : undefined }}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-black/40" />
-        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-full flex items-end pb-8 gap-6">
+        <div className="relative z-10 mx-auto w-full px-4 sm:px-6 lg:px-8 h-full flex items-end pb-8 gap-6">
           <button
             onClick={() => router.back()}
             aria-label="Go back"
@@ -255,7 +255,7 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {seasons.length > 1 && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">

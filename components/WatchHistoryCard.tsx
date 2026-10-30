@@ -107,10 +107,23 @@ export function WatchHistoryCard({ item, onQuickRemove }: WatchHistoryCardProps)
     void removeItem(item.media_type, itemId);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "Enter" || e.key === " " || e.key === "Select" || e.keyCode === 23) {
+      e.preventDefault();
+      handleRewatch();
+    }
+  };
+
   return (
     <article
+      role="button"
+      tabIndex={0}
+      data-tv-focusable="true"
+      aria-label={`Watch ${item.title} (${episodeLabel})`}
       onClick={() => handleRewatch()}
-      className="poster-card group/history relative aspect-video w-[256px] sm:w-[292px] md:w-[324px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border-custom bg-surface select-none transition-all duration-300 hover:-translate-y-1 hover:border-primary"
+      onKeyDown={handleKeyDown}
+      className="poster-card group/history relative aspect-video w-[256px] sm:w-[292px] md:w-[324px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border-custom bg-surface select-none transition-all duration-300 hover:-translate-y-1 hover:border-primary focus-visible:-translate-y-1 focus-visible:border-primary"
     >
       {!imageLoaded && (
         <div className="absolute inset-0 flex animate-pulse items-center justify-center bg-neutral-900/90">
@@ -122,7 +135,7 @@ export function WatchHistoryCard({ item, onQuickRemove }: WatchHistoryCardProps)
         src={imageSrc}
         alt={item.title}
         onLoad={() => setImageLoaded(true)}
-        className={`h-full w-full object-cover transition-transform duration-500 group-hover/history:scale-105 ${
+        className={`h-full w-full object-cover transition-transform duration-500 group-hover/history:scale-105 group-focus-within/history:scale-105 ${
           imageLoaded ? "opacity-100" : "opacity-0"
         }`}
         loading="lazy"
@@ -153,6 +166,7 @@ export function WatchHistoryCard({ item, onQuickRemove }: WatchHistoryCardProps)
         <div className="flex items-center gap-1.5">
           <button
             type="button"
+            tabIndex={-1}
             onClick={handleWatchAgain}
             data-testid="watch-again-icon-btn"
             aria-label={`Watch Again ${item.title}`}
@@ -164,6 +178,7 @@ export function WatchHistoryCard({ item, onQuickRemove }: WatchHistoryCardProps)
 
           <button
             type="button"
+            tabIndex={-1}
             onClick={handleToggleCompleted}
             aria-label={item.completed ? "Mark as partially watched" : "Mark as completed"}
             title={item.completed ? "Mark as partially watched" : "Mark as completed"}
@@ -178,6 +193,7 @@ export function WatchHistoryCard({ item, onQuickRemove }: WatchHistoryCardProps)
 
           <button
             type="button"
+            tabIndex={-1}
             onClick={handleQuickRemove}
             data-testid="quick-remove-btn"
             aria-label={`Quick Remove ${item.title}`}
@@ -214,6 +230,7 @@ export function WatchHistoryCard({ item, onQuickRemove }: WatchHistoryCardProps)
         <div className="mt-2.5 flex items-center gap-2">
           <button
             type="button"
+            tabIndex={-1}
             onClick={handleWatchAgain}
             data-testid="watch-again-btn"
             aria-label={`Watch Again ${item.title}`}
@@ -226,6 +243,7 @@ export function WatchHistoryCard({ item, onQuickRemove }: WatchHistoryCardProps)
 
           <button
             type="button"
+            tabIndex={-1}
             onClick={handleDetails}
             aria-label={`View details for ${item.title}`}
             title="Title Details"

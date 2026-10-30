@@ -15,24 +15,31 @@ import {
   Wifi,
   WifiOff
 } from "lucide-react";
-import { useSessionStore, useRailFilterStore, logout } from "@/stores";
+import { useSessionStore, useRailFilterStore, useSearchHistoryStore, logout } from "@/stores";
 import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
 import { getNavbarNetworkStatus } from "@/lib/network-status";
 import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
+import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, profiles, currentProfile, setProfile } = useSessionStore();
   const { activeFilter, filterOptions, setActiveFilter } = useRailFilterStore();
+  const { addQuery } = useSearchHistoryStore();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isStatusPopoverOpen, setIsStatusPopoverOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNavAutocomplete, setShowNavAutocomplete] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
+  const statusPopoverRef = useRef<HTMLDivElement>(null);
+
+  useDropdownViewportClamp(isDropdownOpen, profileMenuRef);
+  useDropdownViewportClamp(isStatusPopoverOpen, statusPopoverRef);
 
   // Track browser online/offline state
   useEffect(() => {
@@ -55,9 +62,9 @@ export function Navbar() {
     };
   }, []);
 
-  // Close dropdowns on click outside
+  // Close dropdowns on click outside or Escape
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
@@ -65,15 +72,29 @@ export function Navbar() {
         setIsStatusPopoverOpen(false);
       }
     }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsDropdownOpen(false);
+        setIsStatusPopoverOpen(false);
+      }
+    }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setShowNavAutocomplete(false);
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    const trimmed = searchQuery.trim();
+    if (trimmed) {
+      void addQuery(trimmed);
+      router.push(`/search?q=${encodeURIComponent(trimmed)}`);
     }
   };
 
@@ -107,7 +128,7 @@ export function Navbar() {
     <nav
       className={`site-nav sticky top-0 z-40 w-full border-b ${networkStatus.navBorderClass} bg-background/90 backdrop-blur-md transition-colors duration-300`}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
           
           {/* Logo & Main Nav */}
@@ -146,7 +167,7 @@ export function Navbar() {
           <div className="flex items-center gap-2.5 sm:gap-3.5">
             
             {/* Subtle Connectivity Status Indicator */}
-            <div className="relative" ref={statusRef}>
+            <div className={`relative ${isStatusPopoverOpen ? "z-50" : "z-20"}`} ref={statusRef}>
               <button
                 type="button"
                 role="status"
@@ -180,9 +201,10 @@ export function Navbar() {
 
               {isStatusPopoverOpen && (
                 <div
+                  ref={statusPopoverRef}
                   role="dialog"
                   aria-label="Connection state details"
-                  className="glass-panel absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl p-3.5 shadow-2xl z-50 animate-scale-up"
+                  className="glass-panel absolute left-0 sm:left-auto sm:right-0 mt-2 w-64 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-border-custom bg-surface/95 p-3.5 shadow-2xl backdrop-blur-2xl z-50 animate-scale-up"
                 >
                   <div className="flex items-center gap-2">
                     <span
@@ -202,7 +224,7 @@ export function Navbar() {
             </div>
 
             {/* Search Bar with Voice Input & Real-time Autocomplete */}
-            <form onSubmit={handleSearchSubmit} className="relative hidden sm:block">
+            <form onSubmit={handleSearchSubmit} className={`relative hidden sm:block ${showNavAutocomplete ? "z-50" : "z-20"}`}>
               <input
                 type="text"
                 placeholder={catalogMode === "anime" ? "Search anime..." : "Titles, people, genres..."}
@@ -222,8 +244,12 @@ export function Navbar() {
                 <VoiceSearchButton
                   size="sm"
                   onTranscript={(text) => {
+                    const trimmed = text.trim();
                     setSearchQuery(text);
                     setShowNavAutocomplete(false);
+                    if (trimmed) {
+                      void addQuery(trimmed);
+                    }
                     router.push(`/search?q=${encodeURIComponent(text)}`);
                   }}
                 />
@@ -245,11 +271,17 @@ export function Navbar() {
                 onSelectSuggestion={(suggestion) => {
                   setShowNavAutocomplete(false);
                   setSearchQuery("");
+                  if (suggestion.title.trim()) {
+                    void addQuery(suggestion.title.trim());
+                  }
                   router.push(suggestion.href);
                 }}
                 onViewAll={(q) => {
                   setShowNavAutocomplete(false);
                   setSearchQuery("");
+                  if (q.trim()) {
+                    void addQuery(q.trim());
+                  }
                   router.push(`/search?q=${encodeURIComponent(q)}`);
                 }}
               />
@@ -261,6 +293,9 @@ export function Navbar() {
                 size="sm"
                 className="rounded-xl border border-border-custom bg-surface/75"
                 onTranscript={(text) => {
+                  if (text.trim()) {
+                    void addQuery(text.trim());
+                  }
                   router.push(`/search?q=${encodeURIComponent(text)}`);
                 }}
               />
@@ -275,7 +310,7 @@ export function Navbar() {
 
             {/* Profile Menu Dropdown */}
             {currentProfile && (
-              <div className="relative" ref={dropdownRef}>
+              <div className={`relative ${isDropdownOpen ? "z-50" : "z-20"}`} ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="theme-panel flex items-center gap-2 rounded-full p-1 pr-2.5 hover:border-primary/60 transition-all duration-300"
@@ -294,7 +329,10 @@ export function Navbar() {
                 </button>
 
                 {isDropdownOpen && (
-                  <div className="glass-panel absolute right-0 mt-2 w-60 max-w-[calc(100vw-1.5rem)] rounded-2xl p-2 shadow-2xl animate-scale-up z-50">
+                  <div
+                    ref={profileMenuRef}
+                    className="glass-panel absolute right-0 mt-2 w-60 max-w-[calc(100vw-1.5rem)] max-h-[calc(100dvh-4.75rem)] overflow-y-auto rounded-2xl border border-border-custom bg-surface/95 p-2 shadow-2xl backdrop-blur-2xl animate-scale-up z-50"
+                  >
                     <div className="px-3 py-2.5 border-b border-border-custom">
                       <p className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">Active Profile</p>
                       <p className="text-sm font-bold text-on-surface truncate mt-0.5">{currentProfile.name}</p>
@@ -404,7 +442,7 @@ export function Navbar() {
         {pathname === "/home" && filterOptions.length > 0 && (
           <div
             data-testid="navbar-mobile-rail-filters"
-            className="md:hidden flex items-center gap-1.5 overflow-x-auto no-scrollbar touch-pan-x py-2 px-1 border-t border-border-custom/50 scroll-smooth -mx-1"
+            className="md:hidden custom-scrollbar flex items-center gap-1.5 overflow-x-auto touch-pan-x pt-2 pb-2.5 px-1 border-t border-border-custom/50 scroll-smooth -mx-1"
           >
             {filterOptions.map((chip) => {
               const isActive = activeFilter === chip.id;

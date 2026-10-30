@@ -55,7 +55,7 @@ export function TitleRail({ title, items, mediaType, genreId }: TitleRailProps) 
 
   return (
     <div className="group/rail relative space-y-2 py-2 sm:space-y-3 sm:py-3">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <h2 className="flex items-center gap-2 border-l-2 border-primary pl-2.5 font-display text-xs font-semibold uppercase tracking-wide text-on-surface sm:text-sm">
           {IconComponent && (
             <IconComponent className="h-4 w-4 shrink-0 text-primary sm:h-4.5 sm:w-4.5" />
@@ -81,7 +81,7 @@ export function TitleRail({ title, items, mediaType, genreId }: TitleRailProps) 
         </div>
       </div>
 
-      <div className="relative mx-auto w-full max-w-7xl">
+      <div className="relative mx-auto w-full">
         <div
           className={`rail-edge-fade-left ${
             showLeftArrow ? "opacity-100" : "opacity-0"
@@ -98,7 +98,7 @@ export function TitleRail({ title, items, mediaType, genreId }: TitleRailProps) 
         <div
           ref={rowRef}
           data-scrolling={isScrolling ? (scrollDirection ?? "right") : undefined}
-          className="rail-scroll-track no-scrollbar flex gap-3 overflow-x-auto overflow-y-visible px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8"
+          className="rail-scroll-track custom-scrollbar flex gap-3 overflow-x-auto overflow-y-visible px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8"
         >
           {items.map((item, idx) => (
             <motion.div
