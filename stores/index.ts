@@ -12,7 +12,8 @@ import {
   listenToOrderedCollection,
   listenToDoc,
   updateDocument,
-  deleteDocument
+  deleteDocument,
+  purgeProfileData,
 } from "@/lib/firebase";
 import {
   applyTheme,
@@ -89,6 +90,8 @@ export interface WatchlistItem {
   anilistId?: number | null;
   added_at: string;
   title?: string;
+  creator?: string | null;
+  genres?: string[] | null;
   poster_path?: string | null;
   backdrop_path?: string | null;
   vote_average?: number;
@@ -263,6 +266,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const { user, currentProfile } = get();
     if (!user) return;
     try {
+      await purgeProfileData(user.uid, profileId);
+      clearLocalContinueWatching(profileId);
+      clearLocalWatchHistory(profileId);
       const docRef = getDocRef(`users/${user.uid}/profiles`, profileId);
       await deleteDocument(docRef);
       if (currentProfile && currentProfile.id === profileId) {
@@ -425,6 +431,8 @@ interface WatchlistState {
     tmdbId?: number;
     anilistId?: number;
     title?: string;
+    creator?: string | null;
+    genres?: string[] | null;
     poster_path?: string | null;
     backdrop_path?: string | null;
     vote_average?: number;

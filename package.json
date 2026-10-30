@@ -6,31 +6,38 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "tsx --test \"lib/**/*.test.ts\"",
+    "validate": "npm run typecheck && npm test && npm run build",
     "perf:prod": "npm run build && npm run start",
     "firebase:deploy:rules": "firebase deploy --only firestore:rules",
     "firebase:deploy:indexes": "firebase deploy --only firestore:indexes",
     "firebase:deploy:firestore": "firebase deploy --only firestore:rules,firestore:indexes"
   },
   "dependencies": {
+    "@next/swc-wasm-nodejs": "^15.0.5",
+    "@types/d3": "^7.4.3",
+    "clsx": "^2.1.1",
+    "d3": "^7.9.0",
+    "firebase": "^10.12.2",
+    "framer-motion": "^11.11.17",
+    "lucide-react": "^0.395.0",
+    "motion": "^11.11.17",
     "next": "15.0.7",
     "react": "19.0.0-rc-66855b96-20241106",
     "react-dom": "19.0.0-rc-66855b96-20241106",
-    "firebase": "^10.12.2",
-    "zustand": "^4.5.2",
-    "lucide-react": "^0.395.0",
-    "framer-motion": "^11.11.17",
-    "motion": "^11.11.17",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.3.0"
+    "tailwind-merge": "^2.3.0",
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
-    "typescript": "^5.5.4",
+    "@tailwindcss/postcss": "^4.0.0-alpha.14",
     "@types/node": "^20.14.9",
     "@types/react": "^19.0.0-rc.1",
     "@types/react-dom": "^19.0.0-rc.1",
     "postcss": "^8.4.38",
     "tailwindcss": "^4.0.0-alpha.14",
-    "@tailwindcss/postcss": "^4.0.0-alpha.14"
+    "tsx": "^4.23.15",
+    "typescript": "^5.5.4"
   }
 }

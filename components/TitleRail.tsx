@@ -5,7 +5,7 @@ import { RailNavButton } from "@/components/RailNavButton";
 import { useSmoothRailScroll } from "@/hooks/useSmoothRailScroll";
 import { TMDBTitle } from "@/lib/tmdb";
 import { getGenreIcon } from "@/lib/genreIcons";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 
 interface TitleRailProps {
   title: string;

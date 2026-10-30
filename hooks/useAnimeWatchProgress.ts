@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   useContinueWatchingStore,
   useEpisodeProgressStore,
@@ -48,6 +48,11 @@ export function useAnimeWatchProgress({
     savedRecord ? savedRecord.current_time_sec : 0
   );
   const [isCompleted, setIsCompleted] = useState(Boolean(savedRecord?.completed));
+  const [hasConfirmedPlayback, setHasConfirmedPlayback] = useState(false);
+
+  useEffect(() => {
+    setHasConfirmedPlayback(false);
+  }, [selectedServerId, anilistId, season, episode]);
 
   // Sync state if record updates from database / listener
   useEffect(() => {
@@ -78,9 +83,12 @@ export function useAnimeWatchProgress({
     return () => clearTimeout(timer);
   }, [ready, title, anilistId, season, episode, overview, voteAverage, poster, recordWatching]);
 
-  const handleProgress = useCallback(
-    (progressPercent: number, timeSec: number, durationSec?: number) => {
+  const persistProgress = useCallback(
+    (progressPercent: number, timeSec: number, durationSec?: number, fromPlayerEvent = false) => {
       if (!anilistId || !title) return;
+      if (fromPlayerEvent) {
+        setHasConfirmedPlayback(true);
+      }
 
       const boundedPercent = Math.max(0, Math.min(100, Math.round(progressPercent)));
       const completed = boundedPercent >= 90;
@@ -148,6 +156,13 @@ export function useAnimeWatchProgress({
     ]
   );
 
+  const handleProgress = useCallback(
+    (progressPercent: number, timeSec: number, durationSec?: number) => {
+      persistProgress(progressPercent, timeSec, durationSec, true);
+    },
+    [persistProgress]
+  );
+
   // Listen to postMessage from capable embed player iframes
   usePlayerProgressListener({
     serverId: selectedServerId,
@@ -157,18 +172,20 @@ export function useAnimeWatchProgress({
     onProgress: handleProgress,
   });
 
+  // Never fabricate a hardcoded 1440s duration — preserve known duration or undefined
   const markCompleted = useCallback(() => {
-    handleProgress(100, 0, 1440);
-  }, [handleProgress]);
+    persistProgress(100, savedRecord?.duration_sec ?? 0, savedRecord?.duration_sec ?? undefined, false);
+  }, [persistProgress, savedRecord?.duration_sec]);
 
   const resetProgress = useCallback(() => {
-    handleProgress(0, 0, 1440);
-  }, [handleProgress]);
+    persistProgress(0, 0, savedRecord?.duration_sec ?? undefined, false);
+  }, [persistProgress, savedRecord?.duration_sec]);
 
   return {
     progressPercent: currentProgress,
     currentTimeSec,
     isCompleted,
+    hasConfirmedPlayback,
     savedRecord,
     handleProgress,
     markCompleted,

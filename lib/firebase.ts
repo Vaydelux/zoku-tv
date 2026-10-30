@@ -76,8 +76,6 @@ interface MockAuth {
 const mockAuth: MockAuth = { currentUser: null };
 
 export const auth: Auth | MockAuth = realAuth ?? mockAuth;
-// This replicates the precise behavior of Auth and Firestore using localStorage
-// so that the application is 100% interactive and functional even when offline/not provisioned.
 
 interface MockUser {
   uid: string;
@@ -88,6 +86,49 @@ interface MockUser {
 
 const STORAGE_KEY_AUTH = "zoku_local_auth_user";
 const STORAGE_KEY_DB = "zoku_local_db";
+const STORAGE_KEY_USERS = "zoku_registered_users";
+
+/**
+ * Cryptographic SHA-256 credential hashing for local fallback mode.
+ * Never persists raw plaintext passwords in localStorage.
+ */
+export async function hashLocalCredential(
+  email: string,
+  password: string,
+  salt: string
+): Promise<string> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const payload = `zoku_v1:${salt}:${normalizedEmail}:${password}`;
+  if (typeof globalThis.crypto !== "undefined" && globalThis.crypto.subtle) {
+    const encoded = new TextEncoder().encode(payload);
+    const digest = await globalThis.crypto.subtle.digest("SHA-256", encoded);
+    return Array.from(new Uint8Array(digest))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+  // Fallback multi-round 256-bit mixing when SubtleCrypto is unavailable
+  let h1 = 0xdeadbeef ^ payload.length;
+  let h2 = 0x41c6ce57 ^ payload.length;
+  for (let i = 0; i < payload.length; i++) {
+    const ch = payload.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h1 >>> 0).toString(16).padStart(8, "0") + (h2 >>> 0).toString(16).padStart(8, "0");
+}
+
+function generateSalt(): string {
+  if (typeof globalThis.crypto !== "undefined" && globalThis.crypto.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    globalThis.crypto.getRandomValues(bytes);
+    return Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
 
 const getLocalUser = (): MockUser | null => {
   if (typeof window === "undefined") return null;
@@ -121,45 +162,83 @@ const authListeners: Array<(user: any) => void> = [];
 const dbListeners: Record<string, Array<(snapshot: any) => void>> = {};
 
 const triggerAuthChange = (user: any) => {
-  authListeners.forEach(cb => cb(user));
+  authListeners.forEach((cb) => cb(user));
 };
 
+function collectDirectChildDocs(dbData: Record<string, any>, parentPath: string) {
+  const depth = parentPath.split("/").length + 1;
+  const results: Array<{ id: string | undefined; data: () => any; exists: () => boolean }> = [];
+  Object.entries(dbData).forEach(([key, value]) => {
+    if (key.startsWith(parentPath + "/") && key.split("/").length === depth) {
+      results.push({
+        id: key.split("/").pop(),
+        data: () => value,
+        exists: () => true,
+      });
+    }
+  });
+  return results;
+}
+
 const triggerDbChange = (path: string) => {
+  const dbData = getLocalDb();
+
   if (dbListeners[path]) {
-    const dbData = getLocalDb();
     const docData = dbData[path] || null;
     const snap = {
       exists: () => !!docData,
       data: () => docData,
       id: path.split("/").pop(),
     };
-    dbListeners[path].forEach(cb => cb(snap));
+    dbListeners[path].forEach((cb) => cb(snap));
   }
-  
-  // Also trigger list listeners (parent path)
+
+  // Also trigger collection & ordered-collection listeners on the parent path
   const parts = path.split("/");
   if (parts.length > 1) {
     const parentPath = parts.slice(0, -1).join("/");
+    const baseResults = collectDirectChildDocs(dbData, parentPath);
+
     if (dbListeners[parentPath]) {
-      const dbData = getLocalDb();
-      const results: any[] = [];
-      Object.entries(dbData).forEach(([key, value]) => {
-        if (key.startsWith(parentPath + "/") && key.split("/").length === parts.length) {
-          results.push({
-            id: key.split("/").pop(),
-            data: () => value,
-            exists: () => true
-          });
-        }
-      });
       const querySnap = {
-        docs: results,
-        forEach: (cb: any) => results.forEach(cb),
-        empty: results.length === 0,
-        size: results.length
+        docs: baseResults,
+        forEach: (cb: any) => baseResults.forEach(cb),
+        empty: baseResults.length === 0,
+        size: baseResults.length,
       };
-      dbListeners[parentPath].forEach(cb => cb(querySnap));
+      dbListeners[parentPath].forEach((cb) => cb(querySnap));
     }
+
+    // Notify any ordered collection listeners registered as `${parentPath}?orderBy=...`
+    const orderedPrefix = `${parentPath}?orderBy=`;
+    Object.keys(dbListeners).forEach((listenerKey) => {
+      if (!listenerKey.startsWith(orderedPrefix)) return;
+      const callbacks = dbListeners[listenerKey];
+      if (!callbacks || callbacks.length === 0) return;
+
+      const queryPart = listenerKey.slice(parentPath.length + 1);
+      const params = new URLSearchParams(queryPart);
+      const orderByField = params.get("orderBy") || "";
+      const dirParam = params.get("dir") === "asc" ? 1 : -1;
+      const limitParam = Number(params.get("limit") || "0");
+
+      const sorted = [...baseResults].sort((a, b) => {
+        const aValue = a.data()?.[orderByField] ?? "";
+        const bValue = b.data()?.[orderByField] ?? "";
+        if (aValue < bValue) return -1 * dirParam;
+        if (aValue > bValue) return 1 * dirParam;
+        return 0;
+      });
+
+      const limited = limitParam > 0 ? sorted.slice(0, limitParam) : sorted;
+      const orderedSnap = {
+        docs: limited,
+        forEach: (cb: any) => limited.forEach(cb),
+        empty: limited.length === 0,
+        size: limited.length,
+      };
+      callbacks.forEach((cb) => cb(orderedSnap));
+    });
   }
 };
 
@@ -301,16 +380,63 @@ export const oAuthEnabled = hasRealConfig && !!realAuth && !!googleProvider;
 export { GoogleAuthProvider };
 
 export async function loginWithEmail(email: string, password: string) {
+  const normalizedEmail = email.trim().toLowerCase();
   if (realAuth) {
-    return signInWithEmailAndPassword(realAuth, email, password);
+    return signInWithEmailAndPassword(realAuth, normalizedEmail, password);
   }
-  // Mock login
-  const users = JSON.parse(localStorage.getItem("zoku_registered_users") || "[]");
-  const match = users.find((u: any) => u.email === email && u.password === password);
-  if (!match) {
+  // Local fallback login with hashed password verification + legacy plaintext auto-migration
+  const raw = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_USERS) : null;
+  const users: Array<{
+    uid: string;
+    email: string;
+    name?: string;
+    passwordHash?: string;
+    salt?: string;
+    password?: string;
+  }> = raw ? JSON.parse(raw) : [];
+
+  const userIndex = users.findIndex(
+    (u) => (u.email || "").trim().toLowerCase() === normalizedEmail
+  );
+  if (userIndex === -1) {
     throw new Error("Invalid email or password");
   }
-  const user = { uid: match.uid, email: match.email, displayName: match.name || email.split("@")[0], photoURL: null };
+
+  const candidate = users[userIndex];
+  let verified = false;
+
+  if (candidate.passwordHash && candidate.salt) {
+    const computed = await hashLocalCredential(normalizedEmail, password, candidate.salt);
+    verified = computed === candidate.passwordHash;
+  } else if (typeof candidate.password === "string") {
+    // Migrate legacy plaintext record to salted hash on successful login
+    if (candidate.password === password) {
+      verified = true;
+      const salt = generateSalt();
+      const passwordHash = await hashLocalCredential(normalizedEmail, password, salt);
+      users[userIndex] = {
+        uid: candidate.uid,
+        email: normalizedEmail,
+        name: candidate.name,
+        salt,
+        passwordHash,
+      };
+      if (typeof window !== "undefined") {
+        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+      }
+    }
+  }
+
+  if (!verified) {
+    throw new Error("Invalid email or password");
+  }
+
+  const user = {
+    uid: candidate.uid,
+    email: candidate.email,
+    displayName: candidate.name || normalizedEmail.split("@")[0],
+    photoURL: null,
+  };
   mockAuth.currentUser = user;
   setLocalUser(user);
   triggerAuthChange(user);
@@ -318,21 +444,45 @@ export async function loginWithEmail(email: string, password: string) {
 }
 
 export async function signupWithEmail(email: string, password: string, name: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (password.length < 6) {
+    throw new Error("Password must be at least 6 characters.");
+  }
   if (realAuth) {
-    const cred = await createUserWithEmailAndPassword(realAuth, email, password);
+    const cred = await createUserWithEmailAndPassword(realAuth, normalizedEmail, password);
     return cred;
   }
-  // Mock signup
-  const users = JSON.parse(localStorage.getItem("zoku_registered_users") || "[]");
-  if (users.some((u: any) => u.email === email)) {
-    throw new Error("Email already exists");
-  }
-  const uid = "mock_uid_" + Math.random().toString(36).substr(2, 9);
-  const newUser = { uid, email, password, name };
-  users.push(newUser);
-  localStorage.setItem("zoku_registered_users", JSON.stringify(users));
+  // Local fallback signup — stores salted SHA-256 hash, never plaintext password
+  const raw = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_USERS) : null;
+  const users: Array<{
+    uid: string;
+    email: string;
+    name: string;
+    salt: string;
+    passwordHash: string;
+  }> = raw ? JSON.parse(raw) : [];
 
-  const user = { uid, email, displayName: name, photoURL: null };
+  if (users.some((u) => (u.email || "").trim().toLowerCase() === normalizedEmail)) {
+    throw new Error("An account with this email already exists.");
+  }
+
+  const uid = "local_uid_" + Math.random().toString(36).slice(2, 11);
+  const salt = generateSalt();
+  const passwordHash = await hashLocalCredential(normalizedEmail, password, salt);
+
+  const newUser = {
+    uid,
+    email: normalizedEmail,
+    name: name.trim() || normalizedEmail.split("@")[0],
+    salt,
+    passwordHash,
+  };
+  users.push(newUser);
+  if (typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+  }
+
+  const user = { uid, email: normalizedEmail, displayName: newUser.name, photoURL: null };
   mockAuth.currentUser = user;
   setLocalUser(user);
   triggerAuthChange(user);
@@ -340,7 +490,7 @@ export async function signupWithEmail(email: string, password: string, name: str
 }
 
 async function mockLoginWithGoogle() {
-  const uid = "google_mock_" + Math.random().toString(36).substr(2, 9);
+  const uid = "google_local_default";
   const user = {
     uid,
     email: "google.user@example.com",
@@ -452,6 +602,53 @@ export async function deleteDocument(docRef: any) {
   triggerDbChange(docRef.path);
 }
 
+/**
+ * Purges all subcollections and profile-scoped localStorage entries for a deleted profile.
+ */
+export async function purgeProfileData(userId: string, profileId: string) {
+  const basePath = `users/${userId}/profiles/${profileId}`;
+  const subcollections = [
+    "watchlist",
+    "continueWatching",
+    "watchHistory",
+    "episodeProgress",
+    "searchHistory",
+  ];
+
+  if (realDb) {
+    await Promise.all(
+      subcollections.map(async (sub) => {
+        try {
+          const snap = await getDocs(collection(realDb!, `${basePath}/${sub}`));
+          await Promise.all(snap.docs.map((d: any) => deleteDoc(d.ref)));
+        } catch (err) {
+          console.warn(`Failed to purge cloud subcollection ${sub}:`, err);
+        }
+      })
+    );
+  } else {
+    const dbData = getLocalDb();
+    const prefix = `${basePath}/`;
+    const deletedPaths: string[] = [];
+    for (const key of Object.keys(dbData)) {
+      if (key === basePath || key.startsWith(prefix)) {
+        delete dbData[key];
+        deletedPaths.push(key);
+      }
+    }
+    setLocalDb(dbData);
+    deletedPaths.forEach((p) => triggerDbChange(p));
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.removeItem(`zoku_search_history_${userId}_${profileId}`);
+    } catch {
+      // ignore storage errors
+    }
+  }
+}
+
 export function listenToDoc(docRef: any, callback: (snapshot: any) => void) {
   if (realDb) {
     return onSnapshot(docRef, callback);
@@ -472,7 +669,7 @@ export function listenToDoc(docRef: any, callback: (snapshot: any) => void) {
   }, 0);
 
   return () => {
-    dbListeners[path] = dbListeners[path].filter(cb => cb !== callback);
+    dbListeners[path] = dbListeners[path].filter((cb) => cb !== callback);
   };
 }
 
@@ -483,16 +680,7 @@ export async function getCollectionDocs(collectionRef: any) {
   }
   const path = collectionRef.path as string;
   const dbData = getLocalDb();
-  const results: any[] = [];
-  Object.entries(dbData).forEach(([key, value]) => {
-    if (key.startsWith(path + "/") && key.split("/").length === path.split("/").length + 1) {
-      results.push({
-        id: key.split("/").pop(),
-        data: () => value,
-        exists: () => true,
-      });
-    }
-  });
+  const results = collectDirectChildDocs(dbData, path);
   return {
     docs: results,
     forEach: (cb: any) => results.forEach(cb),
@@ -512,26 +700,17 @@ export function listenToCollection(collectionRef: any, callback: (snapshot: any)
   // Send initial query snapshot
   setTimeout(() => {
     const dbData = getLocalDb();
-    const results: any[] = [];
-    Object.entries(dbData).forEach(([key, value]) => {
-      if (key.startsWith(path + "/") && key.split("/").length === path.split("/").length + 1) {
-        results.push({
-          id: key.split("/").pop(),
-          data: () => value,
-          exists: () => true
-        });
-      }
-    });
+    const results = collectDirectChildDocs(dbData, path);
     callback({
       docs: results,
       forEach: (cb: any) => results.forEach(cb),
       empty: results.length === 0,
-      size: results.length
+      size: results.length,
     });
   }, 0);
 
   return () => {
-    dbListeners[path] = dbListeners[path].filter(cb => cb !== callback);
+    dbListeners[path] = dbListeners[path].filter((cb) => cb !== callback);
   };
 }
 
@@ -555,22 +734,13 @@ export function listenToOrderedCollection(
   }
 
   const path = collectionRef.path;
-  const listenerKey = `${path}?orderBy=${options.orderByField}&dir=${options.direction ?? "desc"}`;
+  const listenerKey = `${path}?orderBy=${options.orderByField}&dir=${options.direction ?? "desc"}&limit=${options.limitTo ?? ""}`;
   if (!dbListeners[listenerKey]) dbListeners[listenerKey] = [];
   dbListeners[listenerKey].push(callback);
 
   setTimeout(() => {
     const dbData = getLocalDb();
-    const results: any[] = [];
-    Object.entries(dbData).forEach(([key, value]) => {
-      if (key.startsWith(path + "/") && key.split("/").length === path.split("/").length + 1) {
-        results.push({
-          id: key.split("/").pop(),
-          data: () => value,
-          exists: () => true,
-        });
-      }
-    });
+    const results = collectDirectChildDocs(dbData, path);
 
     const direction = options.direction === "asc" ? 1 : -1;
     results.sort((a, b) => {

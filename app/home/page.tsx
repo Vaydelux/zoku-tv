@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
   Film,
@@ -8,9 +9,9 @@ import {
   Palette,
   Sun,
   Moon,
-  Layers,
   History,
   Bookmark,
+  Shield,
 } from "lucide-react";
 import {
   useSessionStore,
@@ -37,8 +38,14 @@ import {
   getWatchHistoryItemId,
   type WatchHistoryItem,
 } from "@/lib/watch-history";
+import { filterWatchlistByCatalog } from "@/lib/watchlist";
 import {
-  THEME_OPTIONS,
+  filterTmdbForKidsMode,
+  filterAnimeForKidsMode,
+  isGenreIdAllowedInKidsMode,
+  isAnimeGenreAllowedInKidsMode,
+} from "@/lib/kids-mode";
+import {
   getThemeOption,
   normalizeAppearance,
 } from "@/lib/themes";
@@ -51,6 +58,7 @@ export default function HomePage() {
   const watchlistItems = useWatchlistStore((state) => state.items);
 
   const catalogMode = currentProfile?.catalogMode ?? "tmdb";
+  const isKidMode = Boolean(currentProfile?.kidMode);
   const currentTheme = getThemeOption(currentProfile?.themePreference);
   const currentAppearance = normalizeAppearance(currentProfile?.appearancePreference);
 
@@ -68,7 +76,6 @@ export default function HomePage() {
   const selectedRailFilter = activeFilter;
   const setSelectedRailFilter = setActiveFilter;
 
-  const [showThemeDrawer, setShowThemeDrawer] = useState(false);
   const [cacheRefreshVersion, setCacheRefreshVersion] = useState(0);
 
   const [loadingTrending, setLoadingTrending] = useState(true);
@@ -86,10 +93,36 @@ export default function HomePage() {
     [watchHistoryItems, catalogMode]
   );
 
-  // Reset rail filter when switching catalog mode
+  const catalogWatchlist = useMemo(
+    () => filterWatchlistByCatalog(watchlistItems, catalogMode),
+    [watchlistItems, catalogMode]
+  );
+
+  const tmdbWatchlistPreview = useMemo<TMDBTitle[]>(() => {
+    if (catalogMode !== "tmdb") return [];
+    const mapped: TMDBTitle[] = catalogWatchlist
+      .filter((w) => w.media_type === "movie" || w.media_type === "tv")
+      .map((w) => ({
+        id: Number(w.tmdbId ?? 0),
+        title: w.media_type === "movie" ? w.title : undefined,
+        name: w.media_type === "tv" ? w.title : undefined,
+        overview: "",
+        poster_path: w.poster_path ?? null,
+        backdrop_path: w.backdrop_path ?? null,
+        media_type: w.media_type === "tv" ? ("tv" as const) : ("movie" as const),
+        release_date: w.release_date ?? undefined,
+        first_air_date: w.release_date ?? undefined,
+        vote_average: w.vote_average ?? 0,
+        genre_ids: [12, 16],
+      }))
+      .filter((t) => t.id > 0);
+    return filterTmdbForKidsMode(mapped, isKidMode).slice(0, 12);
+  }, [catalogWatchlist, catalogMode, isKidMode]);
+
+  // Reset rail filter when switching catalog mode or profile
   useEffect(() => {
     setSelectedRailFilter("all");
-  }, [catalogMode]);
+  }, [catalogMode, currentProfile?.id, setSelectedRailFilter]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -118,9 +151,9 @@ export default function HomePage() {
         if (typeof window !== "undefined" && !navigator.onLine) throw new Error("Offline");
         const trending = await loadHomeTrending();
         if (cancelled) return;
-        setHeroSlides(trending.heroSlides);
-        setTrendingMovies(trending.trendingMovies);
-        setTrendingTV(trending.trendingTV);
+        setHeroSlides(filterTmdbForKidsMode(trending.heroSlides, isKidMode));
+        setTrendingMovies(filterTmdbForKidsMode(trending.trendingMovies, isKidMode));
+        setTrendingTV(filterTmdbForKidsMode(trending.trendingTV, isKidMode));
       } catch (err) {
         console.error("Failed to load TMDB home:", err);
       } finally {
@@ -129,9 +162,21 @@ export default function HomePage() {
 
       setLoadingMessage("Loading genre rails...");
       try {
-        const prefGenreIds = currentProfile?.homeGenreRailPreferences || [28, 12, 35, 18];
-        const rails = await loadHomeGenreRails(prefGenreIds);
-        if (!cancelled) setGenreRails(rails);
+        const rawGenreIds = currentProfile?.homeGenreRailPreferences || [28, 12, 35, 18];
+        const prefGenreIds = isKidMode
+          ? rawGenreIds.filter((gid) => isGenreIdAllowedInKidsMode(gid))
+          : rawGenreIds;
+        const rails = await loadHomeGenreRails(prefGenreIds.length > 0 ? prefGenreIds : [16, 12, 35]);
+        if (!cancelled) {
+          setGenreRails(
+            rails
+              .map((r) => ({
+                genre: r.genre,
+                titles: filterTmdbForKidsMode(r.titles, isKidMode),
+              }))
+              .filter((r) => r.titles.length > 0)
+          );
+        }
       } catch (err) {
         console.error("Failed to load genre rails:", err);
       } finally {
@@ -150,10 +195,18 @@ export default function HomePage() {
         if (typeof window !== "undefined" && !navigator.onLine) throw new Error("Offline");
         const content = await loadAnimeHomeContent();
         if (cancelled) return;
-        setAnimeHero(content.heroSlides);
-        setAnimeTrending(content.trending);
-        setAnimePopular(content.popular);
-        setAnimeGenreRails(content.genreRails);
+        setAnimeHero(filterAnimeForKidsMode(content.heroSlides, isKidMode));
+        setAnimeTrending(filterAnimeForKidsMode(content.trending, isKidMode));
+        setAnimePopular(filterAnimeForKidsMode(content.popular, isKidMode));
+        setAnimeGenreRails(
+          content.genreRails
+            .filter((r) => !isKidMode || isAnimeGenreAllowedInKidsMode(r.genre))
+            .map((r) => ({
+              genre: r.genre,
+              items: filterAnimeForKidsMode(r.items, isKidMode),
+            }))
+            .filter((r) => r.items.length > 0)
+        );
       } catch (err) {
         console.error("Failed to load anime home:", err);
       } finally {
@@ -174,7 +227,15 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [user, currentProfile?.id, catalogMode, cacheRefreshVersion]);
+  }, [
+    user,
+    currentProfile?.id,
+    currentProfile?.kidMode,
+    currentProfile?.homeGenreRailPreferences,
+    catalogMode,
+    isKidMode,
+    cacheRefreshVersion,
+  ]);
 
   const handleQuickRemoveHistoryItem = async (item: WatchHistoryItem) => {
     const itemId = getWatchHistoryItemId(item);
@@ -191,11 +252,6 @@ export default function HomePage() {
   const handleCatalogToggle = (nextMode: "tmdb" | "anime") => {
     if (!currentProfile || nextMode === catalogMode) return;
     void updateProfile(currentProfile.id, { catalogMode: nextMode });
-  };
-
-  const handleThemeSelect = (themeId: string) => {
-    if (!currentProfile) return;
-    void updateProfile(currentProfile.id, { themePreference: themeId });
   };
 
   const handleAppearanceToggle = () => {
@@ -232,7 +288,7 @@ export default function HomePage() {
   }, [filterChips, setFilterOptions]);
 
   return (
-    <div className="app-page-shell pb-16 transition-colors duration-300">
+    <div className="app-page-shell pb-16 transition-colors duration-300 safe-area-bottom">
       {loadingMedia && loadingMessage && <LoadingBanner message={loadingMessage} />}
       <Navbar />
 
@@ -242,7 +298,7 @@ export default function HomePage() {
         <HeroCarousel slides={heroSlides} loading={loadingTrending} />
       )}
 
-      {/* Zoku Profile & Catalog Studio Command Deck (100% bound to real Zoku TV state) */}
+      {/* Focused Catalog & Filter Bar (18-theme palette moved to Settings per Phase 3) */}
       <div className="relative z-20 mx-auto -mt-4 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="glass-panel rounded-2xl p-3 sm:p-4 shadow-xl">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -279,20 +335,33 @@ export default function HomePage() {
                 </button>
               </div>
 
+              {isKidMode && (
+                <span
+                  data-testid="home-kids-mode-badge"
+                  className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-300"
+                >
+                  <Shield className="h-3 w-3" />
+                  <span>Kids Mode Active</span>
+                </span>
+              )}
+
               {/* Real Profile Archive Counters */}
               <div className="hidden xl:flex items-center gap-2 font-mono text-[11px] text-on-surface-variant tabular-nums">
                 <span className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background/60 px-2.5 py-1">
                   <History className="h-3 w-3 text-primary" />
                   <strong className="text-on-surface">{filteredHistory.length}</strong> History
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background/60 px-2.5 py-1">
+                <Link
+                  href="/watchlist"
+                  className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background/60 px-2.5 py-1 hover:border-primary/50 transition-colors"
+                >
                   <Bookmark className="h-3 w-3 text-primary" />
-                  <strong className="text-on-surface">{watchlistItems.length}</strong> Watchlist
-                </span>
+                  <strong className="text-on-surface">{catalogWatchlist.length}</strong> Watchlist
+                </Link>
               </div>
             </div>
 
-            {/* Category Rail Filter Track: Compact touch-friendly scrollable strip on small screens + crisp pills on desktop */}
+            {/* Category Rail Filter Track + Settings Theme Shortcut */}
             <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
               <div
                 data-testid="command-deck-rail-filters"
@@ -319,11 +388,10 @@ export default function HomePage() {
               </div>
 
               <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
-                <button
-                  type="button"
-                  onClick={() => setShowThemeDrawer((prev) => !prev)}
+                <Link
+                  href="/settings?section=theme"
                   className="theme-panel inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold text-on-surface transition-colors hover:border-primary hover:text-primary"
-                  title="Switch Profile Theme Palette"
+                  title="Customize Theme in Settings"
                 >
                   <span
                     className="h-3 w-3 rounded-full border border-white/25 shrink-0"
@@ -331,7 +399,7 @@ export default function HomePage() {
                   />
                   <Palette className="h-3.5 w-3.5 text-primary" />
                   <span className="hidden sm:inline">{currentTheme.name}</span>
-                </button>
+                </Link>
 
                 <button
                   type="button"
@@ -349,55 +417,19 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-
-          {/* Expandable 18-Theme Palette Strip */}
-          {showThemeDrawer && (
-            <div className="mt-3 border-t border-border-custom pt-3">
-              <div className="mb-2 flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-on-surface-variant">
-                <span className="inline-flex items-center gap-1.5">
-                  <Layers className="h-3.5 w-3.5 text-primary" />
-                  <span>Zoku 18-Theme Atmosphere Engine</span>
-                </span>
-                <span>Active: {currentTheme.name}</span>
-              </div>
-              <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-1">
-                {THEME_OPTIONS.map((theme) => {
-                  const selected = theme.id === currentTheme.id;
-                  return (
-                    <button
-                      key={theme.id}
-                      type="button"
-                      onClick={() => handleThemeSelect(theme.id)}
-                      className={`inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all ${
-                        selected
-                          ? "border-primary bg-primary text-primary-contrast font-semibold shadow-sm"
-                          : "border-border-custom bg-background/60 text-on-surface-variant hover:border-primary/50 hover:text-on-surface"
-                      }`}
-                    >
-                      <span
-                        className="h-3.5 w-3.5 rounded-full border border-white/25 shadow-sm"
-                        style={{ backgroundImage: theme.preview }}
-                      />
-                      <span>{theme.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
       <section className="relative z-10 bg-transparent pt-2 sm:pt-4 space-y-2 md:space-y-3 pb-16">
-        {isOffline && filteredCw.length > 0 && (
+        {isOffline && (
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="glass-panel rounded-2xl border border-primary/25 p-5 space-y-2 shadow-xl">
-              <div className="flex items-center gap-2 text-primary">
-                <AlertTriangle className="h-5 w-5 animate-pulse" />
-                <h2 className="text-xs font-semibold uppercase tracking-wider">Offline Mode</h2>
+            <div className="glass-panel rounded-2xl border border-amber-500/30 p-5 space-y-2 shadow-xl">
+              <div className="flex items-center gap-2 text-amber-400">
+                <AlertTriangle className="h-5 w-5" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider">Offline Mode Active</h2>
               </div>
-              <p className="text-xs text-on-surface-variant max-w-xl leading-relaxed">
-                Catalog discovery is unavailable offline. You can still resume from Continue Watching or re-watch from Watch History below.
+              <p className="text-xs text-on-surface-variant max-w-2xl leading-relaxed">
+                Live streaming embeds and uncached remote queries require an internet connection. You can still browse locally cached rails, your Watchlist, Continue Watching, and Watch History below.
               </p>
             </div>
           </div>
@@ -406,7 +438,7 @@ export default function HomePage() {
         {/* 1. Continue Watching Rail (unfinished in-progress items) */}
         {filteredCw.length > 0 && <ContinueWatchingRail items={filteredCw} />}
 
-        {/* 2. Watch History Rail (distinct rail for recently completed or partially watched content to re-watch favorites) */}
+        {/* 2. Watch History Rail */}
         <WatchHistoryRail
           items={filteredHistory}
           catalogMode={catalogMode}
@@ -414,7 +446,12 @@ export default function HomePage() {
           onClearCache={handleRefreshWatchHistoryCache}
         />
 
-        {/* 3. Catalog Rails with Smooth Horizontal Scroll & Edge Fade Effects */}
+        {/* 3. Watchlist Preview Rail */}
+        {catalogMode === "tmdb" && tmdbWatchlistPreview.length > 0 && selectedRailFilter === "all" && (
+          <TitleRail title="From Your Watchlist" items={tmdbWatchlistPreview} />
+        )}
+
+        {/* 4. Catalog Rails with Smooth Horizontal Scroll & Edge Fade Effects */}
         {loadingTrending ? (
           <div className="space-y-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
             {[1, 2].map((railIdx) => (
@@ -480,4 +517,3 @@ export default function HomePage() {
     </div>
   );
 }
-

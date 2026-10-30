@@ -1,434 +1,567 @@
 "use client";
 
-import { useEffect, useState, use, useRef } from "react";
+import { useEffect, useState, useMemo, use } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowLeft,
-  ChevronLeft,
   ChevronRight,
-  RefreshCw,
-  CheckCircle2,
+  Shield,
+  ShieldOff,
+  Check,
   RotateCcw,
-  MonitorPlay,
+  Loader2,
+  SlidersHorizontal,
+  ShieldAlert,
+  SkipForward,
+  Image as ImageIcon,
   Play,
-  Crosshair,
 } from "lucide-react";
-import { useSessionStore, useEpisodeProgressStore } from "@/stores";
-import { getAnimeDetails, getAnimeDisplayTitle, getAnimePoster } from "@/lib/anilist";
-import { buildAnimeSeasons, getNextEpisode, getPreviousEpisode, type AnimeSeason } from "@/lib/anilist-seasons";
+import {
+  getAnimeDetails,
+  getAnimeDisplayTitle,
+  getAnimePoster,
+  AniListMediaDetail,
+} from "@/lib/anilist";
 import {
   ANIME_EMBED_SERVER_CATALOG,
   DEFAULT_ANIME_SERVER_ID,
-  getAnimeEmbedUrl,
-  getAnimeServerById,
   groupAnimeEmbedServers,
+  getAnimeServerById,
+  getAnimeEmbedUrl,
 } from "@/lib/anime-embed";
-import { ServerSelect } from "@/components/watch/ServerSelect";
-import { EpisodeThumbnailWithProgress } from "@/components/EpisodeThumbnailWithProgress";
+import {
+  useSessionStore,
+  useEpisodeProgressStore,
+} from "@/stores";
+import { Navbar } from "@/components/Navbar";
 import { useAnimeWatchProgress } from "@/hooks/useAnimeWatchProgress";
+import { ServerSelect } from "@/components/watch/ServerSelect";
+import { isAnimeAllowedInKidsMode } from "@/lib/kids-mode";
 
-const ANIME_SERVER_STORAGE_KEY = "zoku_anime_server_id";
+const ANIME_SERVER_STORAGE_KEY = "zoku_selected_anime_server_id";
 
-interface AnimeWatchPageProps {
+export default function WatchAnimePage({
+  params,
+}: {
   params: Promise<{ anilistId: string; season: string; episode: string }>;
-}
-
-function readStoredAnimeServerId(): string {
-  if (typeof window === "undefined") return DEFAULT_ANIME_SERVER_ID;
-  const stored = localStorage.getItem(ANIME_SERVER_STORAGE_KEY);
-  if (stored && ANIME_EMBED_SERVER_CATALOG.some((s) => s.id === stored)) {
-    return stored;
-  }
-  return DEFAULT_ANIME_SERVER_ID;
-}
-
-export default function AnimeWatchPage({ params }: AnimeWatchPageProps) {
+}) {
+  const { anilistId, season, episode } = use(params);
   const router = useRouter();
-  const { anilistId: anilistIdStr, season, episode } = use(params);
-  const anilistId = Number(anilistIdStr);
-  const seasonNum = Number(season);
-  const episodeNum = Number(episode);
+  const numericId = Number(anilistId);
+  const seasonNum = Math.max(1, Number(season) || 1);
+  const episodeNum = Math.max(1, Number(episode) || 1);
 
   const { currentProfile } = useSessionStore();
-  const { getProgress } = useEpisodeProgressStore();
+  const isEpisodeCompleted = useEpisodeProgressStore((s) => s.isEpisodeCompleted);
 
-  const [title, setTitle] = useState("");
-  const [overview, setOverview] = useState<string | null>(null);
-  const [poster, setPoster] = useState<string | null>(null);
-  const [voteAverage, setVoteAverage] = useState<number | null>(null);
-  const [seasons, setSeasons] = useState<AnimeSeason[]>([]);
-  const [activeSeasonNum, setActiveSeasonNum] = useState(seasonNum);
+  const [anime, setAnime] = useState<AniListMediaDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [iframeLoaded, setIframeLoaded] = useState(false);
-  const [selectedServerId, setSelectedServerId] = useState(DEFAULT_ANIME_SERVER_ID);
+  const [selectedServerId, setSelectedServerId] = useState<string>(
+    DEFAULT_ANIME_SERVER_ID
+  );
+  const [sandbox, setSandbox] = useState(false);
+  const [showToolsPanel, setShowToolsPanel] = useState(false);
+  const [iframeReady, setIframeReady] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const { newServers, defaultServers } = groupAnimeEmbedServers();
-  const selectedServer = getAnimeServerById(selectedServerId);
-  const embedUrl = getAnimeEmbedUrl(selectedServer, anilistId, seasonNum, episodeNum);
-
-  // Hook up automated anime episode progress tracking & DB synchronization
-  const {
-    progressPercent,
-    isCompleted,
-    markCompleted,
-    resetProgress,
-  } = useAnimeWatchProgress({
-    anilistId,
-    season: seasonNum,
-    episode: episodeNum,
-    title,
-    overview,
-    poster,
-    voteAverage,
-    selectedServerId,
-    serverDomains: selectedServer.domains,
-    embedUrl,
-    ready: !loading && Boolean(title),
-  });
+  const { newServers, defaultServers } = useMemo(
+    () => groupAnimeEmbedServers(ANIME_EMBED_SERVER_CATALOG),
+    []
+  );
 
   useEffect(() => {
-    setSelectedServerId(readStoredAnimeServerId());
-  }, []);
-
-  useEffect(() => {
-    if (!currentProfile || !anilistId) return;
-
-    async function load() {
-      setLoading(true);
-      try {
-        const data = await getAnimeDetails(anilistId);
-        if (data) {
-          setTitle(getAnimeDisplayTitle(data));
-          setOverview(data.description ?? null);
-          setPoster(getAnimePoster(data));
-          setVoteAverage(data.averageScore ? data.averageScore / 10 : null);
-          const built = buildAnimeSeasons(data);
-          setSeasons(built);
-          setActiveSeasonNum(seasonNum);
-        }
-      } catch (err) {
-        console.error("Failed to load anime watch metadata", err);
-      } finally {
-        setLoading(false);
+    if (typeof window === "undefined") return;
+    try {
+      const saved = localStorage.getItem(ANIME_SERVER_STORAGE_KEY);
+      if (saved && ANIME_EMBED_SERVER_CATALOG.some((s) => s.id === saved)) {
+        setSelectedServerId(saved);
       }
+    } catch {
+      /* ignore storage errors */
     }
-
-    load();
-  }, [currentProfile, anilistId, seasonNum]);
-
-  useEffect(() => {
-    setIframeLoaded(false);
-    const unblockTimer = setTimeout(() => {
-      setIframeLoaded(true);
-    }, 2200);
-    return () => clearTimeout(unblockTimer);
-  }, [selectedServerId, anilistId, seasonNum, episodeNum, loadAttempts]);
+  }, []);
 
   const handleServerChange = (serverId: string) => {
     setSelectedServerId(serverId);
-    setLoadAttempts((prev) => prev + 1);
+    setIframeReady(false);
     if (typeof window !== "undefined") {
-      localStorage.setItem(ANIME_SERVER_STORAGE_KEY, serverId);
+      try {
+        localStorage.setItem(ANIME_SERVER_STORAGE_KEY, serverId);
+      } catch {
+        /* ignore */
+      }
     }
   };
 
-  const triggerNextServer = () => {
-    const currentIndex = ANIME_EMBED_SERVER_CATALOG.findIndex((s) => s.id === selectedServerId);
-    const nextIndex = (currentIndex + 1) % ANIME_EMBED_SERVER_CATALOG.length;
-    handleServerChange(ANIME_EMBED_SERVER_CATALOG[nextIndex].id);
-  };
-
-  const navigateRelative = async (direction: "prev" | "next") => {
-    if (seasons.length === 0) return;
-    const target =
-      direction === "next"
-        ? getNextEpisode(seasons, seasonNum, episodeNum)
-        : getPreviousEpisode(seasons, seasonNum, episodeNum);
-    if (target) {
-      router.push(`/watch/anime/${target.anilistId}/${target.season}/${target.episode}`);
+  const handleNextServer = () => {
+    const idx = ANIME_EMBED_SERVER_CATALOG.findIndex(
+      (s) => s.id === selectedServerId
+    );
+    const next =
+      ANIME_EMBED_SERVER_CATALOG[(idx + 1) % ANIME_EMBED_SERVER_CATALOG.length];
+    if (next) {
+      handleServerChange(next.id);
     }
   };
 
-  const activeSeasonData =
-    seasons.find((s) => s.seasonNumber === activeSeasonNum) ||
-    seasons.find((s) => s.seasonNumber === seasonNum) ||
-    seasons[0];
+  const handleRetryFrame = () => {
+    setIframeReady(false);
+    setLoadAttempts((prev) => prev + 1);
+  };
 
-  if (loading) {
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getAnimeDetails(numericId)
+      .then((res) => {
+        if (!cancelled) setAnime(res);
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [numericId]);
+
+  useEffect(() => {
+    setIframeReady(false);
+  }, [selectedServerId, numericId, seasonNum, episodeNum, sandbox]);
+
+  const currentServerObj = getAnimeServerById(selectedServerId);
+  const embedUrl = getAnimeEmbedUrl(
+    currentServerObj,
+    numericId,
+    seasonNum,
+    episodeNum
+  );
+
+  const displayTitle = anime ? getAnimeDisplayTitle(anime) : "Loading Anime...";
+  const totalEpisodes = Math.max(
+    episodeNum,
+    anime?.episodes || anime?.streamingEpisodes?.length || 12
+  );
+  const hasPrev = episodeNum > 1;
+  const hasNext = episodeNum < totalEpisodes;
+
+  const kidsRestricted = Boolean(
+    currentProfile?.kidMode && anime && !isAnimeAllowedInKidsMode(anime)
+  );
+
+  const {
+    isCompleted,
+    hasConfirmedPlayback,
+    markCompleted,
+    resetProgress,
+  } = useAnimeWatchProgress({
+    anilistId: numericId,
+    season: seasonNum,
+    episode: episodeNum,
+    title: anime ? getAnimeDisplayTitle(anime) : "",
+    overview: anime?.description ?? null,
+    poster: anime ? getAnimePoster(anime) : null,
+    voteAverage: anime?.averageScore ? anime.averageScore / 10 : null,
+    selectedServerId: currentServerObj.id,
+    serverDomains: currentServerObj.domains,
+    embedUrl,
+    ready: Boolean(anime) && !loading && !kidsRestricted,
+  });
+
+  if (kidsRestricted && anime) {
     return (
-      <div className="flex h-screen items-center justify-center bg-black text-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div
+        className="min-h-screen bg-[#070a10] text-white flex flex-col items-center justify-center p-6 text-center"
+        data-testid="kids-mode-restricted-gate"
+      >
+        <Navbar />
+        <div className="max-w-md rounded-2xl border border-amber-400/25 bg-amber-500/10 p-8 shadow-2xl">
+          <ShieldAlert className="w-12 h-12 text-amber-300 mx-auto mb-4" />
+          <h1 className="text-2xl font-display font-bold mb-2">
+            Restricted in Kids Mode
+          </h1>
+          <p className="text-sm text-white/70 mb-6">
+            This anime is hidden because the active profile ({currentProfile?.name}) has Kids Mode enabled.
+          </p>
+          <Link
+            href="/home"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Safe Home
+          </Link>
+        </div>
       </div>
     );
   }
 
+  const containerStatusLabel = hasConfirmedPlayback
+    ? "Playback Synced"
+    : iframeReady
+    ? "Container Ready"
+    : "Loading Frame...";
+
+  const handleMarkWatchedAndAdvance = () => {
+    markCompleted();
+    if (hasNext) {
+      router.push(`/watch/anime/${anilistId}/${seasonNum}/${episodeNum + 1}`);
+    }
+  };
+
+  const handleRewatch = () => {
+    resetProgress();
+  };
+
+  const episodeNumbers = Array.from(
+    { length: Math.min(totalEpisodes, 100) },
+    (_, i) => i + 1
+  );
+
   return (
-    <div className="relative w-screen h-screen bg-black overflow-y-auto flex flex-col justify-between selection:bg-primary selection:text-white">
-      {/* 1. Header Toolbar */}
-      <div className="sticky top-0 z-40 w-full bg-gradient-to-b from-black/95 via-black/80 to-transparent px-4 py-3 sm:px-6 border-b border-white/10 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={() => router.push(`/anime/${anilistId}`)}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-white transition-colors"
-            title="Back to anime details"
-          >
-            <ArrowLeft className="h-4.5 w-4.5" />
-          </button>
-          <div className="min-w-0">
-            <h1 className="text-sm font-semibold text-white truncate">{title || "Anime"}</h1>
-            <div className="flex items-center gap-2 text-[10px] text-white/60 font-mono uppercase">
-              <span>S{seasonNum} · E{episodeNum}</span>
-              <span>·</span>
-              <span>{selectedServer.name}</span>
-              {progressPercent > 0 && (
-                <>
-                  <span>·</span>
-                  <span className={isCompleted ? "text-emerald-400 font-bold" : "text-primary font-bold"}>
-                    {isCompleted ? "Watched" : `${progressPercent}%`}
+    <div className="min-h-screen bg-[#070a10] text-white pt-16 pb-16">
+      <Navbar />
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/* Top Header Bar */}
+        <header className="flex items-center justify-between gap-4 py-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => router.push(`/anime/${anilistId}`)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+              aria-label="Back to anime details"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-base sm:text-lg font-display font-bold tracking-tight text-white truncate">
+                  Now Watching
+                </h1>
+                <span
+                  data-testid="player-container-status"
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium border ${
+                    hasConfirmedPlayback
+                      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+                      : iframeReady
+                      ? "border-sky-400/30 bg-sky-500/10 text-sky-300"
+                      : "border-amber-400/30 bg-amber-500/10 text-amber-200"
+                  }`}
+                  title={
+                    hasConfirmedPlayback
+                      ? "Confirmed runtime progress messages received from the embedded player"
+                      : iframeReady
+                      ? "External iframe document loaded; playback inside third-party frame is unverified until progress events arrive"
+                      : "Waiting for external provider frame to respond"
+                  }
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      hasConfirmedPlayback
+                        ? "bg-emerald-400"
+                        : iframeReady
+                        ? "bg-sky-400"
+                        : "bg-amber-400 animate-pulse"
+                    }`}
+                  />
+                  {containerStatusLabel}
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-white/60 truncate">
+                {displayTitle} · Season {seasonNum} · Episode {episodeNum}
+              </p>
+            </div>
+          </div>
+
+          <div className="relative flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowToolsPanel((prev) => !prev)}
+              aria-expanded={showToolsPanel}
+              aria-label="Player container settings and troubleshooting"
+              className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-colors ${
+                showToolsPanel || sandbox
+                  ? "border-primary/50 bg-primary/15 text-primary"
+                  : "border-white/10 bg-white/[0.04] text-white/75 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </button>
+
+            {showToolsPanel && (
+              <div className="absolute right-0 top-12 z-30 w-80 rounded-2xl border border-white/15 bg-[#0e131d]/95 p-4 shadow-2xl backdrop-blur-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                    Container Controls
                   </span>
-                </>
+                  <span className="text-[11px] text-white/45">
+                    Provider: {currentServerObj.name}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSandbox(!sandbox);
+                    setIframeReady(false);
+                  }}
+                  className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-medium border transition-colors ${
+                    sandbox
+                      ? "bg-green-500/15 text-green-300 border-green-500/30"
+                      : "bg-white/[0.04] text-white/80 border-white/10 hover:bg-white/[0.08]"
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    {sandbox ? (
+                      <Shield className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <ShieldOff className="w-4 h-4 text-white/50" />
+                    )}
+                    Iframe Sandbox (Ad-Block)
+                  </span>
+                  <span className="font-mono text-[11px]">
+                    {sandbox ? "ON" : "OFF"}
+                  </span>
+                </button>
+                <p className="mt-2.5 text-[11px] leading-relaxed text-white/50">
+                  Anime streams are served by third-party providers. If an episode fails to load on the current server, click{" "}
+                  <strong className="text-white/80">Retry</strong> or switch to another provider.
+                </p>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* 16:9 External Player Frame Container */}
+        <div
+          className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/15 bg-[#0d111a] shadow-2xl"
+          data-testid="external-player-frame-wrapper"
+        >
+          {(loading || !iframeReady) && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#0d111a]/95 p-6 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary border border-primary/30">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+              <div className="space-y-1 max-w-md">
+                <p className="text-base font-semibold text-white">
+                  {loading ? "Loading anime metadata..." : "External video player"}
+                </p>
+                <p className="text-xs text-white/55">
+                  Unmodified third-party iframe ({currentServerObj.name}) · Waiting for provider frame
+                </p>
+              </div>
+              {!loading && (
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleRetryFrame}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.06] px-3.5 py-2 text-xs font-medium text-white hover:bg-white/10 transition-colors"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" /> Retry
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNextServer}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/15 px-3.5 py-2 text-xs font-medium text-primary hover:bg-primary/25 transition-colors"
+                  >
+                    <SkipForward className="h-3.5 w-3.5" /> Next Server
+                  </button>
+                </div>
               )}
             </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          {/* Quick Mark Completed / Reset button */}
-          {isCompleted ? (
-            <button
-              onClick={resetProgress}
-              data-testid="anime-reset-progress-btn"
-              className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all"
-              title="Reset episode progress to 0%"
-            >
-              <RotateCcw className="h-3 w-3 text-amber-400" />
-              <span>Rewatch</span>
-            </button>
-          ) : (
-            <button
-              onClick={markCompleted}
-              data-testid="anime-mark-completed-btn"
-              className="inline-flex items-center gap-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-all"
-              title="Mark episode as completed"
-            >
-              <CheckCircle2 className="h-3 w-3" />
-              <span>Mark Done</span>
-            </button>
           )}
 
-          <ServerSelect
-            value={selectedServerId}
-            onChange={handleServerChange}
-            newServers={newServers}
-            defaultServers={defaultServers}
-          />
-
-          {/* Target / Focus Player Button */}
-          <button
-            onClick={() => {
-              setIframeLoaded(true);
-              iframeRef.current?.focus();
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-white/10 hover:border-primary/60 bg-white/5 hover:bg-white/10 text-white text-[11px] font-semibold transition-all"
-            title="Focus and target anime player directly for clicks & controls"
-          >
-            <Crosshair className="h-3 w-3 text-primary" />
-            <span className="hidden sm:inline">Target Player</span>
-          </button>
-
-          <button
-            onClick={triggerNextServer}
-            className="p-1.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white transition-all"
-            title="Switch to next anime server"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => navigateRelative("prev")}
-            className="flex items-center gap-1 rounded-xl border border-white/10 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-white/5"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-            Prev
-          </button>
-          <button
-            onClick={() => navigateRelative("next")}
-            className="flex items-center gap-1 rounded-xl bg-primary px-3 py-1.5 text-[11px] font-bold text-white shadow-md shadow-primary/25"
-          >
-            Next
-            <ChevronRight className="h-3.5 w-3.5" />
-          </button>
+          {!loading && (
+            <iframe
+              key={`${currentServerObj.id}-${sandbox ? "sb" : "nosb"}-${loadAttempts}`}
+              src={embedUrl}
+              title={`${displayTitle} Episode ${episodeNum} external video player`}
+              className="h-full w-full border-0"
+              allowFullScreen
+              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+              referrerPolicy="origin"
+              onLoad={() => setIframeReady(true)}
+              {...(sandbox
+                ? {
+                    sandbox:
+                      "allow-scripts allow-same-origin allow-forms allow-presentation",
+                  }
+                : {})}
+            />
+          )}
         </div>
-      </div>
 
-      {/* 2. Embedded Video Player */}
-      <div className="relative w-full aspect-video max-h-[75vh] bg-black isolate mx-auto">
-        {!iframeLoaded && (
-          <div
-            onClick={() => {
-              setIframeLoaded(true);
-              iframeRef.current?.focus();
-            }}
-            className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950/90 gap-3 cursor-pointer"
-            title="Click anywhere to dismiss and interact directly with anime player"
-          >
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-xs font-mono text-white/60">Loading {selectedServer.name} player...</p>
-            <div className="flex items-center gap-2 mt-1">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIframeLoaded(true);
-                  iframeRef.current?.focus();
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-[11px] font-bold shadow-md active:scale-95 transition-all"
-              >
-                <Play className="h-3 w-3 fill-current" />
-                <span>Target & Play Stream</span>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  triggerNextServer();
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] text-white transition-all font-semibold"
-              >
-                Cycle Server Fallback
-              </button>
-            </div>
+        {/* Control Bar Below Player */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          {/* Left: ServerSelect + Retry + Next Server */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <ServerSelect
+              value={currentServerObj.id}
+              onChange={handleServerChange}
+              newServers={newServers}
+              defaultServers={defaultServers}
+            />
+
+            <button
+              type="button"
+              onClick={handleRetryFrame}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#141923] px-4 text-xs font-semibold text-white/90 hover:border-white/20 hover:bg-[#1b2230] transition-colors"
+              aria-label="Retry loading current server"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Retry</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleNextServer}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#141923] px-3.5 text-xs font-semibold text-white/75 hover:border-white/20 hover:bg-[#1b2230] hover:text-white transition-colors"
+              aria-label="Switch to next server"
+            >
+              <SkipForward className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Next Server</span>
+            </button>
           </div>
-        )}
 
-        <iframe
-          ref={iframeRef}
-          key={`${selectedServerId}_${anilistId}_${seasonNum}_${episodeNum}_${loadAttempts}`}
-          src={embedUrl}
-          onLoad={() => setIframeLoaded(true)}
-          tabIndex={0}
-          className="w-full h-full border-0 absolute inset-0 z-0 bg-black focus:outline-none"
-          allowFullScreen
-          allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; screen-wake-lock; clipboard-write; web-share"
-          referrerPolicy="no-referrer"
-          title={`${selectedServer.name} anime player`}
-        />
-      </div>
+          {/* Right: Watched + Previous + Next > */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {isCompleted ? (
+              <button
+                type="button"
+                onClick={handleRewatch}
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-green-500/30 bg-green-500/15 px-3.5 text-xs font-semibold text-green-300 hover:bg-green-500/25 transition-colors"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Rewatch</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleMarkWatchedAndAdvance}
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-[#141923] px-3.5 text-xs font-semibold text-white/85 hover:border-white/20 hover:bg-[#1b2230] transition-colors"
+              >
+                <Check className="h-3.5 w-3.5" />
+                <span>{hasNext ? "Watched · Next" : "Mark Watched"}</span>
+              </button>
+            )}
 
-      {/* 3. Progress Bar directly underneath player */}
-      <div
-        data-testid="anime-active-progress-bar"
-        className="w-full h-1 bg-white/10 relative overflow-hidden"
-      >
-        <div
-          className={`h-full transition-all duration-300 ${
-            isCompleted ? "bg-emerald-400" : "bg-primary"
-          }`}
-          style={{ width: `${isCompleted ? 100 : Math.max(0, Math.min(100, progressPercent))}%` }}
-        />
-      </div>
+            <button
+              type="button"
+              disabled={!hasPrev}
+              onClick={() =>
+                hasPrev &&
+                router.push(`/watch/anime/${anilistId}/${seasonNum}/${episodeNum - 1}`)
+              }
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-white/10 bg-[#141923] px-4 text-xs font-semibold text-white/90 hover:border-white/20 hover:bg-[#1b2230] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+            >
+              Previous
+            </button>
 
-      {/* 4. Episode Navigation Grid with persistent progress on thumbnails */}
-      <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
-          <div className="flex items-center gap-2">
-            <MonitorPlay className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-semibold tracking-wide uppercase text-white font-mono">
-              Season {activeSeasonNum} Episodes
+            <button
+              type="button"
+              disabled={!hasNext}
+              onClick={() =>
+                hasNext &&
+                router.push(`/watch/anime/${anilistId}/${seasonNum}/${episodeNum + 1}`)
+              }
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-primary/30 bg-[#1b263b] px-4 text-xs font-semibold text-white hover:bg-[#23314d] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+            >
+              <span>Next</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Episodes Section Below Divider */}
+        <section className="mt-6 border-t border-white/10 pt-6" aria-label="Anime episodes">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="text-base sm:text-lg font-display font-bold text-white">
+              Episodes
             </h2>
-            <span className="text-xs text-white/40 font-mono">
-              ({activeSeasonData?.episodes.length ?? 0})
+            <span className="rounded-xl border border-white/10 bg-[#141923] px-3.5 py-1.5 text-xs font-semibold text-white/80">
+              Season {seasonNum}
             </span>
           </div>
 
-          {seasons.length > 1 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              {seasons.map((s) => (
-                <button
-                  key={s.seasonNumber}
-                  onClick={() => setActiveSeasonNum(s.seasonNumber)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                    activeSeasonNum === s.seasonNumber
-                      ? "bg-primary text-primary-contrast border-primary"
-                      : "border-white/10 bg-white/5 hover:border-white/20 text-white/80"
-                  }`}
-                >
-                  Season {s.seasonNumber}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {activeSeasonData && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-            {activeSeasonData.episodes.map((ep) => {
-              const isActive =
-                activeSeasonData.seasonNumber === seasonNum &&
-                ep.episodeNumber === episodeNum;
-              const epProgress = getProgress(
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {episodeNumbers.map((epNum) => {
+              const streamEp = anime?.streamingEpisodes?.[epNum - 1];
+              const isCurrent = epNum === episodeNum;
+              const isEpWatched = isEpisodeCompleted(
                 "anime",
-                activeSeasonData.anilistId,
-                activeSeasonData.filmuSeason,
-                ep.episodeNumber
+                numericId,
+                seasonNum,
+                epNum
               );
-              const pct = isActive
-                ? progressPercent
-                : epProgress?.progress_percent ?? 0;
-              const done = isActive
-                ? isCompleted
-                : Boolean(epProgress?.completed);
+              const thumbUrl =
+                streamEp?.thumbnail ||
+                anime?.bannerImage ||
+                anime?.coverImage?.extraLarge ||
+                null;
 
               return (
                 <button
-                  key={ep.episodeNumber}
+                  key={epNum}
+                  type="button"
                   onClick={() =>
-                    router.push(
-                      `/watch/anime/${activeSeasonData.anilistId}/${activeSeasonData.filmuSeason}/${ep.episodeNumber}`
-                    )
+                    router.push(`/watch/anime/${anilistId}/${seasonNum}/${epNum}`)
                   }
-                  data-testid={`anime-episode-item-${ep.episodeNumber}`}
-                  className={`group flex flex-col items-start p-2.5 rounded-xl border text-left transition-all relative overflow-hidden ${
-                    isActive
-                      ? "bg-primary/20 border-primary shadow-sm shadow-primary/20"
-                      : "theme-panel hover:border-primary hover:bg-primary/5"
+                  className={`group text-left rounded-2xl transition-all focus-visible:outline-none ${
+                    isCurrent
+                      ? "ring-2 ring-primary"
+                      : "hover:translate-y-[-2px]"
                   }`}
                 >
-                  <EpisodeThumbnailWithProgress
-                    thumbnail={ep.thumbnail}
-                    title={ep.title}
-                    episodeNumber={ep.episodeNumber}
-                    progressPercent={pct}
-                    completed={done}
-                    aspectRatio="video"
-                    className="mb-2 w-full"
-                  />
-                  <div className="flex items-center justify-between w-full text-[10px] font-mono text-on-surface-variant">
-                    <span className={isActive ? "text-primary font-bold" : ""}>
-                      EP {ep.episodeNumber}
-                    </span>
-                    {done ? (
-                      <span className="text-emerald-400 font-semibold text-[9px]">Watched</span>
-                    ) : pct > 0 ? (
-                      <span className="text-primary font-semibold text-[9px]">
-                        {Math.round(pct)}%
+                  <div
+                    className={`relative aspect-video w-full overflow-hidden rounded-2xl border transition-colors ${
+                      isCurrent
+                        ? "border-primary/60 bg-[#1a2333]"
+                        : "border-white/10 bg-[#151c28] group-hover:border-white/25"
+                    }`}
+                  >
+                    {thumbUrl ? (
+                      <img
+                        src={thumbUrl}
+                        alt={streamEp?.title || `Episode ${epNum}`}
+                        loading="lazy"
+                        className="h-full w-full object-cover opacity-80 transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-white/30">
+                        <ImageIcon className="h-6 w-6" />
+                      </div>
+                    )}
+
+                    {isCurrent && (
+                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-black/80 px-3 py-1 text-[11px] font-bold text-primary border border-primary/40">
+                          <Play className="h-3 w-3 fill-current" /> Now Playing
+                        </span>
+                      </div>
+                    )}
+
+                    {isEpWatched && !isCurrent && (
+                      <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-green-500/20 border border-green-500/40 px-2 py-0.5 text-[10px] font-semibold text-green-300 backdrop-blur-sm">
+                        <Check className="h-3 w-3" /> Watched
                       </span>
-                    ) : null}
+                    )}
                   </div>
-                  <span className="text-xs font-semibold line-clamp-2 mt-0.5 text-white/90">
-                    {ep.title}
-                  </span>
+
+                  <div className="mt-2 flex items-center justify-between gap-2 px-1">
+                    <p
+                      className={`text-xs font-semibold truncate ${
+                        isCurrent
+                          ? "text-primary"
+                          : "text-white/85 group-hover:text-white"
+                      }`}
+                    >
+                      Episode {epNum}
+                      {streamEp?.title ? ` · ${streamEp.title}` : ""}
+                    </p>
+                  </div>
                 </button>
               );
             })}
           </div>
-        )}
-      </div>
-
-      {/* 5. Footer */}
-      <div className="bg-black text-[9.5px] font-mono text-center py-2.5 text-white/40 border-t border-white/5 shrink-0">
-        Streamed via {selectedServer.name} embed. Zoku TV does not host video files.
+        </section>
       </div>
     </div>
   );

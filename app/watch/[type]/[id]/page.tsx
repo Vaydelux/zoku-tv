@@ -1,314 +1,324 @@
 "use client";
 
-import { useEffect, useState, use, useRef } from "react";
+import { useEffect, useState, useMemo, use } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  ArrowLeft, 
-  Settings, 
-  ShieldCheck, 
-  ShieldAlert, 
-  ChevronRight, 
-  ChevronLeft, 
-  RefreshCw, 
-  AlertTriangle,
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Shield,
+  ShieldOff,
+  Loader2,
+  RotateCcw,
+  SlidersHorizontal,
+  ShieldAlert,
   Play,
-  Crosshair
+  SkipForward,
+  Check,
 } from "lucide-react";
-import { useSessionStore, useEmbedStore } from "@/stores";
-import { EMBED_SERVER_CATALOG, getEmbedUrl, groupEmbedServers } from "@/lib/embed";
 import { getTitleDetails, TMDBTitle } from "@/lib/tmdb";
+import {
+  EMBED_SERVER_CATALOG,
+  groupEmbedServers,
+  getEmbedUrl,
+} from "@/lib/embed";
+import {
+  useSessionStore,
+  useEmbedStore,
+  useWatchHistoryStore,
+} from "@/stores";
+import { Navbar } from "@/components/Navbar";
 import { useWatchProgress } from "@/hooks/useWatchProgress";
 import { ResumePrompt } from "@/components/watch/ResumePrompt";
 import { ServerSelect } from "@/components/watch/ServerSelect";
+import { isTmdbAllowedInKidsMode } from "@/lib/kids-mode";
 
-interface WatchPageProps {
-  params: Promise<{ type: string; id: string }>;
-}
-
-export default function WatchMoviePage({ params }: WatchPageProps) {
-  const router = useRouter();
+export default function WatchMoviePage({
+  params,
+}: {
+  params: Promise<{ type: "movie" | "tv"; id: string }>;
+}) {
   const { type, id } = use(params);
-  const mediaType = type as "movie" | "tv";
-  const titleId = Number(id);
+  const router = useRouter();
+  const numericId = Number(id);
 
   const { currentProfile } = useSessionStore();
-  const { 
-    selectedServerId, 
-    iframeMode, 
-    setServerId, 
-    setIframeMode, 
-    markServerFailing, 
-    serverHealth 
+  const {
+    selectedServerId,
+    iframeMode,
+    serverHealth,
+    setServerId,
+    setIframeMode,
+    markServerFailing,
   } = useEmbedStore();
+  const isCompletedInHistory = useWatchHistoryStore((s) => s.isCompleted);
+  const toggleCompletedInHistory = useWatchHistoryStore((s) => s.toggleCompleted);
 
   const [details, setDetails] = useState<TMDBTitle | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showOverlay, setShowOverlay] = useState(true);
-  const [showCompatibilityWarning, setShowCompatibilityWarning] = useState(false);
-  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(true);
+  const [showToolsPanel, setShowToolsPanel] = useState(false);
+  const [iframeReady, setIframeReady] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
 
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const overlayTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const healthTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const { newServers, defaultServers } = useMemo(
+    () => groupEmbedServers(EMBED_SERVER_CATALOG),
+    []
+  );
 
-  // Fetch title details
   useEffect(() => {
-    if (!currentProfile || !titleId) return;
-
-    async function loadTitle() {
-      setLoading(true);
-      try {
-        const data = await getTitleDetails(mediaType, titleId);
-        setDetails(data);
-      } catch (err) {
-        console.error("Failed to load watcher details", err);
-      } finally {
-        setLoading(false);
-      }
+    if (type === "tv") {
+      router.replace(`/watch/tv/${id}/1/1`);
+      return;
     }
-
-    loadTitle();
-  }, [currentProfile, mediaType, titleId]);
-
-  // Auto-fading top overlay navigation bar
-  const resetOverlayTimer = () => {
-    setShowOverlay(true);
-    if (overlayTimerRef.current) clearTimeout(overlayTimerRef.current);
-    overlayTimerRef.current = setTimeout(() => {
-      setShowOverlay(false);
-    }, 4000); // fade out after 4 seconds of stillness
-  };
+    let cancelled = false;
+    setDetailsLoading(true);
+    getTitleDetails("movie", numericId)
+      .then((res) => {
+        if (!cancelled) setDetails(res);
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (!cancelled) setDetailsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [type, id, numericId, router]);
 
   useEffect(() => {
-    window.addEventListener("mousemove", resetOverlayTimer);
-    resetOverlayTimer();
-    return () => {
-      window.removeEventListener("mousemove", resetOverlayTimer);
-      if (overlayTimerRef.current) clearTimeout(overlayTimerRef.current);
-    };
-  }, []);
+    setIframeReady(false);
+  }, [selectedServerId, id, iframeMode]);
 
-  // Server health automatic fallback check + unblock timer
-  useEffect(() => {
-    setIframeLoaded(false);
-    if (healthTimerRef.current) clearTimeout(healthTimerRef.current);
+  const kidsRestricted = Boolean(
+    currentProfile?.kidMode && details && !isTmdbAllowedInKidsMode(details)
+  );
 
-    // Auto-unblock after 2.2s so player is immediately clickable even if cross-origin onload is deferred
-    const unblockTimer = setTimeout(() => {
-      setIframeLoaded(true);
-    }, 2200);
-
-    // If iframe doesn't call onload or load within 12 seconds, we offer fallback
-    healthTimerRef.current = setTimeout(() => {
-      if (!iframeLoaded && details) {
-        console.warn(`Zoku TV: Server ${selectedServerId} timeout. Triggering fallback advisor...`);
-      }
-    }, 12000);
-
-    return () => {
-      clearTimeout(unblockTimer);
-      if (healthTimerRef.current) clearTimeout(healthTimerRef.current);
-    };
-  }, [selectedServerId, loadAttempts]);
-
-  const selectedServer = EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) || EMBED_SERVER_CATALOG[0];
-  const { newServers, defaultServers } = groupEmbedServers();
-  const name = details?.title || details?.name || "Untitled";
+  const displayTitle = details?.title || details?.name || "Loading title...";
+  const releaseYear = (details?.release_date || "").slice(0, 4);
 
   const {
-    showResumePrompt,
     savedProgress,
+    showResumePrompt,
     startAtSec,
+    hasConfirmedPlayback,
     handleResume,
     handleStartOver,
   } = useWatchProgress({
-    tmdbId: titleId,
-    mediaType,
-    title: name,
-    overview: details?.overview,
-    vote_average: details?.vote_average,
-    poster_path: details?.poster_path,
-    backdrop_path: details?.backdrop_path,
+    tmdbId: numericId,
+    mediaType: "movie",
+    title: details?.title || details?.name || "",
+    overview: details?.overview ?? null,
+    poster_path: details?.poster_path ?? null,
+    backdrop_path: details?.backdrop_path ?? null,
+    vote_average: details?.vote_average ?? 0,
     selectedServerId,
-    ready: !!details && !loading,
+    ready: Boolean(details) && type === "movie" && !kidsRestricted,
   });
 
-  const embedUrl = details
-    ? getEmbedUrl(selectedServer, mediaType, titleId, 1, 1, { startAtSec })
-    : "";
+  if (type === "tv") return null;
 
-  if (loading) {
+  if (kidsRestricted && details) {
     return (
-      <div className="flex h-screen items-center justify-center bg-black text-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div
+        className="min-h-screen bg-[#070a10] text-white flex flex-col items-center justify-center p-6 text-center"
+        data-testid="kids-mode-restricted-gate"
+      >
+        <Navbar />
+        <div className="max-w-md rounded-2xl border border-amber-400/25 bg-amber-500/10 p-8 shadow-2xl">
+          <ShieldAlert className="w-12 h-12 text-amber-300 mx-auto mb-4" />
+          <h1 className="text-2xl font-display font-bold mb-2">
+            Restricted in Kids Mode
+          </h1>
+          <p className="text-sm text-white/70 mb-6">
+            This movie is hidden because the active profile ({currentProfile?.name}) has Kids Mode enabled.
+          </p>
+          <Link
+            href="/home"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Safe Home
+          </Link>
+        </div>
       </div>
     );
   }
 
-  if (!details) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center bg-black text-white gap-4">
-        <p>Title details could not be loaded.</p>
-        <button onClick={() => router.back()} className="px-4 py-2 bg-primary rounded-xl text-xs font-semibold">
-          Return
-        </button>
-      </div>
-    );
-  }
+  const currentServerObj =
+    EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) ||
+    EMBED_SERVER_CATALOG[0];
 
-  const handleServerChange = (serverId: string) => {
-    setServerId(serverId);
-    setLoadAttempts(prev => prev + 1);
+  const embedUrl = getEmbedUrl(
+    currentServerObj,
+    "movie",
+    numericId,
+    undefined,
+    undefined,
+    { startAtSec }
+  );
+
+  const useSandbox =
+    iframeMode === "Strict" && currentServerObj.supportsSandbox;
+
+  const handleServerChange = (newServerId: string) => {
+    setServerId(newServerId);
+    setIframeReady(false);
   };
 
-  const handleIframeModeToggle = () => {
-    if (iframeMode === "Strict") {
-      setShowCompatibilityWarning(true);
-    } else {
-      setIframeMode("Strict");
+  const handleNextServer = () => {
+    markServerFailing(currentServerObj.id);
+    const idx = EMBED_SERVER_CATALOG.findIndex((s) => s.id === currentServerObj.id);
+    const next = EMBED_SERVER_CATALOG[(idx + 1) % EMBED_SERVER_CATALOG.length];
+    if (next) {
+      handleServerChange(next.id);
     }
   };
 
-  const acceptCompatibilityMode = () => {
-    setIframeMode("Compatibility");
-    setShowCompatibilityWarning(false);
-    setLoadAttempts(prev => prev + 1);
+  const handleRetryFrame = () => {
+    setIframeReady(false);
+    setLoadAttempts((prev) => prev + 1);
   };
 
-  const triggerNextServer = () => {
-    markServerFailing(selectedServerId);
-    const currentIndex = EMBED_SERVER_CATALOG.findIndex(s => s.id === selectedServerId);
-    const nextIndex = (currentIndex + 1) % EMBED_SERVER_CATALOG.length;
-    setServerId(EMBED_SERVER_CATALOG[nextIndex].id);
-    setLoadAttempts(prev => prev + 1);
+  const isMovieCompleted = isCompletedInHistory("movie", numericId);
+
+  const handleToggleCompleted = async () => {
+    if (!details) return;
+    await toggleCompletedInHistory({
+      media_type: "movie",
+      tmdbId: numericId,
+      title: displayTitle,
+      overview: details.overview ?? null,
+      vote_average: details.vote_average ?? null,
+      poster_path: details.poster_path ?? null,
+      backdrop_path: details.backdrop_path ?? null,
+    });
   };
+
+  const containerStatusLabel = hasConfirmedPlayback
+    ? "Playback Synced"
+    : iframeReady
+    ? "Container Ready"
+    : "Loading Frame...";
 
   return (
-    <div className="relative w-screen h-screen bg-black overflow-hidden flex flex-col justify-between">
-      
-      {/* 1. Control Header (Server Selection & Sandboxing Modes) */}
-      <div className="relative z-30 w-full bg-gradient-to-b from-black/95 to-black/40 px-4 py-3 sm:px-6 lg:px-8 border-b border-white/5 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-white transition-colors"
-          >
-            <ArrowLeft className="h-4.5 w-4.5" />
-          </button>
-          <div className="min-w-0">
-            <h1 className="text-sm font-semibold text-white truncate max-w-[200px] sm:max-w-xs">{name}</h1>
-            <p className="text-[10px] text-white/60 font-mono uppercase tracking-wider">{mediaType}</p>
-          </div>
-        </div>
-
-        {/* Server Selection Controls */}
-        <div className="flex items-center gap-3">
-          <ServerSelect
-            value={selectedServerId}
-            onChange={handleServerChange}
-            newServers={newServers}
-            defaultServers={defaultServers}
-            serverHealth={serverHealth}
-          />
-
-          {/* IFrame containment controller */}
-          <button
-            onClick={handleIframeModeToggle}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-semibold transition-all ${
-              iframeMode === "Strict" 
-                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
-                : "bg-amber-500/10 border-amber-500/30 text-amber-400"
-            }`}
-          >
-            {iframeMode === "Strict" ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
-            <span className="hidden sm:inline">Containment: {iframeMode}</span>
-          </button>
-
-          {/* Target / Focus Player Button */}
-          <button
-            onClick={() => {
-              setIframeLoaded(true);
-              iframeRef.current?.focus();
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-white/10 hover:border-primary/60 bg-white/5 hover:bg-white/10 text-white text-[10px] font-semibold transition-all"
-            title="Focus and target player directly for clicks and controls"
-          >
-            <Crosshair className="h-3.5 w-3.5 text-primary" />
-            <span className="hidden sm:inline">Target Player</span>
-          </button>
-
-          {/* Fallback button */}
-          <button
-            onClick={triggerNextServer}
-            className="p-1.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white transition-all"
-            title="Switch to next backup server"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </button>
-
-        </div>
-      </div>
-
-      {/* 2. Dedicated player shell — iframe fills this box only */}
-      <div className="relative flex-1 w-full min-h-0 bg-black overflow-hidden isolate">
-        <div className="absolute inset-0 bg-neutral-950">
-          {/* Connection status overlay — clickable to dismiss and immediately target player */}
-          {!iframeLoaded && !showResumePrompt && (
-            <div
-              onClick={() => {
-                setIframeLoaded(true);
-                iframeRef.current?.focus();
-              }}
-              className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950/90 p-6 text-center gap-3 cursor-pointer"
-              title="Click anywhere to dismiss and interact directly with player"
+    <div className="min-h-screen bg-[#070a10] text-white pt-16 pb-16">
+      <Navbar />
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/* Top Header Bar */}
+        <header className="flex items-center justify-between gap-4 py-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => router.push(`/title/movie/${id}`)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+              aria-label="Back to movie details"
             >
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              <p className="text-xs font-mono text-white/60">Tuning cinematic feed to {selectedServer.name}...</p>
-              <div className="flex items-center gap-2 mt-1">
-                <button 
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIframeLoaded(true);
-                    iframeRef.current?.focus();
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-[11px] font-bold shadow-md active:scale-95 transition-all"
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-base sm:text-lg font-display font-bold tracking-tight text-white truncate">
+                  Now Watching
+                </h1>
+                <span
+                  data-testid="player-container-status"
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium border ${
+                    hasConfirmedPlayback
+                      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+                      : iframeReady
+                      ? "border-sky-400/30 bg-sky-500/10 text-sky-300"
+                      : "border-amber-400/30 bg-amber-500/10 text-amber-200"
+                  }`}
+                  title={
+                    hasConfirmedPlayback
+                      ? "Confirmed runtime progress messages received from the embedded player"
+                      : iframeReady
+                      ? "External iframe document loaded; playback inside third-party frame is unverified until progress events arrive"
+                      : "Waiting for external provider frame to respond"
+                  }
                 >
-                  <Play className="h-3 w-3 fill-current" />
-                  <span>Target & Play Stream</span>
-                </button>
-                <button 
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerNextServer();
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] text-white transition-all font-semibold"
-                >
-                  <span>Cycle Server Fallback</span>
-                </button>
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      hasConfirmedPlayback
+                        ? "bg-emerald-400"
+                        : iframeReady
+                        ? "bg-sky-400"
+                        : "bg-amber-400 animate-pulse"
+                    }`}
+                  />
+                  {containerStatusLabel}
+                </span>
               </div>
+              <p className="text-xs sm:text-sm text-white/60 truncate">
+                {displayTitle}
+                {releaseYear ? ` · ${releaseYear}` : " · Feature Film"}
+              </p>
             </div>
-          )}
+          </div>
 
-          {/* The Sandboxed IFrame element */}
-          {!showResumePrompt && (
-            <iframe
-              ref={iframeRef}
-              key={`${selectedServerId}_${mediaType}_${loadAttempts}_${startAtSec ?? 0}`}
-              src={embedUrl}
-              onLoad={() => setIframeLoaded(true)}
-              tabIndex={0}
-              className="w-full h-full border-0 absolute inset-0 z-0 bg-black focus:outline-none"
-              allowFullScreen
-              allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; screen-wake-lock; clipboard-write; web-share"
-              sandbox={iframeMode === "Strict" ? selectedServer.sandboxPolicy : undefined}
-              referrerPolicy="no-referrer"
-              title={`${selectedServer.name} player`}
-            />
-          )}
+          <div className="relative flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowToolsPanel((prev) => !prev)}
+              aria-expanded={showToolsPanel}
+              aria-label="Player container settings and troubleshooting"
+              className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-colors ${
+                showToolsPanel || useSandbox
+                  ? "border-primary/50 bg-primary/15 text-primary"
+                  : "border-white/10 bg-white/[0.04] text-white/75 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </button>
 
+            {showToolsPanel && (
+              <div className="absolute right-0 top-12 z-30 w-80 rounded-2xl border border-white/15 bg-[#0e131d]/95 p-4 shadow-2xl backdrop-blur-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                    Container Controls
+                  </span>
+                  <span className="text-[11px] text-white/45">
+                    Provider: {currentServerObj.name}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIframeMode(
+                      iframeMode === "Strict" ? "Compatibility" : "Strict"
+                    );
+                    setIframeReady(false);
+                  }}
+                  className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-medium border transition-colors ${
+                    useSandbox
+                      ? "bg-green-500/15 text-green-300 border-green-500/30"
+                      : "bg-white/[0.04] text-white/80 border-white/10 hover:bg-white/[0.08]"
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    {useSandbox ? (
+                      <Shield className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <ShieldOff className="w-4 h-4 text-white/50" />
+                    )}
+                    Iframe Mode: {iframeMode}
+                  </span>
+                  <span className="font-mono text-[11px]">
+                    {useSandbox ? "SANDBOX" : "COMPAT"}
+                  </span>
+                </button>
+                <p className="mt-2.5 text-[11px] leading-relaxed text-white/50">
+                  Streams are hosted by external third-party providers. If a server displays a blank screen, buffer loop, or blocked frame, use{" "}
+                  <strong className="text-white/80">Retry</strong> or switch to another server.
+                </p>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* 16:9 External Player Frame Container */}
+        <div
+          className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/15 bg-[#0d111a] shadow-2xl"
+          data-testid="external-player-frame-wrapper"
+        >
           {showResumePrompt && savedProgress && (
             <ResumePrompt
               progressPercent={savedProgress.progress_percent ?? 0}
@@ -318,55 +328,139 @@ export default function WatchMoviePage({ params }: WatchPageProps) {
             />
           )}
 
-          {/* Auto-fading HUD title bar overlay */}
-          {showOverlay && iframeLoaded && (
-            <div className="absolute top-4 left-4 sm:left-6 z-20 pointer-events-none transition-opacity duration-500 bg-black/70 backdrop-blur-md border border-white/5 px-4 py-2 rounded-xl text-white">
-              <span className="text-[9px] font-mono text-primary font-bold uppercase tracking-widest">{selectedServer.name}</span>
-              <h3 className="text-xs font-semibold leading-tight mt-0.5">{name}</h3>
+          {(!iframeReady || detailsLoading) && !showResumePrompt && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#0d111a]/95 p-6 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary border border-primary/30">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+              <div className="space-y-1 max-w-md">
+                <p className="text-base font-semibold text-white">
+                  External video player
+                </p>
+                <p className="text-xs text-white/55">
+                  Unmodified third-party iframe ({currentServerObj.name}) · Waiting for provider frame
+                </p>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRetryFrame}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.06] px-3.5 py-2 text-xs font-medium text-white hover:bg-white/10 transition-colors"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" /> Retry
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextServer}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/15 px-3.5 py-2 text-xs font-medium text-primary hover:bg-primary/25 transition-colors"
+                >
+                  <SkipForward className="h-3.5 w-3.5" /> Next Server
+                </button>
+              </div>
             </div>
           )}
+
+          {!showResumePrompt && (
+            <iframe
+              key={`${currentServerObj.id}-${useSandbox ? "sb" : "nosb"}-${loadAttempts}`}
+              src={embedUrl}
+              title={`${displayTitle} external video player`}
+              className="h-full w-full border-0"
+              allowFullScreen
+              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+              referrerPolicy="origin"
+              onLoad={() => setIframeReady(true)}
+              {...(useSandbox
+                ? {
+                    sandbox: currentServerObj.sandboxPolicy,
+                  }
+                : {})}
+            />
+          )}
         </div>
-      </div>
 
-      {/* 3. Movie Layout Spacer */}
-      <div className="bg-black text-[9.5px] font-mono text-center py-2 text-white/40 border-t border-white/5">
-        Streamed via direct server-to-browser tunnel. Zoku TV does not host, cache, or duplicate video files.
-      </div>
+        {/* Control Bar Below Player */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <ServerSelect
+              value={currentServerObj.id}
+              onChange={handleServerChange}
+              newServers={newServers}
+              defaultServers={defaultServers}
+              serverHealth={serverHealth}
+            />
 
-      {/* 4. Compatibility Warning Modal Overlay */}
-      {showCompatibilityWarning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-sm rounded-2xl border border-amber-500/20 bg-neutral-950 p-6 shadow-2xl text-white space-y-4">
-            <div className="flex items-center gap-2.5 text-amber-500">
-              <AlertTriangle className="h-5 w-5" />
-              <h3 className="font-semibold text-sm">Disable Containment Sandbox?</h3>
-            </div>
-            
-            <p className="text-xs text-white/70 leading-relaxed">
-              Compatibility mode removes the sandboxed frame wall. Third-party ad scripts, popup links, and redirects will be allowed to execute natively in your browser. 
-            </p>
-            <p className="text-[10px] text-amber-400 font-semibold leading-snug">
-              Ensure you have an active ad blocker running before continuing.
-            </p>
+            <button
+              type="button"
+              onClick={handleRetryFrame}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#141923] px-4 text-xs font-semibold text-white/90 hover:border-white/20 hover:bg-[#1b2230] transition-colors"
+              aria-label="Retry loading current server"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Retry</span>
+            </button>
 
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setShowCompatibilityWarning(false)}
-                className="flex-1 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-xs font-semibold transition-colors text-white"
-              >
-                Keep Protected
-              </button>
-              <button
-                onClick={acceptCompatibilityMode}
-                className="flex-1 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-neutral-950 text-xs font-bold transition-colors"
-              >
-                Disable Sandbox
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleNextServer}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#141923] px-4 text-xs font-semibold text-white/80 hover:border-white/20 hover:bg-[#1b2230] hover:text-white transition-colors"
+              aria-label="Switch to next server"
+            >
+              <SkipForward className="h-3.5 w-3.5" />
+              <span>Next Server</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleToggleCompleted}
+              className={`inline-flex h-10 items-center gap-1.5 rounded-xl border px-3.5 text-xs font-semibold transition-colors ${
+                isMovieCompleted
+                  ? "border-green-500/30 bg-green-500/15 text-green-300 hover:bg-green-500/25"
+                  : "border-white/10 bg-[#141923] text-white/85 hover:border-white/20 hover:bg-[#1b2230]"
+              }`}
+            >
+              <Check className="h-3.5 w-3.5" />
+              <span>{isMovieCompleted ? "Watched" : "Mark Watched"}</span>
+            </button>
+
+            <Link
+              href={`/title/movie/${id}`}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#141923] px-4 text-xs font-semibold text-white/85 hover:border-white/20 hover:bg-[#1b2230] transition-colors"
+            >
+              Movie Details
+            </Link>
           </div>
         </div>
-      )}
 
+        {/* Movie Overview Footer Card */}
+        {details && (
+          <div className="mt-6 border-t border-white/10 pt-6">
+            <div className="flex flex-col sm:flex-row gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+              {details.backdrop_path && (
+                <img
+                  src={`https://image.tmdb.org/t/p/w500${details.backdrop_path}`}
+                  alt={displayTitle}
+                  className="h-28 w-full sm:w-48 rounded-xl object-cover shrink-0 bg-white/5"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-xs text-white/50 mb-1">
+                  <Play className="h-3.5 w-3.5 text-primary" />
+                  <span>Feature Film</span>
+                  {releaseYear && <span>· {releaseYear}</span>}
+                  {details.runtime ? <span>· {details.runtime}m</span> : null}
+                </div>
+                <h2 className="text-base font-bold text-white mb-1">{displayTitle}</h2>
+                <p className="text-xs text-white/65 line-clamp-2 leading-relaxed">
+                  {details.overview || "No synopsis available."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

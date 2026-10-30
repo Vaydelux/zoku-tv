@@ -11,6 +11,9 @@ import {
   ChevronDown,
   Clock,
   Calendar,
+  Search,
+  X,
+  Sparkles,
 } from "lucide-react";
 import { useSessionStore, useWatchlistStore } from "@/stores";
 import { getWatchlistItemId } from "@/lib/media-types";
@@ -20,9 +23,11 @@ import { AnimeCard } from "@/components/anime/AnimeCard";
 import type { AniListMedia } from "@/lib/anilist";
 import {
   sortWatchlistItems,
+  filterWatchlistItems,
   WATCHLIST_SORT_OPTIONS,
   type WatchlistSortOption,
 } from "@/lib/watchlist";
+import { WatchlistAnalyticsSection } from "@/components/watchlist/WatchlistAnalyticsSection";
 
 export default function WatchlistPage() {
   const router = useRouter();
@@ -32,6 +37,7 @@ export default function WatchlistPage() {
   const [clearing, setClearing] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<WatchlistSortOption>("recently_added");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const catalogMode = currentProfile?.catalogMode ?? "tmdb";
@@ -61,7 +67,7 @@ export default function WatchlistPage() {
     return null;
   }
 
-  const filteredItems = useMemo(
+  const catalogFilteredItems = useMemo(
     () =>
       items.filter((item) =>
         catalogMode === "anime"
@@ -71,9 +77,14 @@ export default function WatchlistPage() {
     [items, catalogMode]
   );
 
+  const searchedItems = useMemo(
+    () => filterWatchlistItems(catalogFilteredItems, searchQuery),
+    [catalogFilteredItems, searchQuery]
+  );
+
   const sortedItems = useMemo(
-    () => sortWatchlistItems(filteredItems, sortBy),
-    [filteredItems, sortBy]
+    () => sortWatchlistItems(searchedItems, sortBy),
+    [searchedItems, sortBy]
   );
 
   const handleClearAllWatchlist = async () => {
@@ -98,6 +109,7 @@ export default function WatchlistPage() {
       <Navbar />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Top Header Bar */}
         <div className="border-b border-border-custom pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
@@ -115,14 +127,22 @@ export default function WatchlistPage() {
               {catalogMode === "anime" ? "Anime" : "Movies & TV"} saved by{" "}
               <span className="text-primary font-bold">{currentProfile.name}</span>.
               <span className="ml-2 font-mono text-[11px] text-on-surface-variant/80">
-                ({filteredItems.length} {filteredItems.length === 1 ? "title" : "titles"})
+                {searchQuery ? (
+                  <>
+                    Showing <span className="text-primary font-bold">{sortedItems.length}</span> of {catalogFilteredItems.length} titles
+                  </>
+                ) : (
+                  <>
+                    ({catalogFilteredItems.length} {catalogFilteredItems.length === 1 ? "title" : "titles"})
+                  </>
+                )}
               </span>
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
             {/* Sorting Dropdown */}
-            {filteredItems.length > 0 && (
+            {catalogFilteredItems.length > 0 && (
               <div className="relative" ref={sortDropdownRef}>
                 <button
                   type="button"
@@ -188,7 +208,7 @@ export default function WatchlistPage() {
               </div>
             )}
 
-            {filteredItems.length > 0 && (
+            {catalogFilteredItems.length > 0 && (
               <div className="flex items-center gap-1.5">
                 {confirmClear ? (
                   <div className="inline-flex items-center gap-1 rounded-xl border border-red-500/50 bg-red-500/10 p-1 animate-fade-in">
@@ -234,40 +254,133 @@ export default function WatchlistPage() {
           </div>
         </div>
 
-        {sortedItems.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pt-4 animate-fade-in">
-            {sortedItems.map((item) => (
-              <div key={`${item.media_type}_${getWatchlistItemId(item)}`} className="flex justify-center">
-                {item.media_type === "anime" ? (
-                  <AnimeCard
-                    anime={{
-                      id: item.anilistId!,
-                      title: { english: item.title, romaji: item.title },
-                      coverImage: { large: item.poster_path },
-                      bannerImage: item.backdrop_path,
-                      averageScore: item.vote_average ? item.vote_average * 10 : null,
-                      media_type: "anime",
-                    } as AniListMedia}
-                  />
-                ) : (
-                  <TitleCard
-                    title={{
-                      id: item.tmdbId!,
-                      title: item.title || "",
-                      name: item.title || "",
-                      poster_path: item.poster_path || null,
-                      backdrop_path: item.backdrop_path || null,
-                      vote_average: item.vote_average || 0,
-                      media_type: item.media_type as "movie" | "tv",
-                      overview: "",
-                    }}
-                    mediaType={item.media_type as "movie" | "tv"}
-                  />
-                )}
+        {/* Live Search Input Bar at the top of the Watchlist */}
+        {catalogFilteredItems.length > 0 && (
+          <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="relative flex-1" role="search">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant">
+                <Search className="h-4 w-4 text-primary" />
               </div>
-            ))}
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setSearchQuery("");
+                }}
+                placeholder="Filter watchlist by title or creator name (e.g. Nolan, Arcane, MAPPA)..."
+                aria-label="Filter watchlist by title or creator name"
+                data-testid="watchlist-search-input"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-border-custom bg-surface/70 text-on-surface placeholder:text-on-surface-variant/60 text-xs sm:text-sm focus:outline-none focus:border-primary/80 focus:ring-1 focus:ring-primary/40 transition-all duration-200"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  data-testid="watchlist-search-clear-btn"
+                  aria-label="Clear search"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-on-surface-variant hover:text-primary transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {searchQuery && (
+              <div className="flex items-center gap-2 text-xs font-mono text-on-surface-variant shrink-0">
+                <span className="rounded-xl bg-surface px-3 py-2 border border-border-custom">
+                  <span className="font-bold text-on-surface">{sortedItems.length}</span> of {catalogFilteredItems.length} matched
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="rounded-xl px-2.5 py-2 text-[11px] text-primary hover:bg-surface-hover font-semibold transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Analytics Section with D3 Visualizations */}
+        {items.length > 0 && (
+          <WatchlistAnalyticsSection
+            items={items}
+            catalogFilteredItems={catalogFilteredItems}
+            catalogMode={catalogMode}
+          />
+        )}
+
+        {/* Titles Grid or Empty States */}
+        {sortedItems.length > 0 ? (
+          <div className="space-y-3">
+            {searchQuery && (
+              <div className="flex items-center justify-between text-xs font-mono text-on-surface-variant pt-2">
+                <span>
+                  Filtering by &quot;<span className="text-primary font-semibold">{searchQuery}</span>&quot;
+                </span>
+                <span>{sortedItems.length} {sortedItems.length === 1 ? "title" : "titles"} found</span>
+              </div>
+            )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pt-2 animate-fade-in">
+              {sortedItems.map((item) => (
+                <div key={`${item.media_type}_${getWatchlistItemId(item)}`} className="flex justify-center">
+                  {item.media_type === "anime" ? (
+                    <AnimeCard
+                      anime={{
+                        id: item.anilistId!,
+                        title: { english: item.title, romaji: item.title },
+                        coverImage: { large: item.poster_path },
+                        bannerImage: item.backdrop_path,
+                        averageScore: item.vote_average ? item.vote_average * 10 : null,
+                        media_type: "anime",
+                      } as AniListMedia}
+                    />
+                  ) : (
+                    <TitleCard
+                      title={{
+                        id: item.tmdbId!,
+                        title: item.title || "",
+                        name: item.title || "",
+                        poster_path: item.poster_path || null,
+                        backdrop_path: item.backdrop_path || null,
+                        vote_average: item.vote_average || 0,
+                        media_type: item.media_type as "movie" | "tv",
+                        overview: "",
+                      }}
+                      mediaType={item.media_type as "movie" | "tv"}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : catalogFilteredItems.length > 0 ? (
+          /* Filter returned no matches */
+          <div
+            data-testid="watchlist-search-no-results"
+            className="glass-panel flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-border-custom rounded-2xl p-8 gap-4 max-w-lg mx-auto animate-fade-in"
+          >
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+              <Search className="h-6 w-6" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-semibold text-sm">No matching saved titles</p>
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                No items in your watchlist match &quot;<span className="text-primary font-bold">{searchQuery}</span>&quot; by title or creator name.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="mt-1 rounded-xl bg-primary hover:bg-opacity-95 text-primary-contrast py-2.5 px-5 text-xs font-bold transition-all shadow-md active:scale-95"
+            >
+              Clear Search Filter
+            </button>
           </div>
         ) : (
+          /* Watchlist completely empty */
           <div className="glass-panel flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-border-custom rounded-2xl p-8 gap-4 max-w-lg mx-auto">
             <Film className="h-12 w-12 text-primary animate-pulse" />
             <div className="space-y-1">

@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ClientInitializer } from "@/components/ClientInitializer";
 import { AuthGate } from "@/components/AuthGate";
@@ -7,24 +6,6 @@ import { SiteChrome } from "@/components/SiteChrome";
 import { DEFAULT_THEME_ID } from "@/lib/themes";
 import { getPwaIconUrl } from "@/lib/pwa-brand";
 import { INLINE_FETCH_AND_EXTENSION_GUARD_SCRIPT } from "@/lib/runtime-guards";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-display",
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Zoku TV - Infinite Streaming Portal",
@@ -76,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full`}
+      className="h-full"
       data-theme="theme-crimson"
       suppressHydrationWarning
     >

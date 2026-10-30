@@ -65,6 +65,7 @@ export function AnimeCard({ anime }: AnimeCardProps) {
         media_type: "anime",
         anilistId: anime.id,
         title: name,
+        genres: anime.genres || null,
         poster_path: getAnimePoster(anime),
         backdrop_path: anime.bannerImage ?? null,
         vote_average: anime.averageScore ? anime.averageScore / 10 : undefined,

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Film, Tv, Star, ArrowRight, Search, Loader2 } from "lucide-react";
+import { useSessionStore } from "@/stores";
 import {
   fetchRealtimeAutocomplete,
   type AutocompleteSuggestion,
@@ -28,6 +29,7 @@ export function SearchAutocompleteDropdown({
   maxResults = 7,
 }: SearchAutocompleteDropdownProps) {
   const router = useRouter();
+  const kidMode = useSessionStore((state) => Boolean(state.currentProfile?.kidMode));
   const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -47,7 +49,7 @@ export function SearchAutocompleteDropdown({
 
     const timer = setTimeout(async () => {
       try {
-        const results = await fetchRealtimeAutocomplete(trimmed, maxResults);
+        const results = await fetchRealtimeAutocomplete(trimmed, maxResults, kidMode);
         if (isMounted) {
           setSuggestions(results);
           setHighlightedIndex(-1);
@@ -65,7 +67,7 @@ export function SearchAutocompleteDropdown({
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [query, maxResults]);
+  }, [query, maxResults, kidMode]);
 
   // Click outside listener
   useEffect(() => {

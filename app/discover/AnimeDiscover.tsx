@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SlidersHorizontal, RotateCcw, ChevronDown } from "lucide-react";
-import { Suspense } from "react";
+import { SlidersHorizontal, RotateCcw, ChevronDown, Shield } from "lucide-react";
 import { useSessionStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { CustomSelect } from "@/components/CustomSelect";
@@ -14,6 +13,10 @@ import {
   browseAnime,
   type AniListMedia,
 } from "@/lib/anilist";
+import {
+  filterAnimeForKidsMode,
+  isAnimeGenreAllowedInKidsMode,
+} from "@/lib/kids-mode";
 
 export default function AnimeDiscoverPage() {
   return (
@@ -33,6 +36,7 @@ export function AnimeDiscoverContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentProfile } = useSessionStore();
+  const isKidMode = Boolean(currentProfile?.kidMode);
 
   const [results, setResults] = useState<AniListMedia[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,32 +65,51 @@ export function AnimeDiscoverContent() {
   useEffect(() => {
     if (!currentProfile) return;
 
+    let cancelled = false;
+
     async function loadResults() {
       if (page === 1) setLoading(true);
       else setLoadingMore(true);
 
       try {
+        const requestedGenres = genreParam
+          ? genreParam
+              .split(",")
+              .filter((g) => !isKidMode || isAnimeGenreAllowedInKidsMode(g))
+          : undefined;
+
         const data = await browseAnime({
           page,
           perPage: 20,
-          genres: genreParam ? genreParam.split(",") : undefined,
+          genres: requestedGenres?.length ? requestedGenres : undefined,
           season: season || undefined,
           seasonYear: seasonYear ? Number(seasonYear) : undefined,
           sort: [sortBy],
         });
 
-        setResults((prev) => (page === 1 ? data.media : [...prev, ...data.media]));
+        if (cancelled) return;
+
+        const filteredMedia = filterAnimeForKidsMode(data.media, isKidMode);
+        setResults((prev) =>
+          page === 1 ? filteredMedia : [...prev, ...filteredMedia]
+        );
         setHasNextPage(data.pageInfo.hasNextPage);
       } catch (err) {
         console.error("Anime discover failed:", err);
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (!cancelled) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     }
 
     loadResults();
-  }, [currentProfile, page, sortBy, genreParam, season, seasonYear]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentProfile, page, sortBy, genreParam, season, seasonYear, isKidMode]);
 
   const applyFilters = () => {
     const params = new URLSearchParams();
@@ -119,6 +142,10 @@ export function AnimeDiscoverContent() {
     ...ANILIST_SEASONS.map((s) => ({ value: s, label: s })),
   ];
 
+  const visibleGenres = ANILIST_GENRES.filter(
+    (g) => !isKidMode || isAnimeGenreAllowedInKidsMode(g)
+  );
+
   return (
     <div className="app-page-shell text-on-surface pb-16">
       <Navbar />
@@ -126,17 +153,33 @@ export function AnimeDiscoverContent() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border-custom pb-6">
           <div>
-            <h1 className="text-2xl font-display font-bold uppercase tracking-wide">Discover Anime</h1>
-            <p className="text-xs text-on-surface-variant mt-1">Browse the AniList catalog</p>
+            <h1 className="text-2xl font-display font-bold uppercase tracking-wide">
+              Discover Anime
+            </h1>
+            <p className="text-xs text-on-surface-variant mt-1">
+              Browse the AniList catalog
+            </p>
           </div>
-          <button
-            onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-            className="theme-panel flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold hover:border-primary/60 transition-colors"
-          >
-            <SlidersHorizontal className="h-4 w-4 text-primary" />
-            Filters
-            <ChevronDown className={`h-4 w-4 transition-transform ${isFilterPanelOpen ? "rotate-180" : ""}`} />
-          </button>
+          <div className="flex items-center gap-3">
+            {isKidMode && (
+              <span className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                <Shield className="h-3.5 w-3.5" />
+                <span>Kids Mode Active</span>
+              </span>
+            )}
+            <button
+              onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+              className="theme-panel flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold hover:border-primary/60 transition-colors"
+            >
+              <SlidersHorizontal className="h-4 w-4 text-primary" />
+              Filters
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${
+                  isFilterPanelOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+          </div>
         </div>
 
         {isFilterPanelOpen && (
@@ -159,7 +202,9 @@ export function AnimeDiscoverContent() {
               />
 
               <div className="space-y-1.5">
-                <label className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">Year</label>
+                <label className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  Year
+                </label>
                 <input
                   type="number"
                   value={localYear}
@@ -171,9 +216,11 @@ export function AnimeDiscoverContent() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-on-surface-variant">Genres</label>
+              <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-on-surface-variant">
+                Genres
+              </label>
               <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1">
-                {ANILIST_GENRES.map((genre) => {
+                {visibleGenres.map((genre) => {
                   const active = selectedGenres.includes(genre);
                   return (
                     <button
@@ -184,7 +231,9 @@ export function AnimeDiscoverContent() {
                         )
                       }
                       className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${
-                        active ? "bg-primary text-primary-contrast border-primary" : "border-border-custom bg-background/40 hover:border-primary"
+                        active
+                          ? "bg-primary text-primary-contrast border-primary"
+                          : "border-border-custom bg-background/40 hover:border-primary"
                       }`}
                     >
                       {genre}
@@ -195,10 +244,16 @@ export function AnimeDiscoverContent() {
             </div>
 
             <div className="flex flex-wrap gap-3 pt-2">
-              <button onClick={applyFilters} className="rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-contrast shadow-md">
+              <button
+                onClick={applyFilters}
+                className="rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-contrast shadow-md"
+              >
                 Apply Filters
               </button>
-              <button onClick={resetFilters} className="theme-panel inline-flex items-center gap-1 rounded-xl px-4 py-2.5 text-xs font-semibold hover:border-primary">
+              <button
+                onClick={resetFilters}
+                className="theme-panel inline-flex items-center gap-1 rounded-xl px-4 py-2.5 text-xs font-semibold hover:border-primary"
+              >
                 <RotateCcw className="h-3.5 w-3.5" />
                 Reset
               </button>

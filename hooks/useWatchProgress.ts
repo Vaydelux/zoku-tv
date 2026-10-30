@@ -59,13 +59,19 @@ export function useWatchProgress({
     urlStartAt > 0 ? urlStartAt : undefined
   );
   const [showResumePrompt, setShowResumePrompt] = useState(false);
-  const [playbackStarted, setPlaybackStarted] = useState(urlStartAt > 0);
+  const [userResolvedResume, setUserResolvedResume] = useState(urlStartAt > 0);
+  const [hasConfirmedPlayback, setHasConfirmedPlayback] = useState(false);
+
+  // Reset confirmation when server or episode changes
+  useEffect(() => {
+    setHasConfirmedPlayback(false);
+  }, [selectedServerId, tmdbId, season, episode]);
 
   useEffect(() => {
-    if (canResume && !playbackStarted) {
+    if (canResume && !userResolvedResume) {
       setShowResumePrompt(true);
     }
-  }, [canResume, playbackStarted]);
+  }, [canResume, userResolvedResume]);
 
   useEffect(() => {
     if (!ready || !title) return;
@@ -80,24 +86,37 @@ export function useWatchProgress({
       poster_path,
       backdrop_path,
     });
-  }, [ready, tmdbId, mediaType, season, episode, title, overview, vote_average, poster_path, backdrop_path, recordWatching]);
+  }, [
+    ready,
+    tmdbId,
+    mediaType,
+    season,
+    episode,
+    title,
+    overview,
+    vote_average,
+    poster_path,
+    backdrop_path,
+    recordWatching,
+  ]);
 
   const handleResume = useCallback(() => {
     setStartAtSec(savedProgress?.current_time_sec ?? undefined);
     setShowResumePrompt(false);
-    setPlaybackStarted(true);
+    setUserResolvedResume(true);
   }, [savedProgress?.current_time_sec]);
 
   const handleStartOver = useCallback(() => {
     setStartAtSec(undefined);
     setShowResumePrompt(false);
-    setPlaybackStarted(true);
+    setUserResolvedResume(true);
   }, []);
 
   const recordEpisodeProgress = useEpisodeProgressStore((state) => state.recordEpisodeProgress);
 
   const handleProgress = useCallback(
     (progressPercent: number, currentTimeSec: number, durationSec?: number) => {
+      setHasConfirmedPlayback(true);
       recordProgress({
         tmdbId,
         media_type: mediaType,
@@ -125,19 +144,35 @@ export function useWatchProgress({
         });
       }
     },
-    [tmdbId, mediaType, season, episode, title, overview, vote_average, poster_path, backdrop_path, recordProgress, recordEpisodeProgress]
+    [
+      tmdbId,
+      mediaType,
+      season,
+      episode,
+      title,
+      overview,
+      vote_average,
+      poster_path,
+      backdrop_path,
+      recordProgress,
+      recordEpisodeProgress,
+    ]
   );
 
-  const selectedServer = EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) || EMBED_SERVER_CATALOG[0];
+  const selectedServer =
+    EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) || EMBED_SERVER_CATALOG[0];
   const embedUrl = ready
     ? getEmbedUrl(selectedServer, mediaType, tmdbId, season, episode, { startAtSec })
     : "";
+
+  // Enable listener immediately for first-time viewers (!canResume) or once resume prompt is resolved
+  const listenerEnabled = ready && (!canResume || userResolvedResume) && !showResumePrompt;
 
   usePlayerProgressListener({
     serverId: selectedServerId,
     domains: selectedServer?.domains ?? [],
     embedUrl,
-    enabled: ready && playbackStarted && !showResumePrompt,
+    enabled: listenerEnabled,
     onProgress: handleProgress,
   });
 
@@ -145,6 +180,7 @@ export function useWatchProgress({
     showResumePrompt,
     savedProgress,
     startAtSec,
+    hasConfirmedPlayback,
     handleResume,
     handleStartOver,
     handleProgress,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Play, Plus, Check, Star, Info, CheckCircle2 } from "lucide-react";
 import { TMDBTitle } from "@/lib/tmdb";
 import { useWatchlistStore, useWatchHistoryStore } from "@/stores";
@@ -118,6 +118,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
         media_type: heroMediaType,
         tmdbId: current.id,
         title: heroName,
+        genres: current.genres?.map((g) => g.name) || null,
         poster_path: current.poster_path,
         backdrop_path: current.backdrop_path,
         vote_average: current.vote_average,

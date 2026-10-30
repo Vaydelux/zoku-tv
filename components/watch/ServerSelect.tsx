@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 
 export interface ServerSelectOption {
@@ -50,14 +50,31 @@ export function ServerSelect({
 }: ServerSelectProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const listId = useId();
   const selected = findSelected(value, newServers, defaultServers);
   const selectedLabel = selected
     ? optionLabel(selected, serverHealth)
     : "Select server";
 
+  const flatOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const list: ServerSelectOption[] = [];
+    for (const s of [...newServers, ...defaultServers]) {
+      if (!seen.has(s.id)) {
+        seen.add(s.id);
+        list.push(s);
+      }
+    }
+    return list;
+  }, [newServers, defaultServers]);
+
+  const [activeIndex, setActiveIndex] = useState<number>(0);
+
   useEffect(() => {
     if (!open) return;
+    const idx = flatOptions.findIndex((s) => s.id === value);
+    setActiveIndex(idx >= 0 ? idx : 0);
 
     const onPointerDown = (event: MouseEvent | TouchEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
@@ -66,7 +83,24 @@ export function ServerSelect({
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        triggerRef.current?.focus();
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setActiveIndex((prev) => (prev + 1) % Math.max(1, flatOptions.length));
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setActiveIndex((prev) =>
+          prev <= 0 ? Math.max(0, flatOptions.length - 1) : prev - 1
+        );
+      } else if (event.key === "Enter" && flatOptions[activeIndex]) {
+        event.preventDefault();
+        onChange(flatOptions[activeIndex].id);
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     };
 
     document.addEventListener("mousedown", onPointerDown);
@@ -77,11 +111,12 @@ export function ServerSelect({
       document.removeEventListener("touchstart", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, flatOptions, value, activeIndex, onChange]);
 
   const pick = (serverId: string) => {
     onChange(serverId);
     setOpen(false);
+    triggerRef.current?.focus();
   };
 
   const renderGroup = (groupLabel: string, servers: ServerSelectOption[]) => {
@@ -91,13 +126,16 @@ export function ServerSelect({
         <div className="zoku-server-select__group-label">{groupLabel}</div>
         {servers.map((server) => {
           const isSelected = server.id === value;
+          const isFocused = flatOptions[activeIndex]?.id === server.id;
           return (
             <button
               key={server.id}
               type="button"
               role="option"
               aria-selected={isSelected}
-              className={`zoku-server-select__option ${isSelected ? "is-selected" : ""}`}
+              className={`zoku-server-select__option ${isSelected ? "is-selected" : ""} ${
+                isFocused ? "ring-1 ring-primary/50" : ""
+              }`}
               onClick={() => pick(server.id)}
             >
               <span className="zoku-server-select__option-label">
@@ -117,15 +155,17 @@ export function ServerSelect({
     <div
       ref={rootRef}
       className={`zoku-server-select ${open ? "is-open" : ""} ${className}`}
+      data-testid="server-select"
     >
       <span className="zoku-server-select__eyebrow hidden sm:inline">{label}</span>
       <button
+        ref={triggerRef}
         type="button"
         className="zoku-server-select__trigger"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
-        aria-label={`${label} selection`}
+        aria-label={`${label} selection: ${selectedLabel}`}
         onClick={() => setOpen((prev) => !prev)}
       >
         <span className="zoku-server-select__value">{selectedLabel}</span>
@@ -139,7 +179,7 @@ export function ServerSelect({
           aria-label={`${label} options`}
           className="zoku-server-select__picker"
         >
-          {renderGroup("New servers", newServers)}
+          {renderGroup("Recommended servers", newServers)}
           {renderGroup("All servers", defaultServers)}
         </div>
       )}

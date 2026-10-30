@@ -65,6 +65,7 @@ export function TitleCard({ title, mediaType }: TitleCardProps) {
         media_type: actualMediaType,
         tmdbId: title.id,
         title: name,
+        genres: title.genres?.map((g) => g.name) || null,
         poster_path: title.poster_path,
         backdrop_path: title.backdrop_path,
         vote_average: title.vote_average,

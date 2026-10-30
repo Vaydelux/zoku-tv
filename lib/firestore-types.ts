@@ -22,6 +22,8 @@ export type WatchlistDoc = {
   anilistId?: number | null;
   added_at: string;
   title?: string;
+  creator?: string | null;
+  genres?: string[] | null;
   poster_path?: string | null;
   backdrop_path?: string | null;
   vote_average?: number;
@@ -81,5 +83,3 @@ export type EpisodeProgressDoc = {
   completed: boolean;
   updated_at: string;
 };
-
-

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { Trash2 } from "lucide-react";
 import { ContinueWatchingCard } from "@/components/ContinueWatchingCard";
 import { RailNavButton } from "@/components/RailNavButton";

@@ -2,12 +2,26 @@
 
 import { useEffect, useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Trash2, History, ArrowRight, Film, Tv, Sparkles, Layers } from "lucide-react";
+import {
+  Search,
+  Trash2,
+  History,
+  ArrowRight,
+  Film,
+  Tv,
+  Sparkles,
+  Layers,
+  Shield,
+} from "lucide-react";
 import { useSessionStore, useSearchHistoryStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { TitleCard } from "@/components/TitleCard";
 import { searchMulti, TMDBTitle } from "@/lib/tmdb";
 import { searchAnime, type AniListMedia } from "@/lib/anilist";
+import {
+  filterTmdbForKidsMode,
+  filterAnimeForKidsMode,
+} from "@/lib/kids-mode";
 import { AnimeCard } from "@/components/anime/AnimeCard";
 import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
@@ -37,6 +51,7 @@ function SearchPageContent() {
   const searchParams = useSearchParams();
   const { currentProfile } = useSessionStore();
   const { history, loadHistory, addQuery, clearHistory } = useSearchHistoryStore();
+  const isKidMode = Boolean(currentProfile?.kidMode);
 
   const queryParam = searchParams.get("q") || "";
   const [inputValue, setInputValue] = useState(queryParam);
@@ -48,21 +63,18 @@ function SearchPageContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
 
-  // Load search history when profile is active
   useEffect(() => {
     if (currentProfile) {
       loadHistory();
     }
   }, [currentProfile, loadHistory]);
 
-  // Sync input value when URL parameter changes externally
   useEffect(() => {
     if (queryParam !== inputValue) {
       setInputValue(queryParam);
     }
   }, [queryParam]);
 
-  // 300ms Debounce of inputValue to the URL query parameter
   useEffect(() => {
     const timer = setTimeout(() => {
       const trimmed = inputValue.trim();
@@ -78,18 +90,18 @@ function SearchPageContent() {
     return () => clearTimeout(timer);
   }, [inputValue, queryParam, router]);
 
-  // Reset page to 1 whenever URL queryParam changes
   useEffect(() => {
     setPage(1);
   }, [queryParam]);
 
-  // Fetch search results across both TMDB and AniList concurrently
   useEffect(() => {
     if (!queryParam.trim()) {
       setResults([]);
       setAnimeResults([]);
       return;
     }
+
+    let cancelled = false;
 
     async function performSearch() {
       if (page === 1) {
@@ -103,11 +115,10 @@ function SearchPageContent() {
           searchAnime(queryParam, page, 18),
         ]);
 
+        if (cancelled) return;
+
         if (tmdbPromise.status === "fulfilled") {
-          const raw = tmdbPromise.value;
-          const filtered = currentProfile?.kidMode
-            ? raw.filter((title) => (title.vote_average || 0) < 7.5)
-            : raw;
+          const filtered = filterTmdbForKidsMode(tmdbPromise.value, isKidMode);
 
           if (page === 1) {
             setResults(filtered);
@@ -121,13 +132,16 @@ function SearchPageContent() {
         }
 
         if (animePromise.status === "fulfilled") {
-          const data = animePromise.value;
+          const filteredAnime = filterAnimeForKidsMode(
+            animePromise.value.media || [],
+            isKidMode
+          );
           if (page === 1) {
-            setAnimeResults(data.media || []);
+            setAnimeResults(filteredAnime);
           } else {
             setAnimeResults((prev) => {
               const existingIds = new Set(prev.map((p) => p.id));
-              const newItems = (data.media || []).filter((f) => !existingIds.has(f.id));
+              const newItems = filteredAnime.filter((f) => !existingIds.has(f.id));
               return [...prev, ...newItems];
             });
           }
@@ -139,13 +153,19 @@ function SearchPageContent() {
       } catch (err) {
         console.error("Search failed:", err);
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (!cancelled) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     }
 
     performSearch();
-  }, [queryParam, page, currentProfile, addQuery]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [queryParam, page, currentProfile, isKidMode, addQuery]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,7 +184,6 @@ function SearchPageContent() {
     router.push(`/search?q=${encodeURIComponent(q)}`);
   };
 
-  // Interleave TMDB and Anime items for combined feed
   const combinedItems: CombinedSearchResult[] = useMemo(() => {
     const list: CombinedSearchResult[] = [];
     const maxLen = Math.max(results.length, animeResults.length);
@@ -187,11 +206,21 @@ function SearchPageContent() {
       <Navbar />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
-        {/* Search Search Box */}
         <div className="flex flex-col items-center max-w-2xl mx-auto text-center gap-4 py-6">
-          <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-on-surface">
-            Infinite Search Channel
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-on-surface">
+              Infinite Search Channel
+            </h1>
+            {isKidMode && (
+              <span
+                data-testid="search-kids-mode-badge"
+                className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-300"
+              >
+                <Shield className="h-3 w-3" />
+                <span>Kids Safe</span>
+              </span>
+            )}
+          </div>
           <p className="text-xs text-on-surface-variant max-w-md">
             Scan across millions of movies, television series, and anime franchises in real-time.
           </p>
@@ -229,7 +258,6 @@ function SearchPageContent() {
               </button>
             </div>
 
-            {/* Real-time TMDB + AniList Autocomplete Dropdown */}
             <SearchAutocompleteDropdown
               query={inputValue}
               isOpen={showAutocomplete}
@@ -248,9 +276,7 @@ function SearchPageContent() {
           </form>
         </div>
 
-        {/* Search Content */}
         {!queryParam ? (
-          /* Search history & recommendations */
           <div className="glass-panel max-w-xl mx-auto rounded-2xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border-custom pb-3">
               <span className="text-xs font-mono uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
@@ -289,18 +315,20 @@ function SearchPageContent() {
             )}
           </div>
         ) : (
-          /* Search results */
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-2">
               <p className="text-xs font-mono uppercase tracking-wider text-on-surface-variant">
-                Search Results for <span className="text-primary font-bold lowercase font-sans">“{queryParam}”</span>
+                Search Results for{" "}
+                <span className="text-primary font-bold lowercase font-sans">
+                  “{queryParam}”
+                </span>
               </p>
               <p className="text-xs font-mono text-on-surface-variant">
-                Total Found: {totalResultsCount} results ({results.length} Movies/TV · {animeResults.length} Anime)
+                Total Found: {totalResultsCount} results ({results.length} Movies/TV ·{" "}
+                {animeResults.length} Anime)
               </p>
             </div>
 
-            {/* Filter Tabs for Combined / Category Partition */}
             <div className="flex flex-wrap items-center gap-2 border-b border-border-custom pb-4">
               <button
                 type="button"
@@ -366,21 +394,25 @@ function SearchPageContent() {
                 <div className="space-y-1">
                   <p className="font-semibold text-sm">No scanner results found.</p>
                   <p className="text-xs text-on-surface-variant max-w-xs">
-                    Please check spelling or search for wider words, genre titles, or franchise creators.
+                    {isKidMode
+                      ? "No Kids Mode family-safe titles matched your query."
+                      : "Please check spelling or search for wider words, genre titles, or franchise creators."}
                   </p>
                 </div>
               </div>
             ) : (
               <div className="space-y-8">
-                {/* 1. Combined Feed */}
                 {activeFilter === "all" && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                     {combinedItems.map((item, idx) => (
                       <div
-                        key={item.kind === "anime" ? `anime_${item.data.id}` : `tmdb_${item.data.id}_${idx}`}
+                        key={
+                          item.kind === "anime"
+                            ? `anime_${item.data.id}`
+                            : `tmdb_${item.data.id}_${idx}`
+                        }
                         className="relative flex justify-center group/search-card"
                       >
-                        {/* Distinct Visual Distinction Badges */}
                         <div className="pointer-events-none absolute left-2.5 top-2.5 z-30 drop-shadow-md">
                           {item.kind === "anime" ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-white uppercase shadow-md shadow-fuchsia-950/60 border border-fuchsia-300/50 backdrop-blur-md">
@@ -410,12 +442,14 @@ function SearchPageContent() {
                   </div>
                 )}
 
-                {/* 2. Movies & TV Shows Partition */}
-                {activeFilter === "movies_tv" && (
-                  results.length > 0 ? (
+                {activeFilter === "movies_tv" &&
+                  (results.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                       {results.map((title) => (
-                        <div key={title.id} className="relative flex justify-center group/search-card">
+                        <div
+                          key={title.id}
+                          className="relative flex justify-center group/search-card"
+                        >
                           <div className="pointer-events-none absolute left-2.5 top-2.5 z-30 drop-shadow-md">
                             {title.media_type === "tv" ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-sky-950/80 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-sky-200 uppercase shadow-md shadow-sky-950/60 border border-sky-400/60 backdrop-blur-md">
@@ -436,17 +470,20 @@ function SearchPageContent() {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
                       <Film className="h-10 w-10 text-on-surface-variant" />
-                      <p className="text-xs text-on-surface-variant">No Movies or TV series found for this query.</p>
+                      <p className="text-xs text-on-surface-variant">
+                        No Movies or TV series found for this query.
+                      </p>
                     </div>
-                  )
-                )}
+                  ))}
 
-                {/* 3. Anime Partition */}
-                {activeFilter === "anime" && (
-                  animeResults.length > 0 ? (
+                {activeFilter === "anime" &&
+                  (animeResults.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                       {animeResults.map((anime) => (
-                        <div key={anime.id} className="relative flex justify-center group/search-card">
+                        <div
+                          key={anime.id}
+                          className="relative flex justify-center group/search-card"
+                        >
                           <div className="pointer-events-none absolute left-2.5 top-2.5 z-30 drop-shadow-md">
                             <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-white uppercase shadow-md shadow-fuchsia-950/60 border border-fuchsia-300/50 backdrop-blur-md">
                               <Sparkles className="h-2.5 w-2.5 text-yellow-300" />
@@ -460,12 +497,12 @@ function SearchPageContent() {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
                       <Sparkles className="h-10 w-10 text-on-surface-variant" />
-                      <p className="text-xs text-on-surface-variant">No Anime series found for this query.</p>
+                      <p className="text-xs text-on-surface-variant">
+                        No Anime series found for this query.
+                      </p>
                     </div>
-                  )
-                )}
+                  ))}
 
-                {/* Manual 'Load more' Button */}
                 <div className="flex justify-center pt-4">
                   <button
                     onClick={() => setPage((p) => p + 1)}

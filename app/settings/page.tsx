@@ -1,29 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { 
-  Settings, 
-  Palette, 
-  ShieldCheck, 
-  LayoutGrid, 
-  Save, 
-  Sparkles, 
-  ArrowLeft, 
-  Check, 
-  Eye,
+import {
+  Settings,
+  Palette,
+  ShieldCheck,
+  LayoutGrid,
+  Save,
+  Sparkles,
+  ArrowLeft,
+  Check,
   AlertTriangle,
   Trash2,
   Tv,
   Clapperboard,
   Moon,
   Sun,
+  User,
+  Activity,
+  Shield,
 } from "lucide-react";
-import { useSessionStore, useEmbedStore } from "@/stores";
+import {
+  useSessionStore,
+  useEmbedStore,
+  useContinueWatchingStore,
+  useWatchHistoryStore,
+} from "@/stores";
 import type { CatalogMode } from "@/lib/media-types";
 import { Navbar } from "@/components/Navbar";
 import { FirebaseStatusIndicator } from "@/components/FirebaseStatusIndicator";
 import { LoadingBanner } from "@/components/LoadingBanner";
+import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
+import { ConfirmDialog } from "@/components/ui/Primitives";
 import { getGenres, TMDBGenre } from "@/lib/tmdb";
 import { getGenreIcon } from "@/lib/genreIcons";
 import {
@@ -36,15 +45,24 @@ import {
   type AppearanceMode,
 } from "@/lib/themes";
 
-import { Suspense } from "react";
+type SettingsSection =
+  | "theme"
+  | "catalog"
+  | "genre-rails"
+  | "profiles"
+  | "iframe-mode"
+  | "cache"
+  | "diagnostics";
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-background">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      }
+    >
       <SettingsPageContent />
     </Suspense>
   );
@@ -53,10 +71,12 @@ export default function SettingsPage() {
 function SettingsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, currentProfile, updateProfile } = useSessionStore();
+  const { user, profiles, currentProfile, updateProfile } = useSessionStore();
   const { iframeMode, setIframeMode } = useEmbedStore();
+  const clearContinueWatching = useContinueWatchingStore((s) => s.clearContinueWatching);
+  const clearWatchHistory = useWatchHistoryStore((s) => s.clearHistory);
 
-  const [activeTab, setActiveTab] = useState<"theme" | "iframe-mode" | "genre-rails" | "catalog" | "cache">("theme");
+  const [activeTab, setActiveTab] = useState<SettingsSection>("theme");
   const [localAppearance, setLocalAppearance] = useState<AppearanceMode>(DEFAULT_APPEARANCE);
   const [availableGenres, setAvailableGenres] = useState<TMDBGenre[]>([]);
   const [selectedGenreIds, setSelectedGenreIds] = useState<number[]>([]);
@@ -64,25 +84,43 @@ function SettingsPageContent() {
   const [localCatalogMode, setLocalCatalogMode] = useState<CatalogMode>("tmdb");
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [confirmAction, setConfirmAction] = useState<
+    null | "clear_cache" | "clear_history" | "clear_cw"
+  >(null);
 
-  // Parse URL if they navigated to subroutes via query
   useEffect(() => {
-    const section = searchParams.get("section");
-    if (section === "theme" || section === "iframe-mode" || section === "genre-rails" || section === "catalog" || section === "cache") {
-      setActiveTab(section as any);
+    const section = searchParams.get("section") as SettingsSection | null;
+    if (
+      section &&
+      [
+        "theme",
+        "catalog",
+        "genre-rails",
+        "profiles",
+        "iframe-mode",
+        "cache",
+        "diagnostics",
+      ].includes(section)
+    ) {
+      setActiveTab(section);
     }
   }, [searchParams]);
 
-  // Load available genres & profile preferences
   useEffect(() => {
     if (!user || !currentProfile) return;
 
+    let cancelled = false;
+
     async function loadGenreOptions() {
       try {
-        const movieGenres = await getGenres("movie");
-        const tvGenres = await getGenres("tv");
+        const [movieGenres, tvGenres] = await Promise.all([
+          getGenres("movie"),
+          getGenres("tv"),
+        ]);
+        if (cancelled) return;
         const combined = [...movieGenres, ...tvGenres].reduce((acc, curr) => {
-          if (!acc.some(g => g.id === curr.id)) acc.push(curr);
+          if (!acc.some((g) => g.id === curr.id)) acc.push(curr);
           return acc;
         }, [] as TMDBGenre[]);
 
@@ -99,11 +137,27 @@ function SettingsPageContent() {
     }
 
     loadGenreOptions();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user, currentProfile, iframeMode]);
 
   if (!user || !currentProfile) {
     return null;
   }
+
+  const notifySuccess = (msg: string) => {
+    setErrorMsg("");
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(""), 3200);
+  };
+
+  const notifyError = (msg: string) => {
+    setSuccessMsg("");
+    setErrorMsg(msg);
+    setTimeout(() => setErrorMsg(""), 4000);
+  };
 
   const handleThemeSelect = async (themeId: string) => {
     setSaving(true);
@@ -113,11 +167,10 @@ function SettingsPageContent() {
         themePreference: normalized,
       });
       applyTheme(normalized, localAppearance);
-
-      setSuccessMsg(`Applied ${getThemeOption(normalized).name} theme!`);
-      setTimeout(() => setSuccessMsg(""), 3000);
+      notifySuccess(`Applied ${getThemeOption(normalized).name} theme!`);
     } catch (err) {
       console.error(err);
+      notifyError("Could not save theme preference.");
     } finally {
       setSaving(false);
     }
@@ -131,10 +184,10 @@ function SettingsPageContent() {
         appearancePreference: mode,
       });
       applyTheme(currentProfile.themePreference, mode);
-      setSuccessMsg(`Switched to ${mode === "light" ? "light" : "dark"} mode`);
-      setTimeout(() => setSuccessMsg(""), 3000);
+      notifySuccess(`Switched to ${mode === "light" ? "light" : "dark"} mode`);
     } catch (err) {
       console.error(err);
+      notifyError("Could not update appearance mode.");
     } finally {
       setSaving(false);
     }
@@ -148,10 +201,10 @@ function SettingsPageContent() {
       await updateProfile(currentProfile.id, {
         iframeModePreference: mode,
       });
-      setSuccessMsg(`Default iframe sandbox mode configured to: ${mode}!`);
-      setTimeout(() => setSuccessMsg(""), 3000);
+      notifySuccess(`Default iframe sandbox mode configured to: ${mode}!`);
     } catch (err) {
       console.error(err);
+      notifyError("Could not update iframe sandbox preference.");
     } finally {
       setSaving(false);
     }
@@ -160,10 +213,10 @@ function SettingsPageContent() {
   const handleGenreCheckboxToggle = (genreId: number) => {
     let nextGenres = [...selectedGenreIds];
     if (nextGenres.includes(genreId)) {
-      nextGenres = nextGenres.filter(id => id !== genreId);
+      nextGenres = nextGenres.filter((id) => id !== genreId);
     } else {
       if (nextGenres.length >= 6) {
-        alert("You can select up to 6 custom genre rails to keep home dashboard loading fast!");
+        notifyError("You can select up to 6 custom genre rails to keep home loading fast.");
         return;
       }
       nextGenres.push(genreId);
@@ -173,7 +226,7 @@ function SettingsPageContent() {
 
   const saveGenrePreferences = async () => {
     if (selectedGenreIds.length === 0) {
-      alert("Please select at least 1 preferred genre rail.");
+      notifyError("Please select at least 1 preferred genre rail.");
       return;
     }
     setSaving(true);
@@ -181,41 +234,52 @@ function SettingsPageContent() {
       await updateProfile(currentProfile.id, {
         homeGenreRailPreferences: selectedGenreIds,
       });
-      setSuccessMsg("Preferred genre rails saved! Refreshing dashboards...");
-      setTimeout(() => setSuccessMsg(""), 3000);
+      notifySuccess("Preferred genre rails saved!");
     } catch (err) {
       console.error(err);
+      notifyError("Failed to save genre rails.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleClearCache = async () => {
+  const executeConfirmedAction = async () => {
+    if (!confirmAction) return;
     setSaving(true);
     try {
-      // 1. Clear TMDB caches from localStorage
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.startsWith("zoku_tmdb_cache_") || key.includes("cache"))) {
-          keysToRemove.push(key);
+      if (confirmAction === "clear_cache") {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (
+            key &&
+            (key.startsWith("zoku_tmdb_cache_") ||
+              key.startsWith("zoku_anilist_cache_") ||
+              key.includes("cache"))
+          ) {
+            keysToRemove.push(key);
+          }
         }
-      }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
 
-      // 2. Clear Service Worker Cache if available
-      if (typeof window !== "undefined" && "caches" in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
+        if (typeof window !== "undefined" && "caches" in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map((name) => caches.delete(name)));
+        }
+        setConfirmAction(null);
+        notifySuccess("Catalog & service-worker caches cleared!");
+      } else if (confirmAction === "clear_history") {
+        await clearWatchHistory();
+        setConfirmAction(null);
+        notifySuccess("Watch history cleared for this profile.");
+      } else if (confirmAction === "clear_cw") {
+        await clearContinueWatching();
+        setConfirmAction(null);
+        notifySuccess("Continue Watching queue cleared for this profile.");
       }
-
-      setSuccessMsg("System & TMDB media caches successfully cleared! Reloading dashboard...");
-      setTimeout(() => {
-        setSuccessMsg("");
-        window.location.reload();
-      }, 1500);
     } catch (err) {
-      console.error("Failed to clear system cache:", err);
+      console.error("Failed destructive data operation:", err);
+      notifyError("Operation could not complete. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -226,13 +290,31 @@ function SettingsPageContent() {
     setSaving(true);
     try {
       await updateProfile(currentProfile.id, { catalogMode: mode });
-      setSuccessMsg(`Content catalog switched to ${mode === "anime" ? "Anime" : "Movies & TV"}!`);
+      notifySuccess(`Content catalog switched to ${mode === "anime" ? "Anime" : "Movies & TV"}!`);
       setTimeout(() => {
-        setSuccessMsg("");
         router.push("/home");
-      }, 1200);
+      }, 900);
     } catch (err) {
       console.error(err);
+      notifyError("Failed to switch catalog mode.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleKidModeToggle = async () => {
+    setSaving(true);
+    try {
+      const nextKidMode = !currentProfile.kidMode;
+      await updateProfile(currentProfile.id, { kidMode: nextKidMode });
+      notifySuccess(
+        nextKidMode
+          ? "Kids Mode enabled for this profile."
+          : "Kids Mode disabled for this profile."
+      );
+    } catch (err) {
+      console.error(err);
+      notifyError("Failed to update Kids Mode setting.");
     } finally {
       setSaving(false);
     }
@@ -240,17 +322,23 @@ function SettingsPageContent() {
 
   const isAnimeCatalog = localCatalogMode === "anime";
 
+  function switchTab(tab: SettingsSection) {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("section", tab);
+    router.push(`/settings?${params.toString()}`);
+  }
+
   return (
     <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
       {saving && <LoadingBanner message="Saving your settings..." />}
       <Navbar />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        
-        {/* Navigation back */}
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push("/home")}
+            aria-label="Back to Home"
             className="theme-panel p-2 rounded-xl hover:bg-surface-hover text-on-surface hover:text-primary transition-all active:scale-95"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -261,84 +349,137 @@ function SettingsPageContent() {
               <span>Portal Settings</span>
             </h1>
             <p className="text-xs text-on-surface-variant">
-              Configure layout aesthetics, sandbox layers, and preferred genre channels.
+              Configure appearance, browsing preferences, profiles, playback containment, privacy, and diagnostics.
             </p>
           </div>
         </div>
 
         {successMsg && (
-          <div className="rounded-xl bg-primary/10 border border-primary/20 p-3.5 text-xs text-primary font-semibold animate-fade-in flex items-center gap-2">
+          <div
+            role="status"
+            className="rounded-xl bg-primary/10 border border-primary/20 p-3.5 text-xs text-primary font-semibold animate-fade-in flex items-center gap-2"
+          >
             <Sparkles className="h-4 w-4" />
             <span>{successMsg}</span>
           </div>
         )}
 
-        <FirebaseStatusIndicator userId={user.uid} profileId={currentProfile.id} />
+        {errorMsg && (
+          <div
+            role="alert"
+            className="rounded-xl bg-red-500/10 border border-red-500/25 p-3.5 text-xs text-red-400 font-semibold animate-fade-in flex items-center gap-2"
+          >
+            <AlertTriangle className="h-4 w-4" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
 
-        {/* Custom Tabbed layout panel */}
-        <div className="flex flex-col md:flex-row gap-8 items-start pt-4">
-          
-          {/* Sub-nav Sidebar tabs */}
+        <div className="flex flex-col md:flex-row gap-8 items-start pt-2">
+          {/* Structured Settings Navigation */}
           <div className="glass-panel w-full md:w-64 flex flex-col gap-1.5 shrink-0 rounded-2xl p-4">
+            <p className="px-2 pb-1 text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
+              Appearance & Browsing
+            </p>
             <button
-              onClick={() => { setActiveTab("theme"); applyFiltersQuery("theme"); }}
+              onClick={() => switchTab("theme")}
               className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
-                activeTab === "theme" ? "bg-primary text-primary-contrast" : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
+                activeTab === "theme"
+                  ? "bg-primary text-primary-contrast"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
               }`}
             >
-              <Palette className="h-4.5 w-4.5" />
-              <span>18-Theme Canvas</span>
+              <Palette className="h-4 w-4" />
+              <span>Appearance & 18 Themes</span>
             </button>
 
             <button
-              onClick={() => { setActiveTab("iframe-mode"); applyFiltersQuery("iframe-mode"); }}
+              onClick={() => switchTab("catalog")}
               className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
-                activeTab === "iframe-mode" ? "bg-primary text-primary-contrast" : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
+                activeTab === "catalog"
+                  ? "bg-primary text-primary-contrast"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
               }`}
             >
-              <ShieldCheck className="h-4.5 w-4.5" />
-              <span>IFrame Sandbox Mode</span>
+              <Clapperboard className="h-4 w-4" />
+              <span>Browsing & Catalog</span>
             </button>
 
             <button
-              onClick={() => { setActiveTab("catalog"); applyFiltersQuery("catalog"); }}
-              className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
-                activeTab === "catalog" ? "bg-primary text-primary-contrast" : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
-              }`}
-            >
-              <Clapperboard className="h-4.5 w-4.5" />
-              <span>Content Catalog</span>
-            </button>
-
-            <button
-              onClick={() => { setActiveTab("genre-rails"); applyFiltersQuery("genre-rails"); }}
+              onClick={() => switchTab("genre-rails")}
               disabled={isAnimeCatalog}
               className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
-                activeTab === "genre-rails" ? "bg-primary text-primary-contrast" : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
+                activeTab === "genre-rails"
+                  ? "bg-primary text-primary-contrast"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
               } ${isAnimeCatalog ? "opacity-40 cursor-not-allowed" : ""}`}
             >
-              <LayoutGrid className="h-4.5 w-4.5" />
+              <LayoutGrid className="h-4 w-4" />
               <span>Home Genre Rails</span>
             </button>
 
+            <p className="px-2 pt-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
+              Household & Playback
+            </p>
             <button
-              onClick={() => { setActiveTab("cache"); applyFiltersQuery("cache"); }}
+              onClick={() => switchTab("profiles")}
               className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
-                activeTab === "cache" ? "bg-primary text-primary-contrast" : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
+                activeTab === "profiles"
+                  ? "bg-primary text-primary-contrast"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
               }`}
             >
-              <Trash2 className="h-4.5 w-4.5" />
-              <span>Data & Local Cache</span>
+              <User className="h-4 w-4" />
+              <span>Profiles & Kids Mode</span>
+            </button>
+
+            <button
+              onClick={() => switchTab("iframe-mode")}
+              className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
+                activeTab === "iframe-mode"
+                  ? "bg-primary text-primary-contrast"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
+              }`}
+            >
+              <ShieldCheck className="h-4 w-4" />
+              <span>Playback Container</span>
+            </button>
+
+            <p className="px-2 pt-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
+              System & Privacy
+            </p>
+            <button
+              onClick={() => switchTab("cache")}
+              className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
+                activeTab === "cache"
+                  ? "bg-primary text-primary-contrast"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
+              }`}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Privacy & Data</span>
+            </button>
+
+            <button
+              onClick={() => switchTab("diagnostics")}
+              className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
+                activeTab === "diagnostics"
+                  ? "bg-primary text-primary-contrast"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
+              }`}
+            >
+              <Activity className="h-4 w-4" />
+              <span>Diagnostics</span>
             </button>
           </div>
 
           {/* Active Tab Panel */}
-          <div className="glass-panel flex-1 w-full rounded-2xl p-6 sm:p-8 shadow-xl min-h-[400px]">
-            
+          <div className="glass-panel flex-1 w-full rounded-2xl p-6 sm:p-8 shadow-xl min-h-[420px]">
             {activeTab === "theme" && (
               <div className="space-y-6">
                 <div className="space-y-1">
-                  <h2 className="text-base font-semibold text-on-surface">Cinema Colors Presets</h2>
+                  <h2 className="text-base font-semibold text-on-surface">
+                    Appearance & 18-Theme Cinema Canvas
+                  </h2>
                   <p className="text-xs text-on-surface-variant">
                     Pick a palette, then choose light or dark. Gradients tint the page while text stays high-contrast.
                   </p>
@@ -346,7 +487,7 @@ function SettingsPageContent() {
 
                 <div className="space-y-3">
                   <p className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
-                    Appearance
+                    Appearance Mode
                   </p>
                   <div className="grid grid-cols-2 gap-3 max-w-md">
                     <button
@@ -364,7 +505,9 @@ function SettingsPageContent() {
                         <p className="text-xs font-semibold text-on-surface">Dark</p>
                         <p className="text-[10px] text-on-surface-variant">Cinematic night shell</p>
                       </div>
-                      {localAppearance === "dark" && <Check className="h-3.5 w-3.5 text-primary ml-auto shrink-0" />}
+                      {localAppearance === "dark" && (
+                        <Check className="h-3.5 w-3.5 text-primary ml-auto shrink-0" />
+                      )}
                     </button>
                     <button
                       type="button"
@@ -381,14 +524,17 @@ function SettingsPageContent() {
                         <p className="text-xs font-semibold text-on-surface">Light</p>
                         <p className="text-[10px] text-on-surface-variant">Bright day shell</p>
                       </div>
-                      {localAppearance === "light" && <Check className="h-3.5 w-3.5 text-primary ml-auto shrink-0" />}
+                      {localAppearance === "light" && (
+                        <Check className="h-3.5 w-3.5 text-primary ml-auto shrink-0" />
+                      )}
                     </button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                   {THEME_OPTIONS.map((theme) => {
-                    const isActive = normalizeThemeId(currentProfile.themePreference) === theme.id;
+                    const isActive =
+                      normalizeThemeId(currentProfile.themePreference) === theme.id;
                     const previewTokens =
                       localAppearance === "light" ? theme.lightTokens : theme.tokens;
                     return (
@@ -408,16 +554,27 @@ function SettingsPageContent() {
                           aria-hidden
                         />
                         <div className="flex items-center justify-between w-full gap-2 pt-2">
-                          <span className="text-xs sm:text-sm font-semibold text-on-surface">{theme.name}</span>
+                          <span className="text-xs sm:text-sm font-semibold text-on-surface">
+                            {theme.name}
+                          </span>
                           {isActive && <Check className="h-4 w-4 text-primary shrink-0" />}
                         </div>
                         <p className="text-[10px] sm:text-xs text-on-surface-variant mt-1 leading-relaxed line-clamp-2">
                           {theme.hint}
                         </p>
                         <div className="flex gap-1 mt-3 w-full h-3 rounded-md overflow-hidden border border-white/10">
-                          <div className="flex-[3]" style={{ backgroundImage: previewTokens.buttonGradient }} />
-                          <div className="flex-[4]" style={{ backgroundImage: previewTokens.backgroundGradient }} />
-                          <div className="flex-[2]" style={{ backgroundColor: previewTokens.onSurface }} />
+                          <div
+                            className="flex-[3]"
+                            style={{ backgroundImage: previewTokens.buttonGradient }}
+                          />
+                          <div
+                            className="flex-[4]"
+                            style={{ backgroundImage: previewTokens.backgroundGradient }}
+                          />
+                          <div
+                            className="flex-[2]"
+                            style={{ backgroundColor: previewTokens.onSurface }}
+                          />
                         </div>
                       </button>
                     );
@@ -426,74 +583,22 @@ function SettingsPageContent() {
               </div>
             )}
 
-            {activeTab === "iframe-mode" && (
-              <div className="space-y-6">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold text-on-surface">Default Containment Sandbox Mode</h2>
-                  <p className="text-xs text-on-surface-variant">
-                    Manage iframe shielding rules. Protects your device from unwanted redirects, popups, or tracking cookies.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  {/* Strict Mode details */}
-                  <div 
-                    onClick={() => handleIframePreferenceChange("Strict")}
-                    className={`p-5 rounded-xl border cursor-pointer transition-all space-y-2 flex items-start gap-4 ${
-                      localIframeMode === "Strict" 
-                        ? "border-emerald-500 bg-emerald-500/5" 
-                        : "border-border-custom hover:border-primary/40 bg-background/40"
-                    }`}
-                  >
-                    <ShieldCheck className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-xs text-on-surface">Strict Mode (Containment Shield)</h3>
-                        {localIframeMode === "Strict" && <span className="text-[9px] bg-emerald-500 text-neutral-950 font-bold px-1.5 rounded">Active Default</span>}
-                      </div>
-                      <p className="text-xs text-on-surface-variant leading-relaxed">
-                        Applies HTML5 sandbox directives (<code className="font-mono text-[10px]">allow-scripts allow-same-origin allow-forms</code>). Prevents intrusive advertisements from escaping the frame, creating new window tabs, or forcing browser redirects. 
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Compatibility Mode details */}
-                  <div 
-                    onClick={() => handleIframePreferenceChange("Compatibility")}
-                    className={`p-5 rounded-xl border cursor-pointer transition-all space-y-2 flex items-start gap-4 ${
-                      localIframeMode === "Compatibility" 
-                        ? "border-amber-500 bg-amber-500/5" 
-                        : "border-border-custom hover:border-primary/40 bg-background/40"
-                    }`}
-                  >
-                    <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-xs text-on-surface">Compatibility Mode (Relaxed Rules)</h3>
-                        {localIframeMode === "Compatibility" && <span className="text-[9px] bg-amber-500 text-neutral-950 font-bold px-1.5 rounded">Active Default</span>}
-                      </div>
-                      <p className="text-xs text-on-surface-variant leading-relaxed">
-                        Removes HTML5 sandboxing containment. Best for legacy devices or servers that fail to load scripts inside contained spaces, but allows popup ads and tracking cookies. Highly advised to use with standard browser ad blockers.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {activeTab === "catalog" && (
               <div className="space-y-6">
                 <div className="space-y-1">
-                  <h2 className="text-base font-semibold text-on-surface">Content Catalog Mode</h2>
+                  <h2 className="text-base font-semibold text-on-surface">
+                    Browsing & Content Catalog Mode
+                  </h2>
                   <p className="text-xs text-on-surface-variant">
-                    Choose which catalog this profile browses. Only one catalog is active at a time to keep Home, Discover, and Search focused.
+                    Choose which primary catalog this profile browses on Home and Discover.
                   </p>
                 </div>
 
                 <div className="space-y-4">
-                  <div
+                  <button
+                    type="button"
                     onClick={() => handleCatalogModeChange("tmdb")}
-                    className={`p-5 rounded-xl border cursor-pointer transition-all flex items-start gap-4 ${
+                    className={`w-full text-left p-5 rounded-xl border cursor-pointer transition-all flex items-start gap-4 ${
                       localCatalogMode === "tmdb"
                         ? "border-primary bg-primary/5"
                         : "border-border-custom hover:border-primary/40 bg-background/40"
@@ -502,20 +607,25 @@ function SettingsPageContent() {
                     <Tv className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-xs text-on-surface">Movies & TV (TMDB)</h3>
+                        <h3 className="font-semibold text-xs text-on-surface">
+                          Movies & TV (TMDB)
+                        </h3>
                         {localCatalogMode === "tmdb" && (
-                          <span className="text-[9px] bg-primary text-primary-contrast font-bold px-1.5 rounded">Active</span>
+                          <span className="text-[9px] bg-primary text-primary-contrast font-bold px-1.5 rounded">
+                            Active
+                          </span>
                         )}
                       </div>
                       <p className="text-xs text-on-surface-variant leading-relaxed">
                         Browse trending movies and TV series from TMDB with multi-server embed playback.
                       </p>
                     </div>
-                  </div>
+                  </button>
 
-                  <div
+                  <button
+                    type="button"
                     onClick={() => handleCatalogModeChange("anime")}
-                    className={`p-5 rounded-xl border cursor-pointer transition-all flex items-start gap-4 ${
+                    className={`w-full text-left p-5 rounded-xl border cursor-pointer transition-all flex items-start gap-4 ${
                       localCatalogMode === "anime"
                         ? "border-primary bg-primary/5"
                         : "border-border-custom hover:border-primary/40 bg-background/40"
@@ -524,16 +634,20 @@ function SettingsPageContent() {
                     <Clapperboard className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-xs text-on-surface">Anime (AniList)</h3>
+                        <h3 className="font-semibold text-xs text-on-surface">
+                          Anime (AniList)
+                        </h3>
                         {localCatalogMode === "anime" && (
-                          <span className="text-[9px] bg-primary text-primary-contrast font-bold px-1.5 rounded">Active</span>
+                          <span className="text-[9px] bg-primary text-primary-contrast font-bold px-1.5 rounded">
+                            Active
+                          </span>
                         )}
                       </div>
                       <p className="text-xs text-on-surface-variant leading-relaxed">
                         Browse anime from AniList with multi-server anime embeds (Filmu default). Seasons and episodes are sourced from AniList metadata.
                       </p>
                     </div>
-                  </div>
+                  </button>
                 </div>
               </div>
             )}
@@ -541,13 +655,15 @@ function SettingsPageContent() {
             {activeTab === "genre-rails" && (
               <div className="space-y-6">
                 <div className="space-y-1">
-                  <h2 className="text-base font-semibold text-on-surface">Home Genre Channels Selection</h2>
+                  <h2 className="text-base font-semibold text-on-surface">
+                    Home Genre Channels Selection
+                  </h2>
                   <p className="text-xs text-on-surface-variant">
                     Pick up to 6 genre categories to show on your home dashboard. Tailored exclusively for this profile.
                   </p>
                 </div>
 
-                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-80 overflow-y-auto p-2 border border-border-custom rounded-xl bg-background/40">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-80 overflow-y-auto p-2 border border-border-custom rounded-xl bg-background/40">
                   {availableGenres.map((g) => {
                     const isChecked = selectedGenreIds.includes(g.id);
                     const GenreIcon = getGenreIcon(g.id);
@@ -557,18 +673,26 @@ function SettingsPageContent() {
                         type="button"
                         onClick={() => handleGenreCheckboxToggle(g.id)}
                         className={`flex items-center justify-between p-3 rounded-lg border text-xs font-semibold text-left transition-all ${
-                          isChecked 
-                            ? "border-primary bg-primary/5 text-primary" 
+                          isChecked
+                            ? "border-primary bg-primary/5 text-primary"
                             : "border-border-custom hover:border-primary text-on-surface-variant hover:text-on-surface bg-background/20"
                         }`}
                       >
                         <span className="flex items-center gap-2">
-                          <GenreIcon className={`h-4 w-4 shrink-0 ${isChecked ? "text-primary" : "text-on-surface-variant"}`} />
+                          <GenreIcon
+                            className={`h-4 w-4 shrink-0 ${
+                              isChecked ? "text-primary" : "text-on-surface-variant"
+                            }`}
+                          />
                           <span>{g.name}</span>
                         </span>
-                        <div className={`h-4.5 w-4.5 rounded border flex items-center justify-center transition-all ${
-                          isChecked ? "bg-primary border-primary text-primary-contrast" : "border-border-custom"
-                        }`}>
+                        <div
+                          className={`h-4.5 w-4.5 rounded border flex items-center justify-center transition-all ${
+                            isChecked
+                              ? "bg-primary border-primary text-primary-contrast"
+                              : "border-border-custom"
+                          }`}
+                        >
                           {isChecked && <Check className="h-3 w-3" />}
                         </div>
                       </button>
@@ -592,33 +716,217 @@ function SettingsPageContent() {
               </div>
             )}
 
-            {activeTab === "cache" && (
+            {activeTab === "profiles" && (
               <div className="space-y-6">
                 <div className="space-y-1">
-                  <h2 className="text-base font-semibold text-on-surface">Data & Offline Caching</h2>
+                  <h2 className="text-base font-semibold text-on-surface">
+                    Active Profile & Kids Mode Controls
+                  </h2>
                   <p className="text-xs text-on-surface-variant">
-                    Manage your locally stored TMDB metadata, active theme preference cache, and offline service worker storage.
+                    Manage your current profile settings or switch to another household portal.
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-border-custom bg-background/20 p-5 space-y-4">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-border-custom bg-background/40 p-5">
+                  <div className="flex items-center gap-4">
+                    <ProfileAvatarDisplay
+                      avatar={currentProfile.avatar}
+                      avatarColor={currentProfile.avatarColor}
+                      name={currentProfile.name}
+                      size="md"
+                    />
                     <div className="space-y-1">
-                      <h4 className="text-xs font-bold text-on-surface">Force Refresh Cache</h4>
-                      <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                        If you are seeing outdated titles, broken media streams, or offline states, clearing your local caches will force Zoku TV to reload the latest official channels directly from TMDB servers.
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-on-surface">
+                          {currentProfile.name}
+                        </h3>
+                        {currentProfile.kidMode && (
+                          <span className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-amber-300 border border-amber-500/40">
+                            <Shield className="h-2.5 w-2.5" />
+                            <span>Kids</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-on-surface-variant">
+                        Active Household Portal ({profiles.length} total profiles)
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex pt-2">
+                  <button
+                    type="button"
+                    onClick={() => router.push("/profiles")}
+                    className="theme-panel rounded-xl px-4 py-2.5 text-xs font-semibold text-on-surface hover:border-primary hover:text-primary transition-colors"
+                  >
+                    Switch or Edit All Profiles
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 rounded-2xl border border-border-custom bg-background/30 p-5">
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold text-on-surface flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-amber-400" />
+                      <span>Kids Experience Protection</span>
+                    </h4>
+                    <p className="text-xs text-on-surface-variant max-w-md leading-relaxed">
+                      When enabled, mature R/TV-MA content and restricted genres (Horror, Crime, Thriller, War, Ecchi, Psychological) are filtered out of Home, Discover, Search, Details, and Watch routes.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleKidModeToggle}
+                    disabled={saving}
+                    className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+                      currentProfile.kidMode
+                        ? "bg-amber-500 text-neutral-950 hover:bg-amber-400"
+                        : "bg-primary text-primary-contrast hover:brightness-110"
+                    }`}
+                  >
+                    {currentProfile.kidMode ? "Disable Kids Mode" : "Enable Kids Mode"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "iframe-mode" && (
+              <div className="space-y-6">
+                <div className="space-y-1">
+                  <h2 className="text-base font-semibold text-on-surface">
+                    Playback Container Sandbox Mode
+                  </h2>
+                  <p className="text-xs text-on-surface-variant">
+                    Manage external iframe shielding rules. Protects your browser from unwanted redirects or popups while treating the embedded player as an external black box.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => handleIframePreferenceChange("Strict")}
+                    className={`w-full text-left p-5 rounded-xl border cursor-pointer transition-all space-y-2 flex items-start gap-4 ${
+                      localIframeMode === "Strict"
+                        ? "border-emerald-500 bg-emerald-500/5"
+                        : "border-border-custom hover:border-primary/40 bg-background/40"
+                    }`}
+                  >
+                    <ShieldCheck className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-xs text-on-surface">
+                          Strict Mode (Containment Shield)
+                        </h3>
+                        {localIframeMode === "Strict" && (
+                          <span className="text-[9px] bg-emerald-500 text-neutral-950 font-bold px-1.5 rounded">
+                            Active Default
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                        Applies HTML5 sandbox directives (
+                        <code className="font-mono text-[10px]">
+                          allow-scripts allow-same-origin allow-forms allow-presentation
+                        </code>
+                        ). Prevents intrusive advertisements from opening popup windows or forcing top-level redirects.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleIframePreferenceChange("Compatibility")}
+                    className={`w-full text-left p-5 rounded-xl border cursor-pointer transition-all space-y-2 flex items-start gap-4 ${
+                      localIframeMode === "Compatibility"
+                        ? "border-amber-500 bg-amber-500/5"
+                        : "border-border-custom hover:border-primary/40 bg-background/40"
+                    }`}
+                  >
+                    <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-xs text-on-surface">
+                          Compatibility Mode (Relaxed Rules)
+                        </h3>
+                        {localIframeMode === "Compatibility" && (
+                          <span className="text-[9px] bg-amber-500 text-neutral-950 font-bold px-1.5 rounded">
+                            Active Default
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                        Omits HTML5 sandbox restrictions for third-party providers that explicitly reject sandboxed iframes. Recommended only when a provider refuses to initialize under Strict Mode.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "cache" && (
+              <div className="space-y-6">
+                <div className="space-y-1">
+                  <h2 className="text-base font-semibold text-on-surface">
+                    Privacy, Viewing Data & Local Caches
+                  </h2>
+                  <p className="text-xs text-on-surface-variant">
+                    Manage your profile-scoped viewing data and public catalog metadata caches.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-border-custom bg-background/25 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold text-on-surface">
+                        Clear Continue Watching Queue
+                      </h4>
+                      <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                        Remove all in-progress resume points for {currentProfile.name}.
+                      </p>
+                    </div>
                     <button
-                      onClick={handleClearCache}
+                      type="button"
+                      onClick={() => setConfirmAction("clear_cw")}
                       disabled={saving}
-                      className="flex items-center gap-2 rounded-xl bg-primary hover:bg-opacity-95 text-primary-contrast py-3 px-6 text-xs font-bold transition-all disabled:opacity-50 active:scale-95 shadow"
+                      className="shrink-0 rounded-xl border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-300 py-2.5 px-4 text-xs font-semibold transition-all"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      Clear Continue Watching
+                    </button>
+                  </div>
+
+                  <div className="rounded-xl border border-border-custom bg-background/25 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold text-on-surface">
+                        Clear Profile Watch History
+                      </h4>
+                      <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                        Permanently clear watched titles and completion logs for {currentProfile.name}.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmAction("clear_history")}
+                      disabled={saving}
+                      className="shrink-0 rounded-xl border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-300 py-2.5 px-4 text-xs font-semibold transition-all"
+                    >
+                      Clear Watch History
+                    </button>
+                  </div>
+
+                  <div className="rounded-xl border border-border-custom bg-background/25 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold text-on-surface">
+                        Force Refresh Catalog & Service Worker Cache
+                      </h4>
+                      <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                        Evict cached TMDB/AniList responses and Service Worker static caches without deleting your profile or watchlist.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmAction("clear_cache")}
+                      disabled={saving}
+                      className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-primary text-primary-contrast py-2.5 px-5 text-xs font-bold transition-all"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
                       <span>Clear Local Caches</span>
                     </button>
                   </div>
@@ -626,17 +934,47 @@ function SettingsPageContent() {
               </div>
             )}
 
+            {activeTab === "diagnostics" && (
+              <div className="space-y-6">
+                <div className="space-y-1">
+                  <h2 className="text-base font-semibold text-on-surface">
+                    System & Cloud Diagnostics
+                  </h2>
+                  <p className="text-xs text-on-surface-variant">
+                    Inspect Firebase connectivity, security rules verification, and active session scope.
+                  </p>
+                </div>
+
+                <FirebaseStatusIndicator userId={user.uid} profileId={currentProfile.id} />
+              </div>
+            )}
           </div>
-
         </div>
-
       </div>
+
+      <ConfirmDialog
+        open={confirmAction !== null}
+        title={
+          confirmAction === "clear_cache"
+            ? "Clear Local Catalog Caches?"
+            : confirmAction === "clear_history"
+            ? `Clear ${currentProfile.name}'s Watch History?`
+            : `Clear ${currentProfile.name}'s Continue Watching?`
+        }
+        description={
+          confirmAction === "clear_cache"
+            ? "Cached TMDB, AniList, and Service Worker assets will be evicted and refetched on next load. Your profile and watchlist remain untouched."
+            : confirmAction === "clear_history"
+            ? "This will permanently remove all watch history records for the active profile."
+            : "This will remove all in-progress resume items from the Continue Watching rail for the active profile."
+        }
+        confirmLabel="Confirm Clear"
+        cancelLabel="Cancel"
+        destructive={confirmAction !== "clear_cache"}
+        loading={saving}
+        onConfirm={executeConfirmedAction}
+        onCancel={() => setConfirmAction(null)}
+      />
     </div>
   );
-
-  function applyFiltersQuery(tab: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("section", tab);
-    router.push(`/settings?${params.toString()}`);
-  }
 }

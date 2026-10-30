@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { AnimeCard } from "@/components/anime/AnimeCard";
 import { RailNavButton } from "@/components/RailNavButton";
 import { useSmoothRailScroll } from "@/hooks/useSmoothRailScroll";

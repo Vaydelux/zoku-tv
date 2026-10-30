@@ -1,0 +1,42 @@
+# Zoku TV — Release Readiness & Verification Report
+
+## 1. Phase Acceptance Criteria Verification
+
+| Phase | Scope | Status | Verification Evidence |
+| --- | --- | --- | --- |
+| **Phase 0** | Baseline Repository Inspection & Audit | **Verified** | [`docs/audit/baseline.md`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/docs/audit/baseline.md), [`docs/audit/architecture.md`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/docs/audit/architecture.md), [`docs/audit/functional-inventory.md`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/docs/audit/functional-inventory.md), [`docs/audit/risks.md`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/docs/audit/risks.md) |
+| **Phase 1** | Security, Privacy, & Functional Correctness | **Verified** | Salted SHA-256 local credential hashing (`hashLocalCredential`), profile subcollection + localStorage purge (`purgeProfileData`), live local `listenToOrderedCollection` updates, conservative Kids Mode module ([`lib/kids-mode.ts`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/lib/kids-mode.ts)), hardened [`firestore.rules`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/firestore.rules). Covered by [`lib/kids-mode.test.ts`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/lib/kids-mode.test.ts) and [`lib/security-isolation.test.ts`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/lib/security-isolation.test.ts). |
+| **Phase 2** | Design System & Component Foundation | **Verified** | Unified primitives in [`components/ui/Primitives.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/components/ui/Primitives.tsx), 18-theme CSS token system, keyboard + 10-foot TV focus rings and `prefers-reduced-motion` in [`app/globals.css`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/globals.css), documented in [`docs/design-system.md`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/docs/design-system.md). |
+| **Phase 3** | Homepage & Global Navigation | **Verified** | Moved 18-theme palette strip out of [`app/home/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/home/page.tsx) into `/settings?section=theme`, added `From Your Watchlist` preview rail, Kids Mode filtering across hero/trending/genre rails, and async cancellation. |
+| **Phase 4** | Discovery, Search, Autocomplete, & Filtering | **Verified** | Enforced Kids Mode filtering and stale-request suppression across [`lib/autocomplete.ts`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/lib/autocomplete.ts), [`components/SearchAutocompleteDropdown.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/components/SearchAutocompleteDropdown.tsx), [`app/discover/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/discover/page.tsx), [`app/discover/AnimeDiscover.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/discover/AnimeDiscover.tsx), [`app/genre/[id]/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/genre/%5Bid%5D/page.tsx), and [`app/search/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/search/page.tsx). |
+| **Phase 5** | Media Details & Decision Experience | **Verified** | Added maturity classification badges (`data-testid="title-maturity-badge"`, `data-testid="anime-maturity-badge"`) and Kids Mode restriction gates (`data-testid="kids-mode-restricted-gate"`) on [`app/title/[type]/[id]/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/title/%5Btype%5D/%5Bid%5D/page.tsx) and [`app/anime/[id]/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/anime/%5Bid%5D/page.tsx). |
+| **Phase 6** | Watchlist, Continue Watching, & Watch History | **Verified** | Live search by title/creator and D3 analytics section in [`app/watchlist/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/watchlist/page.tsx) & [`components/watchlist/WatchlistAnalyticsSection.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/components/watchlist/WatchlistAnalyticsSection.tsx); fixed first-time viewer progress listener in [`hooks/useWatchProgress.ts`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/hooks/useWatchProgress.ts) and removed hardcoded `1440`s duration in [`hooks/useAnimeWatchProgress.ts`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/hooks/useAnimeWatchProgress.ts). |
+| **Phase 7** | Profiles, Authentication, & Settings | **Verified** | Cloud vs. Local Device Mode indicators on [`app/login/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/login/page.tsx) & [`app/signup/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/signup/page.tsx), confirmation dialogs & keyboard navigation on [`app/profiles/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/profiles/page.tsx), and 7-section organized settings in [`app/settings/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/settings/page.tsx). |
+| **Phase 8** | Premium External Player Container | **Verified** | Redesigned [`app/watch/[type]/[id]/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/watch/%5Btype%5D/%5Bid%5D/page.tsx), [`app/watch/[type]/[id]/[season]/[episode]/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/watch/%5Btype%5D/%5Bid%5D/%5Bseason%5D/%5Bepisode%5D/page.tsx), and [`app/watch/anime/[anilistId]/[season]/[episode]/page.tsx`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/watch/anime/%5BanilistId%5D/%5Bseason%5D/%5Bepisode%5D/page.tsx) with 16:9 framing, honest `Container Ready` vs `Playback Synced` status, `ServerSelect` keyboard navigation, `Retry` + `Next Server` controls, and 3-column episode grid while preserving all embed URLs untouched. |
+| **Phase 9** | Cross-Device UI & TV Navigation | **Verified** | Spatial & grid D-pad helpers in [`lib/tv-navigation.ts`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/lib/tv-navigation.ts) + [`lib/tv-navigation.test.ts`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/lib/tv-navigation.test.ts) and 10-foot TV focus styles in [`app/globals.css`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/app/globals.css). |
+| **Phase 10** | Performance, Caching, & PWA Hardening | **Verified** | Hardened [`public/sw.js`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/public/sw.js) (`zoku-tv-shell-v4` & `zoku-tv-images-v4`) so only public poster CDNs and same-origin shell assets are cached; Firebase, API, and third-party embed streams are never cached. |
+| **Phase 11** | Automated Quality Gates | **Verified** | Added `typecheck`, `lint`, `test`, and `validate` scripts in [`package.json`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/package.json) and GitHub Actions workflow in [`.github/workflows/ci.yml`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/.github/workflows/ci.yml). |
+| **Phase 12 & 13** | Full System Hardening & Release Readiness | **Verified** | Zero TypeScript errors (`npm run typecheck`), 66/66 passing unit tests (`npm test`), and clean production Next.js build (`npm run build`). |
+
+---
+
+## 2. Pre-Deployment Checklist
+
+- [x] `npm run typecheck` exits with code `0`.
+- [x] `npm test` passes all 66 unit & security isolation tests across 18 suites.
+- [x] `npm run build` succeeds with zero build or static generation errors.
+- [x] Third-party embed URLs (`lib/embed.ts` and `lib/anime-embed.ts`) verified unmodified via [`lib/embed.test.ts`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/lib/embed.test.ts).
+- [x] `firestore.rules` ownership and schema validators verified via [`lib/security-isolation.test.ts`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/lib/security-isolation.test.ts).
+- [x] Service worker (`public/sw.js`) excludes cross-origin auth, Firestore, and embed player requests.
+
+---
+
+## 3. Rollback Plan
+
+1. **Application Rollback**:
+   - Revert deployment to the previous immutable production build artifact on the hosting platform (Vercel / containerized Node.js host).
+2. **Service Worker Cache Recovery**:
+   - Bumping `CACHE_NAME` in [`public/sw.js`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/public/sw.js) automatically evicts prior caches on `activate`. Users can also clear all local and CacheStorage state at any time via **Settings → Privacy & Data → Clear Local Cache**.
+3. **Firestore Rules Rollback**:
+   - Run `firebase firestore:rules:release` targeting the previous ruleset version in the Firebase Console or redeploy the prior tag with `npm run firebase:deploy:rules`.
+

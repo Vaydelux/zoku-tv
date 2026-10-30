@@ -1,372 +1,366 @@
 "use client";
 
-import { useEffect, useState, use, useRef } from "react";
+import { useEffect, useState, useMemo, use } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  ArrowLeft, 
-  ShieldCheck, 
-  ShieldAlert, 
-  ChevronRight, 
-  ChevronLeft, 
-  RefreshCw, 
-  AlertTriangle,
-  MonitorPlay,
+import Link from "next/link";
+import {
+  ArrowLeft,
+  ChevronRight,
+  Shield,
+  ShieldOff,
+  Check,
+  RotateCcw,
+  Loader2,
+  SlidersHorizontal,
+  ShieldAlert,
+  SkipForward,
+  Image as ImageIcon,
   Play,
-  Crosshair,
 } from "lucide-react";
-import { useSessionStore, useEmbedStore, useEpisodeProgressStore } from "@/stores";
-import { EMBED_SERVER_CATALOG, getEmbedUrl, groupEmbedServers } from "@/lib/embed";
-import { getTitleDetails, getSeasonDetails, TMDBTitle, TMDBSeasonDetail } from "@/lib/tmdb";
+import {
+  getTitleDetails,
+  getSeasonDetails,
+  TMDBTitle,
+  TMDBEpisode,
+} from "@/lib/tmdb";
+import {
+  EMBED_SERVER_CATALOG,
+  groupEmbedServers,
+  getEmbedUrl,
+} from "@/lib/embed";
+import {
+  useSessionStore,
+  useEmbedStore,
+  useEpisodeProgressStore,
+} from "@/stores";
+import { Navbar } from "@/components/Navbar";
 import { useWatchProgress } from "@/hooks/useWatchProgress";
 import { ResumePrompt } from "@/components/watch/ResumePrompt";
 import { ServerSelect } from "@/components/watch/ServerSelect";
-import { EpisodeThumbnailWithProgress } from "@/components/EpisodeThumbnailWithProgress";
+import { isTmdbAllowedInKidsMode } from "@/lib/kids-mode";
 
-interface TVWatchPageProps {
+export default function WatchTvPage({
+  params,
+}: {
   params: Promise<{ type: string; id: string; season: string; episode: string }>;
-}
-
-export default function TVWatchPage({ params }: TVWatchPageProps) {
-  const router = useRouter();
+}) {
   const { type, id, season, episode } = use(params);
-  
-  const mediaType = type as "movie" | "tv";
-  const titleId = Number(id);
+  const router = useRouter();
+  const numericId = Number(id);
   const seasonNum = Number(season);
   const episodeNum = Number(episode);
 
   const { currentProfile } = useSessionStore();
-  const { 
-    selectedServerId, 
-    iframeMode, 
-    setServerId, 
-    setIframeMode, 
-    markServerFailing, 
-    serverHealth 
+  const {
+    selectedServerId,
+    iframeMode,
+    serverHealth,
+    setServerId,
+    setIframeMode,
+    markServerFailing,
   } = useEmbedStore();
-  const { getProgress } = useEpisodeProgressStore();
+
+  const isEpisodeCompleted = useEpisodeProgressStore((s) => s.isEpisodeCompleted);
+  const recordEpisodeProgress = useEpisodeProgressStore(
+    (s) => s.recordEpisodeProgress
+  );
+  const resetEpisodeProgress = useEpisodeProgressStore(
+    (s) => s.resetEpisodeProgress
+  );
 
   const [details, setDetails] = useState<TMDBTitle | null>(null);
-  const [seasonDetail, setSeasonDetail] = useState<TMDBSeasonDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadingSeason, setLoadingSeason] = useState(false);
-  const [showOverlay, setShowOverlay] = useState(true);
-  const [showCompatibilityWarning, setShowCompatibilityWarning] = useState(false);
-  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [episodes, setEpisodes] = useState<TMDBEpisode[]>([]);
+  const [episodesLoading, setEpisodesLoading] = useState(true);
+  const [showToolsPanel, setShowToolsPanel] = useState(false);
+  const [iframeReady, setIframeReady] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
 
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const overlayTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const healthTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const { newServers, defaultServers } = useMemo(
+    () => groupEmbedServers(EMBED_SERVER_CATALOG),
+    []
+  );
 
   useEffect(() => {
-    if (!currentProfile || !titleId) return;
-
-    async function loadTVDetails() {
-      setLoading(true);
-      try {
-        const info = await getTitleDetails("tv", titleId);
-        setDetails(info);
-      } catch (err) {
-        console.error("Failed to load TV details", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadTVDetails();
-  }, [currentProfile, titleId]);
-
-  useEffect(() => {
-    if (!currentProfile || !titleId) return;
-
-    async function loadSeasonData() {
-      setLoadingSeason(true);
-      try {
-        const seasonInfo = await getSeasonDetails(titleId, seasonNum);
-        setSeasonDetail(seasonInfo);
-      } catch (err) {
-        console.error("Failed to load season details", err);
-      } finally {
-        setLoadingSeason(false);
-      }
-    }
-
-    loadSeasonData();
-  }, [currentProfile, titleId, seasonNum, episodeNum]);
-
-  // Overlay mousemove fade control
-  const resetOverlayTimer = () => {
-    setShowOverlay(true);
-    if (overlayTimerRef.current) clearTimeout(overlayTimerRef.current);
-    overlayTimerRef.current = setTimeout(() => {
-      setShowOverlay(false);
-    }, 4000);
-  };
-
-  useEffect(() => {
-    window.addEventListener("mousemove", resetOverlayTimer);
-    resetOverlayTimer();
+    if (type !== "tv") return;
+    let cancelled = false;
+    setEpisodesLoading(true);
+    Promise.all([
+      getTitleDetails("tv", numericId),
+      getSeasonDetails(numericId, seasonNum),
+    ])
+      .then(([det, seas]) => {
+        if (cancelled) return;
+        setDetails(det);
+        setEpisodes(seas.episodes || []);
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (!cancelled) setEpisodesLoading(false);
+      });
     return () => {
-      window.removeEventListener("mousemove", resetOverlayTimer);
-      if (overlayTimerRef.current) clearTimeout(overlayTimerRef.current);
+      cancelled = true;
     };
-  }, []);
+  }, [type, numericId, seasonNum]);
 
-  // Server health timer + unblock timer
   useEffect(() => {
-    setIframeLoaded(false);
-    if (healthTimerRef.current) clearTimeout(healthTimerRef.current);
+    setIframeReady(false);
+  }, [selectedServerId, numericId, seasonNum, episodeNum, iframeMode]);
 
-    // Auto-unblock after 2.2s so player is clickable immediately
-    const unblockTimer = setTimeout(() => {
-      setIframeLoaded(true);
-    }, 2200);
+  const currentEp = episodes.find((e) => e.episode_number === episodeNum);
+  const nextEp = episodes.find((e) => e.episode_number === episodeNum + 1);
+  const prevEp = episodes.find((e) => e.episode_number === episodeNum - 1);
 
-    healthTimerRef.current = setTimeout(() => {
-      if (!iframeLoaded && details) {
-        console.warn(`Zoku TV: Server ${selectedServerId} timeout on TV episode. Fallback recommended.`);
-      }
-    }, 12000);
+  const kidsRestricted = Boolean(
+    currentProfile?.kidMode && details && !isTmdbAllowedInKidsMode(details)
+  );
 
-    return () => {
-      clearTimeout(unblockTimer);
-      if (healthTimerRef.current) clearTimeout(healthTimerRef.current);
-    };
-  }, [selectedServerId, seasonNum, episodeNum, loadAttempts]);
-
-  const selectedServer = EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) || EMBED_SERVER_CATALOG[0];
-  const { newServers, defaultServers } = groupEmbedServers();
-  const name = details?.name || details?.title || "TV Series";
+  const displayTitle = details?.name || details?.title || "Loading Series...";
+  const validSeasons = (details?.seasons || []).filter(
+    (s) => s.season_number > 0
+  );
 
   const {
-    showResumePrompt,
     savedProgress,
+    showResumePrompt,
     startAtSec,
+    hasConfirmedPlayback,
     handleResume,
     handleStartOver,
+    handleProgress,
   } = useWatchProgress({
-    tmdbId: titleId,
+    tmdbId: numericId,
     mediaType: "tv",
     season: seasonNum,
     episode: episodeNum,
-    title: name,
-    overview: details?.overview,
-    vote_average: details?.vote_average,
-    poster_path: details?.poster_path,
-    backdrop_path: details?.backdrop_path,
+    title: details?.name || details?.title || "",
+    overview: details?.overview ?? null,
+    poster_path: details?.poster_path ?? null,
+    backdrop_path: details?.backdrop_path ?? null,
+    vote_average: details?.vote_average ?? 0,
     selectedServerId,
-    ready: !!details && !loading,
+    ready: Boolean(details) && !kidsRestricted,
   });
 
-  const embedUrl = details
-    ? getEmbedUrl(selectedServer, "tv", titleId, seasonNum, episodeNum, { startAtSec })
-    : "";
-
-  if (loading) {
+  if (kidsRestricted && details) {
     return (
-      <div className="flex h-screen items-center justify-center bg-black text-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div
+        className="min-h-screen bg-[#070a10] text-white flex flex-col items-center justify-center p-6 text-center"
+        data-testid="kids-mode-restricted-gate"
+      >
+        <Navbar />
+        <div className="max-w-md rounded-2xl border border-amber-400/25 bg-amber-500/10 p-8 shadow-2xl">
+          <ShieldAlert className="w-12 h-12 text-amber-300 mx-auto mb-4" />
+          <h1 className="text-2xl font-display font-bold mb-2">
+            Restricted in Kids Mode
+          </h1>
+          <p className="text-sm text-white/70 mb-6">
+            This series is hidden because the active profile ({currentProfile?.name}) has Kids Mode enabled.
+          </p>
+          <Link
+            href="/home"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Safe Home
+          </Link>
+        </div>
       </div>
     );
   }
 
-  if (!details || !seasonDetail) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center bg-black text-white gap-4">
-        <p>TV details or season information could not be found.</p>
-        <button onClick={() => router.back()} className="px-4 py-2 bg-primary rounded-xl text-xs font-semibold">
-          Return
-        </button>
-      </div>
-    );
-  }
+  const currentServerObj =
+    EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) ||
+    EMBED_SERVER_CATALOG[0];
 
-  const handleServerChange = (serverId: string) => {
-    setServerId(serverId);
-    setLoadAttempts(prev => prev + 1);
+  const embedUrl = getEmbedUrl(
+    currentServerObj,
+    "tv",
+    numericId,
+    seasonNum,
+    episodeNum,
+    { startAtSec }
+  );
+
+  const useSandbox =
+    iframeMode === "Strict" && currentServerObj.supportsSandbox;
+
+  const isCurrentWatched = isEpisodeCompleted(
+    "tv",
+    numericId,
+    seasonNum,
+    episodeNum
+  );
+
+  const containerStatusLabel = hasConfirmedPlayback
+    ? "Playback Synced"
+    : iframeReady
+    ? "Container Ready"
+    : "Loading Frame...";
+
+  const handleServerChange = (newServerId: string) => {
+    setServerId(newServerId);
+    setIframeReady(false);
   };
 
-  const handleIframeModeToggle = () => {
-    if (iframeMode === "Strict") {
-      setShowCompatibilityWarning(true);
-    } else {
-      setIframeMode("Strict");
+  const handleNextServer = () => {
+    markServerFailing(currentServerObj.id);
+    const idx = EMBED_SERVER_CATALOG.findIndex((s) => s.id === currentServerObj.id);
+    const next = EMBED_SERVER_CATALOG[(idx + 1) % EMBED_SERVER_CATALOG.length];
+    if (next) {
+      handleServerChange(next.id);
     }
   };
 
-  const acceptCompatibilityMode = () => {
-    setIframeMode("Compatibility");
-    setShowCompatibilityWarning(false);
-    setLoadAttempts(prev => prev + 1);
+  const handleRetryFrame = () => {
+    setIframeReady(false);
+    setLoadAttempts((prev) => prev + 1);
   };
 
-  const triggerNextServer = () => {
-    markServerFailing(selectedServerId);
-    const currentIndex = EMBED_SERVER_CATALOG.findIndex(s => s.id === selectedServerId);
-    const nextIndex = (currentIndex + 1) % EMBED_SERVER_CATALOG.length;
-    setServerId(EMBED_SERVER_CATALOG[nextIndex].id);
-    setLoadAttempts(prev => prev + 1);
-  };
-
-  // Navigating between episodes logically
-  const totalEpisodes = seasonDetail.episodes?.length || 0;
-  const hasPreviousEpisode = episodeNum > 1;
-  const hasNextEpisode = episodeNum < totalEpisodes;
-
-  const navigateToPrevious = () => {
-    if (hasPreviousEpisode) {
-      router.push(`/watch/tv/${titleId}/${seasonNum}/${episodeNum - 1}`);
+  const handleMarkWatchedAndAdvance = async () => {
+    handleProgress(100, 0);
+    await recordEpisodeProgress({
+      media_type: "tv",
+      tmdbId: numericId,
+      season: seasonNum,
+      episode: episodeNum,
+      progress_percent: 100,
+      current_time_sec: 0,
+      completed: true,
+    });
+    if (nextEp) {
+      router.push(`/watch/tv/${id}/${seasonNum}/${nextEp.episode_number}`);
     }
   };
 
-  const navigateToNext = () => {
-    if (hasNextEpisode) {
-      router.push(`/watch/tv/${titleId}/${seasonNum}/${episodeNum + 1}`);
-    } else {
-      // Look for next season
-      const currentSeasonIndex = details.seasons?.findIndex(s => s.season_number === seasonNum) ?? -1;
-      const nextSeason = details.seasons?.[currentSeasonIndex + 1];
-      if (nextSeason && nextSeason.season_number > 0) {
-        router.push(`/watch/tv/${titleId}/${nextSeason.season_number}/1`);
-      }
-    }
+  const handleRewatch = async () => {
+    await resetEpisodeProgress("tv", numericId, seasonNum, episodeNum);
+    handleStartOver();
   };
 
-  const activeEpisode = seasonDetail.episodes?.find(e => e.episode_number === episodeNum);
-  const availableSeasons = details.seasons ?? [];
-
-  const handleSeasonChange = (newSeason: number) => {
-    if (newSeason === seasonNum) return;
-    router.push(`/watch/tv/${titleId}/${newSeason}/1`);
+  const handleSeasonSwitch = (nextSeason: number) => {
+    router.push(`/watch/tv/${id}/${nextSeason}/1`);
   };
 
   return (
-    <div className="relative w-screen h-screen bg-black overflow-y-auto flex flex-col justify-between">
-      
-      {/* 1. Control Header (Server Selector & Sandbox Containment Modes) */}
-      <div className="relative z-30 w-full bg-gradient-to-b from-black/95 to-black/40 px-4 py-3 sm:px-6 lg:px-8 border-b border-white/5 flex flex-wrap items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push(`/title/tv/${titleId}`)}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-white transition-colors"
-          >
-            <ArrowLeft className="h-4.5 w-4.5" />
-          </button>
-          <div className="min-w-0">
-            <h1 className="text-sm font-semibold text-white truncate max-w-[180px] sm:max-w-xs">{name}</h1>
-            <p className="text-[10px] text-white/60 font-mono uppercase tracking-wider">
-              S{seasonNum} : E{episodeNum} {activeEpisode?.name ? `- ${activeEpisode.name}` : ""}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <ServerSelect
-            value={selectedServerId}
-            onChange={handleServerChange}
-            newServers={newServers}
-            defaultServers={defaultServers}
-            serverHealth={serverHealth}
-          />
-
-          {/* IFrame mode controller */}
-          <button
-            onClick={handleIframeModeToggle}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-semibold transition-all ${
-              iframeMode === "Strict" 
-                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
-                : "bg-amber-500/10 border-amber-500/30 text-amber-400"
-            }`}
-          >
-            {iframeMode === "Strict" ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
-            <span className="hidden sm:inline">Containment: {iframeMode}</span>
-          </button>
-
-          {/* Target / Focus Player Button */}
-          <button
-            onClick={() => {
-              setIframeLoaded(true);
-              iframeRef.current?.focus();
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-white/10 hover:border-primary/60 bg-white/5 hover:bg-white/10 text-white text-[10px] font-semibold transition-all"
-            title="Focus and target player directly for clicks and controls"
-          >
-            <Crosshair className="h-3.5 w-3.5 text-primary" />
-            <span className="hidden sm:inline">Target Player</span>
-          </button>
-
-          {/* Force reload fallback */}
-          <button
-            onClick={triggerNextServer}
-            className="p-1.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white transition-all"
-            title="Next server backup fallback"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </button>
-
-        </div>
-      </div>
-
-      {/* 2. Dedicated player shell — iframe fills this box only */}
-      <div className="relative w-full aspect-[16/9] md:h-[65dvh] lg:h-[70dvh] bg-neutral-950 shrink-0 overflow-hidden isolate">
-        <div className="absolute inset-0">
-          {/* Loader status — clickable to dismiss and immediately target player */}
-          {!iframeLoaded && !showResumePrompt && (
-            <div
-              onClick={() => {
-                setIframeLoaded(true);
-                iframeRef.current?.focus();
-              }}
-              className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-950/90 p-6 text-center gap-3 cursor-pointer"
-              title="Click anywhere to dismiss and interact directly with player"
+    <div className="min-h-screen bg-[#070a10] text-white pt-16 pb-16">
+      <Navbar />
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/* Top Header Bar */}
+        <header className="flex items-center justify-between gap-4 py-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => router.push(`/title/tv/${id}`)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+              aria-label="Back to series details"
             >
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              <p className="text-xs font-mono text-white/60">Launching broadcast tunnel to server {selectedServer.name}...</p>
-              <div className="flex items-center gap-2 mt-1">
-                <button 
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIframeLoaded(true);
-                    iframeRef.current?.focus();
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-[11px] font-bold shadow-md active:scale-95 transition-all"
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-base sm:text-lg font-display font-bold tracking-tight text-white truncate">
+                  Now Watching
+                </h1>
+                <span
+                  data-testid="player-container-status"
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium border ${
+                    hasConfirmedPlayback
+                      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+                      : iframeReady
+                      ? "border-sky-400/30 bg-sky-500/10 text-sky-300"
+                      : "border-amber-400/30 bg-amber-500/10 text-amber-200"
+                  }`}
+                  title={
+                    hasConfirmedPlayback
+                      ? "Confirmed runtime progress messages received from the embedded player"
+                      : iframeReady
+                      ? "External iframe document loaded; playback inside third-party frame is unverified until progress events arrive"
+                      : "Waiting for external provider frame to respond"
+                  }
                 >
-                  <Play className="h-3 w-3 fill-current" />
-                  <span>Target & Play Stream</span>
-                </button>
-                <button 
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerNextServer();
-                  }}
-                  className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] text-white transition-all font-semibold"
-                >
-                  <span>Switch Server Fallback</span>
-                </button>
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      hasConfirmedPlayback
+                        ? "bg-emerald-400"
+                        : iframeReady
+                        ? "bg-sky-400"
+                        : "bg-amber-400 animate-pulse"
+                    }`}
+                  />
+                  {containerStatusLabel}
+                </span>
               </div>
+              <p className="text-xs sm:text-sm text-white/60 truncate">
+                {displayTitle} · Season {seasonNum} · Episode {episodeNum}
+                {currentEp?.name ? ` — ${currentEp.name}` : ""}
+              </p>
             </div>
-          )}
+          </div>
 
-          {/* Sandboxed player element */}
-          {!showResumePrompt && (
-            <iframe
-              ref={iframeRef}
-              key={`${selectedServerId}_tv_${seasonNum}_${episodeNum}_${loadAttempts}_${startAtSec ?? 0}`}
-              src={embedUrl}
-              onLoad={() => setIframeLoaded(true)}
-              tabIndex={0}
-              className="w-full h-full border-0 absolute inset-0 z-0 bg-black focus:outline-none"
-              allowFullScreen
-              allow="autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; screen-wake-lock; clipboard-write; web-share"
-              sandbox={iframeMode === "Strict" ? selectedServer.sandboxPolicy : undefined}
-              referrerPolicy="no-referrer"
-              title={`${selectedServer.name} player`}
-            />
-          )}
+          <div className="relative flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowToolsPanel((prev) => !prev)}
+              aria-expanded={showToolsPanel}
+              aria-label="Player container settings and troubleshooting"
+              className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-colors ${
+                showToolsPanel || useSandbox
+                  ? "border-primary/50 bg-primary/15 text-primary"
+                  : "border-white/10 bg-white/[0.04] text-white/75 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </button>
 
+            {showToolsPanel && (
+              <div className="absolute right-0 top-12 z-30 w-80 rounded-2xl border border-white/15 bg-[#0e131d]/95 p-4 shadow-2xl backdrop-blur-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                    Container Controls
+                  </span>
+                  <span className="text-[11px] text-white/45">
+                    Provider: {currentServerObj.name}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIframeMode(
+                      iframeMode === "Strict" ? "Compatibility" : "Strict"
+                    );
+                    setIframeReady(false);
+                  }}
+                  className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-medium border transition-colors ${
+                    useSandbox
+                      ? "bg-green-500/15 text-green-300 border-green-500/30"
+                      : "bg-white/[0.04] text-white/80 border-white/10 hover:bg-white/[0.08]"
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    {useSandbox ? (
+                      <Shield className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <ShieldOff className="w-4 h-4 text-white/50" />
+                    )}
+                    Iframe Mode: {iframeMode}
+                  </span>
+                  <span className="font-mono text-[11px]">
+                    {useSandbox ? "SANDBOX" : "COMPAT"}
+                  </span>
+                </button>
+                <p className="mt-2.5 text-[11px] leading-relaxed text-white/50">
+                  Streams are hosted by external third-party providers. If a server displays a blank screen or fails to load, use{" "}
+                  <strong className="text-white/80">Retry</strong> or switch to another server.
+                </p>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* 16:9 External Player Frame Container */}
+        <div
+          className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/15 bg-[#0d111a] shadow-2xl"
+          data-testid="external-player-frame-wrapper"
+        >
           {showResumePrompt && savedProgress && (
             <ResumePrompt
               progressPercent={savedProgress.progress_percent ?? 0}
@@ -376,162 +370,263 @@ export default function TVWatchPage({ params }: TVWatchPageProps) {
             />
           )}
 
-          {/* Auto-fading HUD overlay */}
-          {showOverlay && iframeLoaded && (
-            <div className="absolute top-4 left-4 sm:left-6 z-20 pointer-events-none transition-opacity duration-500 bg-black/70 backdrop-blur-md border border-white/5 px-4 py-2 rounded-xl text-white">
-              <span className="text-[9px] font-mono text-primary font-bold uppercase tracking-widest">{selectedServer.name}</span>
-              <h3 className="text-xs font-semibold leading-tight mt-0.5">S{seasonNum} : E{episodeNum} {activeEpisode?.name ? `- ${activeEpisode.name}` : ""}</h3>
+          {!iframeReady && !showResumePrompt && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#0d111a]/95 p-6 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary border border-primary/30">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+              <div className="space-y-1 max-w-md">
+                <p className="text-base font-semibold text-white">
+                  External video player
+                </p>
+                <p className="text-xs text-white/55">
+                  Unmodified third-party iframe ({currentServerObj.name}) · Waiting for provider frame
+                </p>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRetryFrame}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.06] px-3.5 py-2 text-xs font-medium text-white hover:bg-white/10 transition-colors"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" /> Retry
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextServer}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/15 px-3.5 py-2 text-xs font-medium text-primary hover:bg-primary/25 transition-colors"
+                >
+                  <SkipForward className="h-3.5 w-3.5" /> Next Server
+                </button>
+              </div>
             </div>
           )}
+
+          {!showResumePrompt && (
+            <iframe
+              key={`${currentServerObj.id}-${useSandbox ? "sb" : "nosb"}-${loadAttempts}`}
+              src={embedUrl}
+              title={`${displayTitle} S${seasonNum}E${episodeNum} external video player`}
+              className="h-full w-full border-0"
+              allowFullScreen
+              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+              referrerPolicy="origin"
+              onLoad={() => setIframeReady(true)}
+              {...(useSandbox
+                ? {
+                    sandbox: currentServerObj.sandboxPolicy,
+                  }
+                : {})}
+            />
+          )}
         </div>
-      </div>
 
-      {/* 3. Season & Episode Navigation Control Panel (Positioned cleanly below player) */}
-      <div className="flex-1 w-full bg-neutral-950 text-white border-t border-white/5 p-4 sm:p-6 space-y-6">
-        
-        {/* Prev / Next Episode CTAs */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
-          <div className="space-y-1">
-            <span className="text-[9px] font-mono uppercase tracking-wider text-primary font-bold">Currently streaming</span>
-            <h2 className="text-sm font-semibold">{activeEpisode?.name || `Episode ${episodeNum}`}</h2>
-            <p className="text-xs text-white/60 max-w-xl leading-relaxed">{activeEpisode?.overview || "No episode synopsis available."}</p>
-          </div>
+        {/* Control Bar Below Player */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          {/* Left: Server selector + Retry + Next Server */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <ServerSelect
+              value={currentServerObj.id}
+              onChange={handleServerChange}
+              newServers={newServers}
+              defaultServers={defaultServers}
+              serverHealth={serverHealth}
+            />
 
-          <div className="flex items-center gap-3 shrink-0">
             <button
-              onClick={navigateToPrevious}
-              disabled={!hasPreviousEpisode}
-              className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 hover:border-white/20 px-4 py-2.5 text-xs font-semibold text-white hover:text-primary transition-all disabled:opacity-30 disabled:pointer-events-none"
+              type="button"
+              onClick={handleRetryFrame}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#141923] px-4 text-xs font-semibold text-white/90 hover:border-white/20 hover:bg-[#1b2230] transition-colors"
+              aria-label="Retry loading current server"
             >
-              <ChevronLeft className="h-4 w-4" />
-              <span>Previous Ep</span>
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Retry</span>
             </button>
 
             <button
-              onClick={navigateToNext}
-              className="flex items-center justify-center gap-1.5 rounded-xl bg-primary hover:bg-opacity-95 px-4 py-2.5 text-xs font-bold text-white transition-all shadow"
+              type="button"
+              onClick={handleNextServer}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#141923] px-3.5 text-xs font-semibold text-white/75 hover:border-white/20 hover:bg-[#1b2230] hover:text-white transition-colors"
+              aria-label="Switch to next server"
             >
-              <span>Next Episode</span>
-              <ChevronRight className="h-4 w-4" />
+              <SkipForward className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Next Server</span>
             </button>
           </div>
-        </div>
 
-        {/* Quick Click-to-Play Episode List Panel */}
-        <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-2">
-              <MonitorPlay className="h-4 w-4 text-primary" />
-              <span>Episodes & Portal Seasons</span>
-            </span>
-
-            {availableSeasons.length > 0 && (
-              <select
-                value={seasonNum}
-                onChange={(e) => handleSeasonChange(Number(e.target.value))}
-                aria-label="Select season"
-                className="w-full sm:w-auto rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white focus:outline-none cursor-pointer"
+          {/* Right: Mark Watched + Previous + Next > */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {isCurrentWatched ? (
+              <button
+                type="button"
+                onClick={handleRewatch}
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-green-500/30 bg-green-500/15 px-3.5 text-xs font-semibold text-green-300 hover:bg-green-500/25 transition-colors"
               >
-                {availableSeasons.map((s) => (
-                  <option key={s.id} value={s.season_number} className="bg-neutral-900 text-white">
-                    {s.name} ({s.episode_count} Episodes)
-                  </option>
-                ))}
-              </select>
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Rewatch</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleMarkWatchedAndAdvance}
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-white/10 bg-[#141923] px-3.5 text-xs font-semibold text-white/85 hover:border-white/20 hover:bg-[#1b2230] transition-colors"
+              >
+                <Check className="h-3.5 w-3.5" />
+                <span>{nextEp ? "Watched · Next" : "Mark Watched"}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              disabled={!prevEp}
+              onClick={() =>
+                prevEp &&
+                router.push(`/watch/tv/${id}/${seasonNum}/${prevEp.episode_number}`)
+              }
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-white/10 bg-[#141923] px-4 text-xs font-semibold text-white/90 hover:border-white/20 hover:bg-[#1b2230] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+            >
+              Previous
+            </button>
+
+            <button
+              type="button"
+              disabled={!nextEp}
+              onClick={() =>
+                nextEp &&
+                router.push(`/watch/tv/${id}/${seasonNum}/${nextEp.episode_number}`)
+              }
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-primary/30 bg-[#1b263b] px-4 text-xs font-semibold text-white hover:bg-[#23314d] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+            >
+              <span>Next</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Episodes Section Below Divider */}
+        <section className="mt-6 border-t border-white/10 pt-6" aria-label="Season episodes">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="text-base sm:text-lg font-display font-bold text-white">
+              Episodes
+            </h2>
+
+            {validSeasons.length > 0 ? (
+              <label className="inline-flex items-center gap-2 text-xs text-white/75">
+                <span className="sr-only">Select season</span>
+                <select
+                  value={seasonNum}
+                  onChange={(e) => handleSeasonSwitch(Number(e.target.value))}
+                  aria-label="Select season"
+                  className="rounded-xl border border-white/10 bg-[#141923] px-3.5 py-2 text-xs font-semibold text-white focus:border-primary focus:outline-none"
+                >
+                  {validSeasons.map((s) => (
+                    <option
+                      key={s.id}
+                      value={s.season_number}
+                      className="bg-[#0e131d] text-white"
+                    >
+                      Season {s.season_number}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <span className="text-xs font-semibold text-white/60">
+                Season {seasonNum}
+              </span>
             )}
           </div>
 
-          {loadingSeason ? (
-            <div className="flex justify-center py-12">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          {episodesLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <div key={idx} className="space-y-2">
+                  <div className="aspect-video w-full rounded-2xl bg-[#161c28] animate-pulse border border-white/5" />
+                  <div className="h-4 w-28 rounded bg-white/10 animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : episodes.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm text-white/60">
+              No episode list available for Season {seasonNum}.
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-              {seasonDetail.episodes?.map((ep) => {
-                const isActive = ep.episode_number === episodeNum;
-                const epProgress = getProgress("tv", titleId, seasonNum, ep.episode_number);
-                const progressPct = epProgress?.progress_percent ?? 0;
-                const isCompleted = Boolean(epProgress?.completed);
-                const thumbUrl = ep.still_path
-                  ? `https://image.tmdb.org/t/p/w500${ep.still_path}`
-                  : null;
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {episodes.map((ep) => {
+                const isCurrent = ep.episode_number === episodeNum;
+                const isEpWatched = isEpisodeCompleted(
+                  "tv",
+                  numericId,
+                  seasonNum,
+                  ep.episode_number
+                );
                 return (
                   <button
                     key={ep.id}
-                    onClick={() => router.push(`/watch/tv/${titleId}/${seasonNum}/${ep.episode_number}`)}
-                    data-testid={`tv-episode-item-${ep.episode_number}`}
-                    className={`group/ep flex flex-col items-start p-2.5 rounded-xl border text-left transition-all relative overflow-hidden ${
-                      isActive
-                        ? "bg-primary/20 border-primary shadow-sm shadow-primary/20"
-                        : "theme-panel hover:border-primary hover:bg-primary/5"
+                    type="button"
+                    onClick={() =>
+                      router.push(`/watch/tv/${id}/${seasonNum}/${ep.episode_number}`)
+                    }
+                    className={`group text-left rounded-2xl transition-all focus-visible:outline-none ${
+                      isCurrent
+                        ? "ring-2 ring-primary"
+                        : "hover:translate-y-[-2px]"
                     }`}
                   >
-                    <EpisodeThumbnailWithProgress
-                      thumbnail={thumbUrl}
-                      title={ep.name || `Episode ${ep.episode_number}`}
-                      episodeNumber={ep.episode_number}
-                      progressPercent={progressPct}
-                      completed={isCompleted}
-                      aspectRatio="video"
-                      className="mb-2 w-full"
-                    />
-                    <div className="flex items-center justify-between w-full text-[10px] font-mono text-on-surface-variant">
-                      <span className={isActive ? "text-primary font-bold" : ""}>
-                        EP {ep.episode_number}
-                      </span>
-                      {isCompleted ? (
-                        <span className="text-emerald-400 font-semibold text-[9px]">Watched</span>
-                      ) : progressPct > 0 ? (
-                        <span className="text-primary font-semibold text-[9px]">{Math.round(progressPct)}%</span>
-                      ) : null}
+                    <div
+                      className={`relative aspect-video w-full overflow-hidden rounded-2xl border transition-colors ${
+                        isCurrent
+                          ? "border-primary/60 bg-[#1a2333]"
+                          : "border-white/10 bg-[#151c28] group-hover:border-white/25"
+                      }`}
+                    >
+                      {ep.still_path ? (
+                        <img
+                          src={`https://image.tmdb.org/t/p/w500${ep.still_path}`}
+                          alt={ep.name || `Episode ${ep.episode_number}`}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-white/30">
+                          <ImageIcon className="h-6 w-6" />
+                        </div>
+                      )}
+
+                      {isCurrent && (
+                        <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-black/80 px-3 py-1 text-[11px] font-bold text-primary border border-primary/40">
+                            <Play className="h-3 w-3 fill-current" /> Now Playing
+                          </span>
+                        </div>
+                      )}
+
+                      {isEpWatched && !isCurrent && (
+                        <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-green-500/20 border border-green-500/40 px-2 py-0.5 text-[10px] font-semibold text-green-300 backdrop-blur-sm">
+                          <Check className="h-3 w-3" /> Watched
+                        </span>
+                      )}
                     </div>
-                    <span className="text-xs font-semibold truncate w-full mt-0.5">
-                      {ep.name || `Episode ${ep.episode_number}`}
-                    </span>
+
+                    <div className="mt-2 flex items-center justify-between gap-2 px-1">
+                      <p
+                        className={`text-xs font-semibold truncate ${
+                          isCurrent ? "text-primary" : "text-white/85 group-hover:text-white"
+                        }`}
+                      >
+                        Episode {ep.episode_number}
+                        {ep.name && ep.name !== `Episode ${ep.episode_number}`
+                          ? ` · ${ep.name}`
+                          : ""}
+                      </p>
+                    </div>
                   </button>
                 );
               })}
             </div>
           )}
-        </div>
-
+        </section>
       </div>
-
-      {/* 4. Compatibility Warning Modal Overlay */}
-      {showCompatibilityWarning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-sm rounded-2xl border border-amber-500/20 bg-neutral-950 p-6 shadow-2xl text-white space-y-4">
-            <div className="flex items-center gap-2.5 text-amber-500">
-              <AlertTriangle className="h-5 w-5" />
-              <h3 className="font-semibold text-sm">Disable Containment Sandbox?</h3>
-            </div>
-            
-            <p className="text-xs text-white/70 leading-relaxed">
-              Compatibility mode removes the sandboxed frame wall. Third-party ad scripts, popup links, and redirects will be allowed to execute natively in your browser. 
-            </p>
-            <p className="text-[10px] text-amber-400 font-semibold leading-snug">
-              Ensure you have an active ad blocker running before continuing.
-            </p>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setShowCompatibilityWarning(false)}
-                className="flex-1 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-xs font-semibold transition-colors text-white"
-              >
-                Keep Protected
-              </button>
-              <button
-                onClick={acceptCompatibilityMode}
-                className="flex-1 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-neutral-950 text-xs font-bold transition-colors"
-              >
-                Disable Sandbox
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { searchMulti, TMDBTitle } from "./tmdb";
 import { searchAnime, type AniListMedia, getAnimeDisplayTitle, getAnimePoster } from "./anilist";
+import { filterTmdbForKidsMode, filterAnimeForKidsMode } from "./kids-mode";
 
 export interface AutocompleteSuggestion {
   id: string;
@@ -15,12 +16,16 @@ export interface AutocompleteSuggestion {
 export function interleaveAutocompleteSuggestions(
   tmdbItems: TMDBTitle[],
   animeItems: AniListMedia[],
-  maxTotal = 8
+  maxTotal = 8,
+  kidMode = false
 ): AutocompleteSuggestion[] {
   const suggestions: AutocompleteSuggestion[] = [];
   const maxEach = Math.ceil(maxTotal / 2);
 
-  const normalizedTmdb: AutocompleteSuggestion[] = (tmdbItems || [])
+  const safeTmdb = filterTmdbForKidsMode(tmdbItems || [], kidMode);
+  const safeAnime = filterAnimeForKidsMode(animeItems || [], kidMode);
+
+  const normalizedTmdb: AutocompleteSuggestion[] = safeTmdb
     .filter((item) => (item.title || item.name) && (item.media_type === "movie" || item.media_type === "tv"))
     .slice(0, maxEach)
     .map((item) => {
@@ -42,7 +47,7 @@ export function interleaveAutocompleteSuggestions(
       };
     });
 
-  const normalizedAnime: AutocompleteSuggestion[] = (animeItems || [])
+  const normalizedAnime: AutocompleteSuggestion[] = safeAnime
     .slice(0, maxEach)
     .map((item) => {
       const title = getAnimeDisplayTitle(item);
@@ -79,15 +84,17 @@ const MAX_CACHE_SIZE = 100;
 
 export async function fetchRealtimeAutocomplete(
   query: string,
-  maxTotal = 8
+  maxTotal = 8,
+  kidMode = false
 ): Promise<AutocompleteSuggestion[]> {
   const normalizedQuery = query.trim().toLowerCase();
   if (normalizedQuery.length < 2) {
     return [];
   }
 
-  if (autocompleteCache.has(normalizedQuery)) {
-    return autocompleteCache.get(normalizedQuery)!;
+  const cacheKey = `${kidMode ? "kid" : "std"}_${maxTotal}_${normalizedQuery}`;
+  if (autocompleteCache.has(cacheKey)) {
+    return autocompleteCache.get(cacheKey)!;
   }
 
   try {
@@ -100,13 +107,18 @@ export async function fetchRealtimeAutocomplete(
     const animeItems: AniListMedia[] =
       animeResult.status === "fulfilled" ? animeResult.value.media || [] : [];
 
-    const suggestions = interleaveAutocompleteSuggestions(tmdbItems, animeItems, maxTotal);
+    const suggestions = interleaveAutocompleteSuggestions(
+      tmdbItems,
+      animeItems,
+      maxTotal,
+      kidMode
+    );
 
     if (autocompleteCache.size >= MAX_CACHE_SIZE) {
       const firstKey = autocompleteCache.keys().next().value;
       if (firstKey) autocompleteCache.delete(firstKey);
     }
-    autocompleteCache.set(normalizedQuery, suggestions);
+    autocompleteCache.set(cacheKey, suggestions);
 
     return suggestions;
   } catch (err) {
