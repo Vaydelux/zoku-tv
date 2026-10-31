@@ -69,20 +69,53 @@
   --orb-c: radial-gradient(circle, color-mix(in srgb, #e11d48 32%, #fb7185 28%) 0%, transparent 72%);
 }
 
+html {
+  scroll-behavior: smooth;
+  background-color: var(--background);
+}
+
 html, body {
   background-color: var(--background);
-  background-image: var(--background-gradient);
-  background-attachment: fixed;
-  background-size: cover;
   color: var(--on-surface);
   font-family: var(--font-sans), sans-serif;
-  transition: background-color 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-              color 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 100vh;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+}
+
+/* Dedicated GPU-composited atmospheric background layer (avoids background-attachment:fixed CPU repaints on 32-bit TV WebViews) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--background);
+  background-image: var(--background-gradient);
+  background-size: cover;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+/* Smooth GPU-composited route transition (transform + opacity only) */
+.page-route-transition {
+  animation: page-route-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  backface-visibility: hidden;
+}
+
+@keyframes page-route-enter {
+  from {
+    opacity: 0.92;
+    transform: translate3d(0, 6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 /* Unified page shell that preserves the login-style atmospheric gradient background across all pages */
@@ -448,13 +481,15 @@ input[type="reset"]:hover:not(:disabled),
   transform: translateY(-1px);
 }
 
-/* Poster / title cards — brand-tinted depth */
+/* Poster / title cards — brand-tinted depth + GPU layer promotion */
 .poster-card {
   box-shadow: var(--shadow-card);
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
   transition:
-    box-shadow 0.28s ease,
-    transform 0.28s ease,
-    border-color 0.2s ease;
+    box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.18s ease;
 }
 
 .poster-card:hover {
@@ -609,7 +644,6 @@ input[type="reset"]:disabled,
   overflow: hidden;
   background-color: var(--background);
   background-image: var(--background-gradient);
-  background-attachment: fixed;
   background-size: cover;
   color: var(--on-surface);
 }
@@ -684,39 +718,25 @@ input[type="reset"]:disabled,
 }
 
 .rail-scroll-track {
-  transition:
-    opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    filter 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  cursor: grab;
 }
 
-.rail-scroll-track[data-scrolling="right"] .rail-card-slot {
-  animation: rail-glide-right 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+.rail-scroll-track[data-dragging="true"] {
+  cursor: grabbing !important;
+  user-select: none !important;
 }
 
-.rail-scroll-track[data-scrolling="left"] .rail-card-slot {
-  animation: rail-glide-left 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+.rail-scroll-track[data-dragging="true"] .poster-card {
+  pointer-events: none;
 }
 
-@keyframes rail-glide-right {
-  0% {
-    opacity: 0.76;
-    transform: translateX(8px) scale(0.985);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes rail-glide-left {
-  0% {
-    opacity: 0.76;
-    transform: translateX(-8px) scale(0.985);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
+.rail-card-slot {
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
 }
 
 /* Default Font Stack Variables & Standardized Keyboard / 10-Foot TV Focus Ring System */
@@ -747,25 +767,45 @@ html[data-tv-mode="true"] [data-tv-focusable="true"]:focus {
   outline: 3px solid var(--primary);
   outline-offset: 3px;
   box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 34%, transparent), var(--shadow-glow);
-  transform: translateY(-4px) scale(1.035);
+  transform: translate3d(0, -4px, 0) scale(1.03);
   z-index: 25;
 }
 
-/* Android TV System WebView & Smart TV GPU / 10-Foot Optimizations */
+/* Android TV System WebView, 32-Bit Browsers, Downloader by AFTVnews, & 60fps Butter Mode Optimizations */
 html[data-tv-webview="true"] .ambient-orb,
-html[data-tv-webview="true"] .ambient-dot {
+html[data-perf-mode="60fps"] .ambient-orb {
   animation: none !important;
-  filter: blur(36px);
+  filter: none !important;
+  opacity: 0.28;
+}
+
+html[data-tv-webview="true"] .ambient-particles,
+html[data-perf-mode="60fps"] .ambient-particles,
+html[data-tv-webview="true"] .ambient-dot,
+html[data-perf-mode="60fps"] .ambient-dot {
+  display: none !important;
+  animation: none !important;
 }
 
 html[data-tv-webview="true"] .glass-panel,
 html[data-tv-webview="true"] .theme-panel,
-html[data-tv-webview="true"] .site-nav {
-  backdrop-filter: blur(8px);
+html[data-tv-webview="true"] .site-nav,
+html[data-perf-mode="60fps"] .glass-panel,
+html[data-perf-mode="60fps"] .theme-panel,
+html[data-perf-mode="60fps"] .site-nav,
+html[data-perf-mode="60fps"] .poster-card [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-html[data-tv-mode="true"] .rail-nav-btn {
-  opacity: 0.92;
+html[data-perf-mode="60fps"] .site-nav {
+  background-color: color-mix(in srgb, var(--background) 96%, var(--surface));
+}
+
+html[data-tv-mode="true"] .rail-nav-btn,
+html[data-tv-webview="true"] .rail-nav-btn,
+html[data-perf-mode="60fps"] .rail-nav-btn {
+  opacity: 0.96;
 }
 
 .safe-area-bottom {

@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { PlayCircle, Trash2 } from "lucide-react";
 import { ContinueWatchingCard } from "@/components/ContinueWatchingCard";
 import { RailNavButton } from "@/components/RailNavButton";
@@ -22,6 +21,7 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
 
   const {
     rowRef,
+    progressBarRef,
     showLeftArrow,
     showRightArrow,
     scrollProgress,
@@ -35,7 +35,7 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
   return (
     <section
       aria-label="Continue Watching"
-      className="group/rail relative space-y-2.5 py-2.5 sm:space-y-3 sm:py-3"
+      className="rail-section group/rail relative space-y-2.5 py-2.5 sm:space-y-3 sm:py-3"
     >
       <div className="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2.5">
@@ -65,8 +65,11 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
               aria-hidden
             >
               <div
-                className="h-full rounded-full bg-primary transition-all duration-300"
-                style={{ width: `${Math.max(16, Math.round(scrollProgress * 100))}%` }}
+                ref={progressBarRef}
+                className="h-full w-full origin-left rounded-full bg-primary transition-transform duration-150 will-change-transform"
+                style={{
+                  transform: `scaleX(${Math.max(0.16, scrollProgress).toFixed(3)})`,
+                }}
               />
             </div>
           )}
@@ -93,19 +96,12 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
           className="rail-scroll-track custom-scrollbar flex gap-3.5 overflow-x-auto overflow-y-visible px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8"
         >
           {items.map((item, idx) => (
-            <motion.div
+            <div
               key={`${item.media_type}_${item.tmdbId ?? item.anilistId}_${idx}`}
-              initial={{ opacity: 0, y: 8, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{
-                duration: 0.28,
-                delay: Math.min(idx * 0.03, 0.24),
-                ease: [0.22, 1, 0.36, 1],
-              }}
-              className="rail-card-slot relative z-0 flex-shrink-0 hover:z-20"
+              className="rail-card-slot relative z-0 flex-shrink-0 hover:z-20 focus-within:z-20"
             >
               <ContinueWatchingCard item={item} />
-            </motion.div>
+            </div>
           ))}
         </div>
 

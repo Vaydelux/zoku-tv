@@ -13,7 +13,8 @@ import {
   ChevronDown, 
   Clapperboard,
   Wifi,
-  WifiOff
+  WifiOff,
+  Zap
 } from "lucide-react";
 import { useSessionStore, useRailFilterStore, useSearchHistoryStore, logout } from "@/stores";
 import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
@@ -21,6 +22,7 @@ import { getNavbarNetworkStatus } from "@/lib/network-status";
 import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
 import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
+import { usePerfMode } from "@/hooks/usePerfMode";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -28,6 +30,7 @@ export function Navbar() {
   const { user, profiles, currentProfile, setProfile } = useSessionStore();
   const { activeFilter, filterOptions, setActiveFilter } = useRailFilterStore();
   const { addQuery } = useSearchHistoryStore();
+  const { is60FpsActive, togglePerfMode, isAutoDetectedTvOr32Bit } = usePerfMode();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isStatusPopoverOpen, setIsStatusPopoverOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
@@ -222,6 +225,36 @@ export function Navbar() {
                 </div>
               )}
             </div>
+
+            {/* 60fps TV / Virtual Mouse Butter Mode Quick Toggle */}
+            <button
+              type="button"
+              onClick={togglePerfMode}
+              data-testid="navbar-perf-mode-toggle"
+              aria-pressed={is60FpsActive}
+              aria-label={
+                is60FpsActive
+                  ? "60fps Butter Mode active. Click to switch to Standard visuals"
+                  : "Enable 60fps Butter Mode for Android TV and virtual mouse browsers"
+              }
+              title={
+                is60FpsActive
+                  ? `60fps Butter Mode Active${isAutoDetectedTvOr32Bit ? " (TV/32-bit Auto-Detected)" : ""} — Click to toggle`
+                  : "Enable 60fps Butter Mode (GPU-composited transitions & 32-bit TV optimization)"
+              }
+              className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 sm:px-2.5 font-mono text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider transition-[transform,border-color,background-color,color] duration-150 active:scale-95 ${
+                is60FpsActive
+                  ? "border-primary/60 bg-primary/15 text-primary shadow-sm"
+                  : "border-border-custom bg-surface/80 text-on-surface-variant hover:border-primary/45 hover:text-on-surface"
+              }`}
+            >
+              <Zap
+                className={`h-3 w-3 shrink-0 ${
+                  is60FpsActive ? "fill-primary text-primary" : "text-on-surface-variant"
+                }`}
+              />
+              <span>{is60FpsActive ? "60FPS ON" : "60FPS"}</span>
+            </button>
 
             {/* Search Bar with Voice Input & Real-time Autocomplete */}
             <form onSubmit={handleSearchSubmit} className={`relative hidden sm:block ${showNavAutocomplete ? "z-50" : "z-20"}`}>

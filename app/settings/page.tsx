@@ -20,6 +20,7 @@ import {
   User,
   Activity,
   Shield,
+  Zap,
 } from "lucide-react";
 import {
   useSessionStore,
@@ -44,6 +45,7 @@ import {
   THEME_OPTIONS,
   type AppearanceMode,
 } from "@/lib/themes";
+import { usePerfMode } from "@/hooks/usePerfMode";
 
 type SettingsSection =
   | "theme"
@@ -75,6 +77,12 @@ function SettingsPageContent() {
   const { iframeMode, setIframeMode } = useEmbedStore();
   const clearContinueWatching = useContinueWatchingStore((s) => s.clearContinueWatching);
   const clearWatchHistory = useWatchHistoryStore((s) => s.clearHistory);
+  const {
+    preference: perfPreference,
+    is60FpsActive,
+    isAutoDetectedTvOr32Bit,
+    setPreference: setPerfPreference,
+  } = usePerfMode();
 
   const [activeTab, setActiveTab] = useState<SettingsSection>("theme");
   const [localAppearance, setLocalAppearance] = useState<AppearanceMode>(DEFAULT_APPEARANCE);
@@ -535,6 +543,78 @@ function SettingsPageContent() {
                         <Check className="h-3.5 w-3.5 text-primary ml-auto shrink-0" />
                       )}
                     </button>
+                  </div>
+                </div>
+
+                {/* 60fps Butter Smoothness & 32-Bit Android TV / Virtual Mouse Mode */}
+                <div
+                  data-testid="settings-perf-mode-card"
+                  className="rounded-2xl border border-border-custom bg-background/40 p-4 space-y-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
+                        <Zap className="h-4 w-4 text-primary" />
+                        <span>60fps Butter Mode &amp; Android TV / Downloader Optimization</span>
+                      </p>
+                      <p className="text-[11px] text-on-surface-variant">
+                        Uses GPU-composited transform/opacity pipelines, zero-repaint backgrounds, and virtual-mouse rail controls for 32-bit Android TV and Downloader by AFTVnews.
+                      </p>
+                    </div>
+                    <span className="rounded-md border border-primary/40 bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase text-primary">
+                      {is60FpsActive ? "60fps Active" : "Standard"}
+                      {isAutoDetectedTvOr32Bit ? " · TV/32-Bit Detected" : ""}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {(
+                      [
+                        {
+                          id: "auto",
+                          label: "Auto (TV / 32-Bit)",
+                          desc: "Auto-enables on Android TV, Fire TV & Downloader",
+                        },
+                        {
+                          id: "60fps",
+                          label: "Always 60fps Butter",
+                          desc: "Force maximum GPU compositing on any device",
+                        },
+                        {
+                          id: "standard",
+                          label: "Standard Desktop",
+                          desc: "Full multi-layer glass blurs & ambient orbs",
+                        },
+                      ] as const
+                    ).map((opt) => {
+                      const selected = perfPreference === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          data-testid={`settings-perf-mode-${opt.id}`}
+                          onClick={() => {
+                            setPerfPreference(opt.id);
+                            notifySuccess(`Performance mode set to ${opt.label}`);
+                          }}
+                          className={`flex flex-col items-start rounded-xl border p-3 text-left transition-[transform,border-color,background-color] duration-150 ${
+                            selected
+                              ? "border-primary bg-primary/10 ring-1 ring-primary"
+                              : "border-border-custom bg-background/40 hover:border-primary/50"
+                          }`}
+                        >
+                          <div className="flex w-full items-center justify-between gap-2">
+                            <span className="text-xs font-semibold text-on-surface">
+                              {opt.label}
+                            </span>
+                            {selected && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                          </div>
+                          <span className="mt-1 text-[10px] text-on-surface-variant leading-snug">
+                            {opt.desc}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

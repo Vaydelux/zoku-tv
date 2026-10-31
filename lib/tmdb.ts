@@ -379,7 +379,7 @@ const FALLBACK_TV: TMDBTitle[] = [
     overview:
       "Follow the lives of the Roy family as they contemplate their future once their aging father begins to step back from the media and entertainment conglomerate they control.",
     poster_path: "/7HW47XbkNQ5fiwQFYGWdw9gs144.jpg",
-    backdrop_path: "/ac0kn22V1c3Rn2R1ncabCx8c0UV.jpg",
+    backdrop_path: "/7HW47XbkNQ5fiwQFYGWdw9gs144.jpg",
     media_type: "tv",
     first_air_date: "2018-06-03",
     vote_average: 8.3,

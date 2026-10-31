@@ -4,10 +4,13 @@ import { useEffect } from "react";
 import {
   ensureRailItemVisible,
   findNearestSpatialCandidate,
-  isAndroidTvOrSmartTvUserAgent,
   isDirectionalKey,
   type SpatialRect,
 } from "@/lib/tv-navigation";
+import {
+  readStoredPerfPreference,
+  syncPerfModeToDocument,
+} from "@/hooks/usePerfMode";
 
 const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -43,22 +46,19 @@ function isEditableInput(el: Element | null): boolean {
 }
 
 /**
- * Global Android TV Browser WebView & 10-Foot D-Pad Spatial Navigation Controller.
- * Enables seamless directional arrow key navigation across rails, poster cards,
- * nav links, and controls on Android TV (Google TV, Fire TV, Shield, TV Bro, etc.).
+ * Global Android TV Browser WebView, 32-Bit Performance Mode, & 10-Foot D-Pad / Virtual Mouse Controller.
+ * Enables seamless directional arrow key navigation and virtual mouse compatibility on
+ * Android TV, Fire TV, Downloader by AFTVnews, Shield, and TV Bro.
  */
 export function TVSpatialNavProvider() {
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return;
 
     const html = document.documentElement;
-    if (isAndroidTvOrSmartTvUserAgent(window.navigator.userAgent || "")) {
-      html.dataset.tvWebview = "true";
-      html.dataset.tvMode = "true";
-    }
+    syncPerfModeToDocument(readStoredPerfPreference());
 
     const handlePointerMove = () => {
-      if (!html.dataset.tvWebview) {
+      if (!html.dataset.tvWebview && html.dataset.perfMode !== "60fps") {
         delete html.dataset.tvMode;
       }
     };

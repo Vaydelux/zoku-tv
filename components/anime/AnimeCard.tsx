@@ -141,7 +141,7 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
       onBlur={() => setIsHovered(false)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`poster-card group/card relative aspect-video ${widthClasses} cursor-pointer overflow-hidden rounded-xl border border-border-custom bg-surface select-none transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary focus-visible:-translate-y-1 focus-visible:scale-[1.02] focus-visible:border-primary`}
+      className={`poster-card group/card relative aspect-video ${widthClasses} cursor-pointer overflow-hidden rounded-xl border border-border-custom bg-surface select-none transition-[transform,border-color,box-shadow] duration-200 ease-out will-change-transform hover:-translate-y-1 hover:scale-[1.02] hover:border-primary focus-visible:-translate-y-1 focus-visible:scale-[1.02] focus-visible:border-primary`}
     >
       {imageLoading && (
         <div className="absolute inset-0 flex animate-pulse items-center justify-center bg-neutral-900/90">
@@ -152,9 +152,11 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
       <img
         src={imagePath}
         alt={name}
+        decoding="async"
+        draggable={false}
         onLoad={() => setImageLoading(false)}
-        className={`h-full w-full object-cover transition-all duration-500 group-hover/card:scale-105 group-focus-within/card:scale-105 ${
-          imageLoading ? "scale-95 opacity-0 blur-md" : "scale-100 opacity-100 blur-0"
+        className={`h-full w-full object-cover transition-[transform,opacity] duration-300 ease-out will-change-transform group-hover/card:scale-105 group-focus-within/card:scale-105 ${
+          imageLoading ? "scale-95 opacity-0" : "scale-100 opacity-100"
         }`}
         loading="lazy"
       />

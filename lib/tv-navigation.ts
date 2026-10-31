@@ -19,17 +19,126 @@ export function isDirectionalKey(key: string): key is DirectionalKey {
   );
 }
 
+export type PerfModePreference = "auto" | "60fps" | "standard";
+
+export const PERF_MODE_STORAGE_KEY = "zoku_perf_mode";
+export const PERF_MODE_CHANGE_EVENT = "zoku:perf-mode-change";
+
 /**
- * Detects Android TV System WebView, Fire TV, Google TV, Shield TV, and Smart TV browsers.
+ * Detects Android TV System WebView, Fire TV, Google TV, Shield TV, Smart TV browsers,
+ * and virtual-mouse TV browsers such as Downloader by AFTVnews.
  */
 export function isAndroidTvOrSmartTvUserAgent(ua: string): boolean {
   if (!ua) return false;
   return (
-    /\b(Android\s+TV|GoogleTV|SmartTV|SMART-TV|BRAVIA|AFT[A-Z0-9]+|SHIELD\s+Android\s+TV|Chromecast|MiBox|MIBOX|ADT-\d|Tizen|Web0S|webOS|NetCast|Viera|HbbTV|TV\s*Bro|BrowseHere|Puffin\s*TV)\b/i.test(
+    /\b(Android\s+TV|GoogleTV|SmartTV|SMART-TV|BRAVIA|AFT[A-Z0-9]*|Silk|SHIELD\s+Android\s+TV|Chromecast|MiBox|MIBOX|ADT-\d|Tizen|Web0S|webOS|NetCast|Viera|HbbTV|TV\s*Bro|BrowseHere|Puffin\s*TV|Downloader|AFTVnews|Fire\s*TV|Nexus\s*Player)\b/i.test(
       ua
     ) ||
-    (/Android/i.test(ua) && /\b(TV|Large\s+Screen)\b/i.test(ua))
+    (/Android/i.test(ua) && /\b(TV|Large\s+Screen|AFT|Dalvik)\b/i.test(ua))
   );
+}
+
+/**
+ * Detects 32-bit Android/Linux architectures (armv7l, armv8l, armeabi-v7a, i686),
+ * Android WebView (; wv), TV browsers (Downloader by AFTVnews, Fire TV, Android TV),
+ * or constrained CPU/RAM hardware where 60fps compositor optimizations are essential.
+ */
+export function is32BitOrLowSpecTvEnvironment(params: {
+  userAgent?: string;
+  platform?: string;
+  hardwareConcurrency?: number;
+  deviceMemory?: number;
+}): boolean {
+  const ua = params.userAgent || "";
+  const platform = params.platform || "";
+
+  if (isAndroidTvOrSmartTvUserAgent(ua)) {
+    return true;
+  }
+
+  // 32-bit ARM / x86 indicators in User-Agent or navigator.platform
+  const arch32Pattern =
+    /\b(armv7l|armv8l|armeabi-v7a|armeabi|aarch64_32|i686|i386|x86_32|Linux\s+armv7|Linux\s+i686)\b/i;
+  if (arch32Pattern.test(ua) || arch32Pattern.test(platform)) {
+    return true;
+  }
+
+  // Android System WebView (; wv) on embedded/TV devices
+  if (/Android/i.test(ua) && /;\s*wv\)/i.test(ua)) {
+    return true;
+  }
+
+  // Low-core or low-RAM hardware typical of 32-bit Android TV / Fire TV sticks
+  if (
+    typeof params.hardwareConcurrency === "number" &&
+    params.hardwareConcurrency > 0 &&
+    params.hardwareConcurrency <= 4 &&
+    /Android|Linux/i.test(ua + " " + platform)
+  ) {
+    return true;
+  }
+
+  if (
+    typeof params.deviceMemory === "number" &&
+    params.deviceMemory > 0 &&
+    params.deviceMemory <= 2
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Resolves whether 60fps Butter Mode is active given user preference and hardware probe.
+ */
+export function resolveEffectivePerfMode(
+  preference: PerfModePreference,
+  isLowSpecOrTv: boolean
+): "60fps" | "standard" {
+  if (preference === "60fps") return "60fps";
+  if (preference === "standard") return "standard";
+  return isLowSpecOrTv ? "60fps" : "standard";
+}
+
+/**
+ * Computes horizontal rail scroll boundary booleans and normalized progress (0..1)
+ * with a 6px boundary deadzone to prevent unnecessary React state re-renders.
+ */
+export function computeRailScrollMetrics(params: {
+  scrollLeft: number;
+  scrollWidth: number;
+  clientWidth: number;
+}): {
+  canScrollLeft: boolean;
+  canScrollRight: boolean;
+  progress: number;
+  maxScroll: number;
+} {
+  const { scrollLeft, scrollWidth, clientWidth } = params;
+  const maxScroll = Math.max(0, scrollWidth - clientWidth);
+  const canScrollLeft = scrollLeft > 6;
+  const canScrollRight = maxScroll > 6 && scrollLeft < maxScroll - 6;
+  const progress =
+    maxScroll > 0 ? Math.min(1, Math.max(0, scrollLeft / maxScroll)) : 0;
+
+  return {
+    canScrollLeft,
+    canScrollRight,
+    progress,
+    maxScroll,
+  };
+}
+
+/**
+ * Determines whether a pointer drag gesture on a horizontal rail exceeded the click
+ * suppression threshold so releasing a virtual mouse drag does not open a card link.
+ */
+export function shouldSuppressRailClickAfterDrag(
+  dragDistancePx: number,
+  thresholdPx = 8
+): boolean {
+  return Math.abs(dragDistancePx) >= thresholdPx;
 }
 
 /**
