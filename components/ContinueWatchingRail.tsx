@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import { PlayCircle, Trash2 } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ContinueWatchingCard } from "@/components/ContinueWatchingCard";
 import { RailNavButton } from "@/components/RailNavButton";
 import { useSmoothRailScroll } from "@/hooks/useSmoothRailScroll";
@@ -12,6 +14,25 @@ interface ContinueWatchingRailProps {
 }
 
 export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
+  const shouldReduceMotion = useReducedMotion();
+  const cardTransition = useMemo(
+    () =>
+      shouldReduceMotion
+        ? { duration: 0 }
+        : {
+            layout: {
+              type: "spring",
+              stiffness: 380,
+              damping: 32,
+              mass: 0.75,
+            },
+            opacity: { duration: 0.22, ease: "easeOut" },
+            scale: { duration: 0.22, ease: "easeOut" },
+            y: { duration: 0.2, ease: "easeOut" },
+          },
+    [shouldReduceMotion]
+  );
+
   const clearContinueWatching = useContinueWatchingStore(
     (state) => state.clearContinueWatching
   );
@@ -90,20 +111,48 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
           onClick={() => handleScroll("left")}
         />
 
-        <div
+        <motion.div
           ref={rowRef}
           data-scrolling={isScrolling ? (scrollDirection ?? "right") : undefined}
-          className="rail-scroll-track custom-scrollbar flex gap-3.5 overflow-x-auto overflow-y-visible px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8"
+          data-velocity-scroll="framer-motion"
+          whileTap={{ cursor: "grabbing" }}
+          className="rail-scroll-track custom-scrollbar flex gap-3.5 overflow-x-auto overflow-y-visible px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8 select-none"
         >
-          {items.map((item, idx) => (
-            <div
-              key={`${item.media_type}_${item.tmdbId ?? item.anilistId}_${idx}`}
-              className="rail-card-slot relative z-0 flex-shrink-0 hover:z-20 focus-within:z-20"
-            >
-              <ContinueWatchingCard item={item} />
-            </div>
-          ))}
-        </div>
+          <AnimatePresence initial={false}>
+            {items.map((item, idx) => {
+              const baseKey = `${item.media_type}_${item.tmdbId ?? item.anilistId ?? idx}`;
+              return (
+                <motion.div
+                  key={baseKey}
+                  layout="position"
+                  initial={
+                    shouldReduceMotion
+                      ? false
+                      : { opacity: 0, scale: 0.94, y: 3 }
+                  }
+                  animate={{
+                    opacity: 1,
+                    scale: 1,
+                    y: 0,
+                  }}
+                  exit={
+                    shouldReduceMotion
+                      ? undefined
+                      : {
+                          opacity: 0,
+                          scale: 0.92,
+                          transition: { duration: 0.16, ease: "easeIn" },
+                        }
+                  }
+                  transition={cardTransition}
+                  className="rail-card-slot relative z-0 flex-shrink-0 hover:z-20 focus-within:z-20 will-change-transform"
+                >
+                  <ContinueWatchingCard item={item} />
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
 
         <div
           className={`rail-edge-fade-right ${

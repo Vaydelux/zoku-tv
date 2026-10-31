@@ -7,6 +7,7 @@ import { useWatchlistStore, useWatchHistoryStore } from "@/stores";
 import type { AniListMedia } from "@/lib/anilist";
 import { getAnimeDetails, getAnimeDisplayTitle, getAnimePoster } from "@/lib/anilist";
 import { isReleasedWithinLast30Days } from "@/lib/media-types";
+import { useCardPlayProgress } from "@/lib/card-play-progress";
 
 interface AnimeCardProps {
   anime: AniListMedia;
@@ -17,6 +18,7 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
   const router = useRouter();
   const { addItem, removeItem, hasItem } = useWatchlistStore();
   const { isCompleted, toggleCompleted } = useWatchHistoryStore();
+  const playProgress = useCardPlayProgress("anime", anime.id);
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [synopsis, setSynopsis] = useState(anime.description?.trim() || "");
@@ -186,6 +188,12 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
                 <span>{anime.episodes} EP</span>
               </>
             ) : null}
+            {playProgress.hasProgress && (
+              <>
+                <span>·</span>
+                <span className="text-primary font-bold">{playProgress.progressPercent}%</span>
+              </>
+            )}
             {watchedCompleted && (
               <>
                 <span>·</span>
@@ -287,6 +295,12 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
                 <span>·</span>
               </>
             )}
+            {playProgress.hasProgress && (
+              <>
+                <span className="text-primary font-bold">{playProgress.label}</span>
+                <span>·</span>
+              </>
+            )}
             <span>{year}</span>
             <span>·</span>
             <span className="uppercase text-primary font-semibold">Anime</span>
@@ -308,10 +322,25 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
 
           <span className="inline-flex items-center gap-1.5 pt-0.5 text-[11px] font-semibold text-primary">
             <Play className="h-3 w-3 fill-primary" />
-            <span>Details & Watch</span>
+            <span>{playProgress.hasProgress ? "Resume" : "Details & Watch"}</span>
           </span>
         </div>
       </div>
+
+      {/* Subtle horizontal progress bar for items with existing play progress */}
+      {playProgress.hasProgress && (
+        <div
+          data-testid="card-play-progress-bar"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-1 bg-white/20 backdrop-blur-xs overflow-hidden"
+          title={`${playProgress.progressPercent}% watched`}
+          aria-label={`${playProgress.progressPercent}% watched`}
+        >
+          <div
+            className="h-full bg-primary shadow-[0_0_8px_var(--primary-glow)] transition-all duration-300 ease-out"
+            style={{ width: `${playProgress.progressPercent}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -10,6 +10,8 @@ import {
   isTvSelectKey,
   getNextGridFocusIndex,
   findNearestSpatialCandidate,
+  computeDragVelocity,
+  computeFrictionStep,
   type SpatialRect,
 } from "./tv-navigation";
 
@@ -151,6 +153,57 @@ describe("TV Browser & Directional Navigation Logic (Phase 9 & 60fps TV Mode)", 
     assert.equal(isTvSelectKey({ key: "Select" }), true);
     assert.equal(isTvSelectKey({ keyCode: 23 }), true);
     assert.equal(isTvSelectKey({ key: "ArrowRight" }), false);
+  });
+
+  it("calculates velocity-based momentum accurately for virtual mouse flick and drag", () => {
+    // Pointer dragged left by 100px over 50ms -> rail scrollLeft should increase (positive velocity)
+    const samplesLeft = [
+      { x: 300, time: 100 },
+      { x: 250, time: 125 },
+      { x: 200, time: 150 },
+    ];
+    const velocityLeft = computeDragVelocity(samplesLeft, 150, 120);
+    // dx = -100, dt = 50, px/ms = -2, -(-2) * 16.67 = 33.34
+    assert.ok(velocityLeft > 30 && velocityLeft < 35, `Velocity was ${velocityLeft}`);
+
+    // Pointer dragged right by 80px over 40ms -> rail scrollLeft should decrease (negative velocity)
+    const samplesRight = [
+      { x: 100, time: 200 },
+      { x: 180, time: 240 },
+    ];
+    const velocityRight = computeDragVelocity(samplesRight, 240, 120);
+    assert.ok(velocityRight < -30 && velocityRight > -35, `Velocity was ${velocityRight}`);
+
+    // Stationary pointer at release -> velocity is 0
+    const samplesStill = [
+      { x: 100, time: 100 },
+      { x: 100, time: 160 },
+    ];
+    const velocityStill = computeDragVelocity(samplesStill, 160, 120);
+    assert.equal(velocityStill, 0);
+
+    // Stale samples outside time window -> velocity is 0
+    const velocityStale = computeDragVelocity(samplesLeft, 500, 120);
+    assert.equal(velocityStale, 0);
+  });
+
+  it("applies friction decay step until velocity drops below threshold", () => {
+    let vel = 20.0;
+    const friction = 0.9;
+    let steps = 0;
+    let totalDisplacement = 0;
+
+    while (steps < 100) {
+      const step = computeFrictionStep(vel, friction, 0.25);
+      totalDisplacement += step.delta;
+      vel = step.nextVelocity;
+      steps++;
+      if (step.isStopped) break;
+    }
+
+    assert.equal(vel, 0);
+    assert.ok(steps > 5 && steps < 50, `Decay took ${steps} steps`);
+    assert.ok(totalDisplacement > 100, `Total displacement was ${totalDisplacement}`);
   });
 });
 

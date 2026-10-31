@@ -1,22 +1,32 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useId, useRef } from "react";
 import {
   History,
   RotateCcw,
   Trash2,
   RefreshCw,
   Check,
+  ArrowUpDown,
+  ChevronDown,
+  Clock,
+  Calendar,
+  CheckCircle2,
 } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { WatchHistoryCard } from "@/components/WatchHistoryCard";
 import { RailNavButton } from "@/components/RailNavButton";
 import { useSmoothRailScroll } from "@/hooks/useSmoothRailScroll";
+import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 import {
   filterWatchHistoryByStatus,
   filterWatchHistoryByType,
   getWatchHistoryItemId,
+  sortWatchHistoryItems,
+  WATCH_HISTORY_SORT_OPTIONS,
   type WatchHistoryFilter,
   type WatchHistoryItem,
+  type WatchHistorySortOption,
   type WatchHistoryTypeFilter,
 } from "@/lib/watch-history";
 import { useWatchHistoryStore } from "@/stores";
@@ -34,13 +44,43 @@ export function WatchHistoryRail({
   onQuickRemoveItem,
   onClearCache,
 }: WatchHistoryRailProps) {
+  const shouldReduceMotion = useReducedMotion();
+  const cardTransition = useMemo(
+    () =>
+      shouldReduceMotion
+        ? { duration: 0 }
+        : {
+            layout: {
+              type: "spring",
+              stiffness: 380,
+              damping: 32,
+              mass: 0.75,
+            },
+            opacity: { duration: 0.22, ease: "easeOut" },
+            scale: { duration: 0.22, ease: "easeOut" },
+            y: { duration: 0.2, ease: "easeOut" },
+          },
+    [shouldReduceMotion]
+  );
   const [typeFilter, setTypeFilter] = useState<WatchHistoryTypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<WatchHistoryFilter>("all");
+  const [sortBy, setSortBy] = useState<WatchHistorySortOption>("most_recent");
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [highlightedSortIdx, setHighlightedSortIdx] = useState(0);
+  const sortRootRef = useRef<HTMLDivElement>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+  const sortListboxId = useId();
   const [refreshingCache, setRefreshingCache] = useState(false);
   const [cacheRefreshed, setCacheRefreshed] = useState(false);
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const [clearingHistory, setClearingHistory] = useState(false);
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
+
+  useDropdownViewportClamp(isSortOpen, sortMenuRef);
+
+  const selectedSortOption =
+    WATCH_HISTORY_SORT_OPTIONS.find((opt) => opt.id === sortBy) ??
+    WATCH_HISTORY_SORT_OPTIONS[0];
 
   const {
     clearHistory,
@@ -72,8 +112,12 @@ export function WatchHistoryRail({
   );
 
   const visibleItems = useMemo(
-    () => filterWatchHistoryByStatus(filteredByType, statusFilter),
-    [filteredByType, statusFilter]
+    () =>
+      sortWatchHistoryItems(
+        filterWatchHistoryByStatus(filteredByType, statusFilter),
+        sortBy
+      ),
+    [filteredByType, statusFilter, sortBy]
   );
 
   const {
@@ -86,6 +130,56 @@ export function WatchHistoryRail({
     scrollDirection,
     handleScroll,
   } = useSmoothRailScroll(visibleItems.length);
+
+  useEffect(() => {
+    if (!isSortOpen) return;
+
+    const currentIdx = WATCH_HISTORY_SORT_OPTIONS.findIndex(
+      (opt) => opt.id === sortBy
+    );
+    setHighlightedSortIdx(currentIdx >= 0 ? currentIdx : 0);
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!sortRootRef.current?.contains(event.target as Node)) {
+        setIsSortOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsSortOpen(false);
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setHighlightedSortIdx(
+          (prev) => (prev + 1) % WATCH_HISTORY_SORT_OPTIONS.length
+        );
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setHighlightedSortIdx(
+          (prev) =>
+            (prev - 1 + WATCH_HISTORY_SORT_OPTIONS.length) %
+            WATCH_HISTORY_SORT_OPTIONS.length
+        );
+      } else if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        const target = WATCH_HISTORY_SORT_OPTIONS[highlightedSortIdx];
+        if (target) {
+          setSortBy(target.id);
+          setIsSortOpen(false);
+          rowRef.current?.scrollTo({ left: 0, behavior: "smooth" });
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSortOpen, sortBy, highlightedSortIdx, rowRef]);
 
   const showTemporaryNotice = (message: string) => {
     setStatusNotice(message);
@@ -256,6 +350,97 @@ export function WatchHistoryRail({
             })}
           </div>
 
+          {/* Watch History Sorting Dropdown ('Most Recent', 'Oldest', 'Completion Status') */}
+          <div
+            ref={sortRootRef}
+            className={`relative shrink-0 ${isSortOpen ? "z-50" : "z-20"}`}
+          >
+            <button
+              type="button"
+              data-testid="watch-history-sort-dropdown"
+              aria-haspopup="listbox"
+              aria-expanded={isSortOpen}
+              aria-controls={sortListboxId}
+              aria-label="Sort watch history"
+              onClick={() => setIsSortOpen((prev) => !prev)}
+              className={`theme-panel inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${
+                isSortOpen
+                  ? "border-primary ring-1 ring-primary/40 text-on-surface"
+                  : "border-border-custom bg-surface text-on-surface hover:border-primary/60 hover:text-primary"
+              }`}
+            >
+              <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span className="hidden xs:inline font-mono text-[10px] uppercase tracking-wider text-on-surface-variant">
+                Sort:
+              </span>
+              <span className="truncate font-semibold text-on-surface">
+                {selectedSortOption.label}
+              </span>
+              <ChevronDown
+                className={`h-3.5 w-3.5 shrink-0 text-primary transition-transform duration-200 ${
+                  isSortOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {isSortOpen && (
+              <div
+                ref={sortMenuRef}
+                id={sortListboxId}
+                role="listbox"
+                aria-label="Sort watch history"
+                className="glass-panel absolute right-0 top-[calc(100%+0.4rem)] w-48 max-w-[calc(100vw-1.5rem)] rounded-xl border border-border-custom bg-surface/95 p-1.5 shadow-2xl backdrop-blur-2xl z-50 animate-scale-up"
+              >
+                {WATCH_HISTORY_SORT_OPTIONS.map((option, idx) => {
+                  const isSelected = option.id === sortBy;
+                  const isHighlighted = idx === highlightedSortIdx;
+                  const iconClass = `h-3.5 w-3.5 shrink-0 ${
+                    isSelected ? "text-primary-contrast" : "text-primary"
+                  }`;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      data-testid={`watch-history-sort-option-${option.id}`}
+                      onMouseEnter={() => setHighlightedSortIdx(idx)}
+                      onClick={() => {
+                        setSortBy(option.id);
+                        setIsSortOpen(false);
+                        rowRef.current?.scrollTo({
+                          left: 0,
+                          behavior: "smooth",
+                        });
+                      }}
+                      className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors cursor-pointer ${
+                        isSelected
+                          ? "bg-primary text-primary-contrast font-semibold"
+                          : isHighlighted
+                          ? "bg-surface-hover text-on-surface"
+                          : "text-on-surface-variant hover:bg-surface-hover hover:text-on-surface"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        {option.id === "most_recent" && (
+                          <Clock className={iconClass} />
+                        )}
+                        {option.id === "oldest" && (
+                          <Calendar className={iconClass} />
+                        )}
+                        {option.id === "completion_status" && (
+                          <CheckCircle2 className={iconClass} />
+                        )}
+                        <span className="truncate">{option.label}</span>
+                      </span>
+                      {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Direct Clear Cache button to refresh local cache for recently watched items without leaving Home */}
           <button
             type="button"
@@ -381,23 +566,48 @@ export function WatchHistoryRail({
               onClick={() => handleScroll("left")}
             />
 
-            <div
+            <motion.div
               ref={rowRef}
               data-scrolling={isScrolling ? (scrollDirection ?? "right") : undefined}
-              className="rail-scroll-track custom-scrollbar flex gap-3.5 overflow-x-auto overflow-y-visible px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8"
+              data-velocity-scroll="framer-motion"
+              whileTap={{ cursor: "grabbing" }}
+              className="rail-scroll-track custom-scrollbar flex gap-3.5 overflow-x-auto overflow-y-visible px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8 select-none"
             >
-              {visibleItems.map((item) => (
-                <div
-                  key={`${item.media_type}_${getWatchHistoryItemId(item)}`}
-                  className="rail-card-slot relative z-0 flex-shrink-0 hover:z-20 focus-within:z-20"
-                >
-                  <WatchHistoryCard
-                    item={item}
-                    onQuickRemove={(target) => void handleQuickRemove(target)}
-                  />
-                </div>
-              ))}
-            </div>
+              <AnimatePresence initial={false}>
+                {visibleItems.map((item) => (
+                  <motion.div
+                    key={`${item.media_type}_${getWatchHistoryItemId(item)}`}
+                    layout="position"
+                    initial={
+                      shouldReduceMotion
+                        ? false
+                        : { opacity: 0, scale: 0.94, y: 3 }
+                    }
+                    animate={{
+                      opacity: 1,
+                      scale: 1,
+                      y: 0,
+                    }}
+                    exit={
+                      shouldReduceMotion
+                        ? undefined
+                        : {
+                            opacity: 0,
+                            scale: 0.92,
+                            transition: { duration: 0.16, ease: "easeIn" },
+                          }
+                    }
+                    transition={cardTransition}
+                    className="rail-card-slot relative z-0 flex-shrink-0 hover:z-20 focus-within:z-20 will-change-transform"
+                  >
+                    <WatchHistoryCard
+                      item={item}
+                      onQuickRemove={(target) => void handleQuickRemove(target)}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
 
             <div
               className={`rail-edge-fade-right ${

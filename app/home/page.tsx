@@ -27,6 +27,7 @@ import { AnimeRail } from "@/components/anime/AnimeRail";
 import { AnimeHeroBanner } from "@/components/anime/AnimeHeroBanner";
 import { ContinueWatchingRail } from "@/components/ContinueWatchingRail";
 import { WatchHistoryRail } from "@/components/WatchHistoryRail";
+import { RailSortDropdown } from "@/components/RailSortDropdown";
 import { LoadingBanner } from "@/components/LoadingBanner";
 import { TMDBTitle, TMDBGenre } from "@/lib/tmdb";
 import { loadHomeGenreRails, loadHomeTrending } from "@/lib/load-home-content";
@@ -39,6 +40,11 @@ import {
   type WatchHistoryItem,
 } from "@/lib/watch-history";
 import { filterWatchlistByCatalog } from "@/lib/watchlist";
+import {
+  sortTmdbCategoryRails,
+  sortAnimeCategoryRails,
+  type RailSortContext,
+} from "@/lib/rail-sorting";
 import {
   filterTmdbForKidsMode,
   filterAnimeForKidsMode,
@@ -72,7 +78,13 @@ export default function HomePage() {
   const [animePopular, setAnimePopular] = useState<AniListMedia[]>([]);
   const [animeGenreRails, setAnimeGenreRails] = useState<{ genre: string; items: AniListMedia[] }[]>([]);
 
-  const { activeFilter, setActiveFilter, setFilterOptions } = useRailFilterStore();
+  const {
+    activeFilter,
+    setActiveFilter,
+    setFilterOptions,
+    railSort,
+    setRailSort,
+  } = useRailFilterStore();
   const selectedRailFilter = activeFilter;
   const setSelectedRailFilter = setActiveFilter;
 
@@ -260,13 +272,65 @@ export default function HomePage() {
     void updateProfile(currentProfile.id, { appearancePreference: nextAppearance });
   };
 
+  const categorySortContext = useMemo<RailSortContext>(() => {
+    const userWatchCounts: Record<string, number> = {};
+    const userSavedKeys = new Set<string>();
+
+    for (const w of watchlistItems) {
+      if (w.media_type === "anime" && w.anilistId) {
+        userSavedKeys.add(`anime_${w.anilistId}`);
+      } else if (w.tmdbId) {
+        userSavedKeys.add(`${w.media_type}_${w.tmdbId}`);
+      }
+    }
+
+    for (const cw of continueWatchingItems) {
+      const progressScore = Math.max(0.3, (cw.progress_percent ?? 20) / 100);
+      if (cw.media_type === "anime" && cw.anilistId) {
+        const key = `anime_${cw.anilistId}`;
+        userWatchCounts[key] = (userWatchCounts[key] ?? 0) + progressScore;
+      } else if (cw.tmdbId) {
+        const key = `${cw.media_type}_${cw.tmdbId}`;
+        userWatchCounts[key] = (userWatchCounts[key] ?? 0) + progressScore;
+      }
+    }
+
+    for (const h of watchHistoryItems) {
+      const countScore =
+        (h.watch_count ?? 1) +
+        (h.completed ? 0.5 : (h.progress_percent ?? 0) / 200);
+      if (h.media_type === "anime" && h.anilistId) {
+        const key = `anime_${h.anilistId}`;
+        userSavedKeys.add(key);
+        userWatchCounts[key] = (userWatchCounts[key] ?? 0) + countScore;
+      } else if (h.tmdbId) {
+        const key = `${h.media_type}_${h.tmdbId}`;
+        userSavedKeys.add(key);
+        userWatchCounts[key] = (userWatchCounts[key] ?? 0) + countScore;
+      }
+    }
+
+    return { userWatchCounts, userSavedKeys };
+  }, [watchlistItems, continueWatchingItems, watchHistoryItems]);
+
+  const sortedGenreRails = useMemo(
+    () => sortTmdbCategoryRails(genreRails, railSort, categorySortContext),
+    [genreRails, railSort, categorySortContext]
+  );
+
+  const sortedAnimeGenreRails = useMemo(
+    () =>
+      sortAnimeCategoryRails(animeGenreRails, railSort, categorySortContext),
+    [animeGenreRails, railSort, categorySortContext]
+  );
+
   const filterChips = useMemo(() => {
     if (catalogMode === "anime") {
       return [
         { id: "all", label: "All Anime" },
         { id: "trending", label: "Trending" },
         { id: "popular", label: "Popular" },
-        ...animeGenreRails.map(({ genre }) => ({
+        ...sortedAnimeGenreRails.map(({ genre }) => ({
           id: `genre_${genre}`,
           label: genre,
         })),
@@ -277,13 +341,13 @@ export default function HomePage() {
       { id: "all", label: "All Rails" },
       { id: "movies", label: "Movies" },
       { id: "tv", label: "TV Series" },
-      ...genreRails.map(({ genre }) => ({
+      ...sortedGenreRails.map(({ genre }) => ({
         id: `genre_${genre.id}`,
         label: genre.name,
       })),
       { id: "history", label: `Watch History (${filteredHistory.length})` },
     ];
-  }, [catalogMode, animeGenreRails, genreRails, filteredHistory.length]);
+  }, [catalogMode, sortedAnimeGenreRails, sortedGenreRails, filteredHistory.length]);
 
   useEffect(() => {
     setFilterOptions(filterChips);
@@ -407,11 +471,11 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Category Rail Filter Track */}
-            <div className="flex flex-1 items-center min-w-0">
+            {/* Category Rail Filter Track & All Rails Sort Dropdown */}
+            <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
               <div
                 data-testid="command-deck-rail-filters"
-                className="custom-scrollbar flex w-full max-w-full items-center gap-1.5 overflow-x-auto touch-pan-x pt-0.5 pb-1.5 px-0.5 scroll-smooth"
+                className="custom-scrollbar flex flex-1 max-w-full items-center gap-1.5 overflow-x-auto touch-pan-x pt-0.5 pb-1.5 px-0.5 scroll-smooth"
               >
                 {filterChips.map((chip) => {
                   const active = selectedRailFilter === chip.id;
@@ -432,6 +496,17 @@ export default function HomePage() {
                   );
                 })}
               </div>
+
+              {selectedRailFilter !== "history" && (
+                <div className="shrink-0 pb-1">
+                  <RailSortDropdown
+                    value={railSort}
+                    onChange={(nextSort) => setRailSort(nextSort)}
+                    ariaLabel="Sort all rails"
+                    testId="all-rails-sort-dropdown"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -497,7 +572,7 @@ export default function HomePage() {
                 {(selectedRailFilter === "all" || selectedRailFilter === "popular") && (
                   <AnimeRail title="Popular Anime" items={animePopular} />
                 )}
-                {animeGenreRails
+                {sortedAnimeGenreRails
                   .filter(
                     ({ genre }) =>
                       selectedRailFilter === "all" || selectedRailFilter === `genre_${genre}`
@@ -517,7 +592,7 @@ export default function HomePage() {
                 {loadingGenreRails ? (
                   <div className="h-32 bg-surface animate-pulse mx-4 rounded-xl" />
                 ) : (
-                  genreRails
+                  sortedGenreRails
                     .filter(
                       ({ genre }) =>
                         selectedRailFilter === "all" ||

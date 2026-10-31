@@ -18,9 +18,18 @@ import {
   normalizeAppearance,
 } from "@/lib/themes";
 import { installWindowFetchGuard } from "@/lib/runtime-guards";
+import {
+  applyHardwareAccelerationFlags,
+  readStoredHardwareFlags,
+} from "@/lib/gpu-diagnostics";
 
 if (typeof window !== "undefined") {
   installWindowFetchGuard(window);
+  try {
+    applyHardwareAccelerationFlags(readStoredHardwareFlags());
+  } catch {
+    // Ignore early probe failure
+  }
 }
 
 export function ClientInitializer() {

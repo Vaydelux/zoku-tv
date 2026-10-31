@@ -24,6 +24,7 @@ export interface TMDBTitle {
   release_date?: string;
   first_air_date?: string;
   vote_average: number;
+  popularity?: number;
   genre_ids?: number[];
   genres?: { id: number; name: string }[];
   runtime?: number;

@@ -21,6 +21,11 @@ import {
   Activity,
   Shield,
   Zap,
+  Monitor,
+  Layers,
+  Cpu,
+  Gauge,
+  Sliders,
 } from "lucide-react";
 import {
   useSessionStore,
@@ -34,6 +39,8 @@ import { FirebaseStatusIndicator } from "@/components/FirebaseStatusIndicator";
 import { LoadingBanner } from "@/components/LoadingBanner";
 import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
 import { ConfirmDialog } from "@/components/ui/Primitives";
+import { GpuDiagnosticOverlay } from "@/components/GpuDiagnosticOverlay";
+import { PerformanceDiagnosticsPanel } from "@/components/PerformanceDiagnosticsPanel";
 import { getGenres, TMDBGenre } from "@/lib/tmdb";
 import { getGenreIcon } from "@/lib/genreIcons";
 import {
@@ -46,6 +53,14 @@ import {
   type AppearanceMode,
 } from "@/lib/themes";
 import { usePerfMode } from "@/hooks/usePerfMode";
+import {
+  probeGpuCapabilities,
+  readStoredHardwareFlags,
+  storeAndApplyHardwareFlags,
+  GPU_FLAG_PRESETS,
+  type GpuCapabilities,
+  type HardwareAccelerationFlags,
+} from "@/lib/gpu-diagnostics";
 
 type SettingsSection =
   | "theme"
@@ -54,7 +69,8 @@ type SettingsSection =
   | "profiles"
   | "iframe-mode"
   | "cache"
-  | "diagnostics";
+  | "diagnostics"
+  | "perf-diagnostics";
 
 export default function SettingsPage() {
   return (
@@ -96,6 +112,17 @@ function SettingsPageContent() {
   const [confirmAction, setConfirmAction] = useState<
     null | "clear_cache" | "clear_history" | "clear_cw"
   >(null);
+  const [isGpuOverlayOpen, setIsGpuOverlayOpen] = useState(false);
+  const [gpuCaps, setGpuCaps] = useState<GpuCapabilities | null>(null);
+  const [hardwareFlags, setHardwareFlags] = useState<HardwareAccelerationFlags>(() =>
+    readStoredHardwareFlags()
+  );
+
+  useEffect(() => {
+    const caps = probeGpuCapabilities();
+    setGpuCaps(caps);
+    setHardwareFlags(readStoredHardwareFlags(caps.tier));
+  }, []);
 
   useEffect(() => {
     const section = searchParams.get("section") as SettingsSection | null;
@@ -109,6 +136,7 @@ function SettingsPageContent() {
         "iframe-mode",
         "cache",
         "diagnostics",
+        "perf-diagnostics",
       ].includes(section)
     ) {
       setActiveTab(section);
@@ -337,6 +365,23 @@ function SettingsPageContent() {
 
   const isAnimeCatalog = localCatalogMode === "anime";
 
+  const handleToggleHardwareFlagInPage = (key: keyof HardwareAccelerationFlags) => {
+    const next: HardwareAccelerationFlags = {
+      ...hardwareFlags,
+      [key]: !hardwareFlags[key],
+    };
+    setHardwareFlags(next);
+    storeAndApplyHardwareFlags(next);
+    notifySuccess(`Hardware flag updated: ${next[key] ? "Enabled" : "Disabled"}`);
+  };
+
+  const handleApplyPresetInPage = (presetKey: keyof typeof GPU_FLAG_PRESETS) => {
+    const preset = GPU_FLAG_PRESETS[presetKey];
+    setHardwareFlags(preset.flags);
+    storeAndApplyHardwareFlags(preset.flags);
+    notifySuccess(`Applied preset: ${preset.title}`);
+  };
+
   function switchTab(tab: SettingsSection) {
     setActiveTab(tab);
     const params = new URLSearchParams(searchParams.toString());
@@ -485,6 +530,19 @@ function SettingsPageContent() {
               <Activity className="h-4 w-4" />
               <span>Diagnostics</span>
             </button>
+
+            <button
+              onClick={() => switchTab("perf-diagnostics")}
+              data-testid="tab-perf-diagnostics"
+              className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
+                activeTab === "perf-diagnostics"
+                  ? "bg-primary text-primary-contrast"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
+              }`}
+            >
+              <Gauge className="h-4 w-4" />
+              <span>Performance Diagnostics</span>
+            </button>
           </div>
 
           {/* Active Tab Panel */}
@@ -615,6 +673,23 @@ function SettingsPageContent() {
                         </button>
                       );
                     })}
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-border-custom/60">
+                    <span className="text-[11px] text-on-surface-variant flex items-center gap-1.5">
+                      <Monitor className="h-3.5 w-3.5 text-primary" />
+                      <span>
+                        GPU Engine: <strong className="text-on-surface">{gpuCaps?.unmaskedRenderer || "Detecting GPU..."}</strong>
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsGpuOverlayOpen(true)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-primary/50 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary hover:text-primary-contrast transition-all"
+                    >
+                      <Activity className="h-3.5 w-3.5" />
+                      <span>Launch GPU Diagnostic Overlay</span>
+                    </button>
                   </div>
                 </div>
 
@@ -1050,19 +1125,298 @@ function SettingsPageContent() {
               <div className="space-y-6">
                 <div className="space-y-1">
                   <h2 className="text-base font-semibold text-on-surface">
-                    System & Cloud Diagnostics
+                    Graphics (GPU), System &amp; Cloud Diagnostics
                   </h2>
                   <p className="text-xs text-on-surface-variant">
-                    Inspect Firebase connectivity, security rules verification, and active session scope.
+                    Detect browser graphics hardware capabilities, toggle acceleration flags for 32-bit Android TV devices, and verify cloud database connectivity.
                   </p>
                 </div>
 
-                <FirebaseStatusIndicator userId={user.uid} profileId={currentProfile.id} />
+                {/* GPU Capability & Hardware Acceleration Section */}
+                <div
+                  data-testid="settings-gpu-diagnostics-card"
+                  className="rounded-2xl border border-border-custom bg-background/40 p-5 space-y-5"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-custom pb-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-primary" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface">
+                          GPU Hardware Capabilities &amp; WebGL Engine
+                        </h3>
+                        {gpuCaps?.is32BitArchitecture && (
+                          <span className="rounded bg-amber-500/20 px-2 py-0.5 font-mono text-[9px] font-bold text-amber-300 border border-amber-500/40">
+                            32-Bit TV Architecture
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-on-surface-variant">
+                        Detected Tier: <strong className="text-primary">{gpuCaps?.tierTitle || "Probing graphics pipeline..."}</strong>
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      data-testid="open-gpu-overlay-btn"
+                      onClick={() => setIsGpuOverlayOpen(true)}
+                      className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-primary/60 bg-primary/10 px-4 py-2 text-xs font-bold text-primary hover:bg-primary hover:text-primary-contrast transition-all shadow-sm"
+                    >
+                      <Sliders className="h-3.5 w-3.5" />
+                      <span>Open GPU Diagnostic Overlay</span>
+                    </button>
+                  </div>
+
+                  {/* GPU Specs Strip */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-mono uppercase text-on-surface-variant">
+                        Unmasked GPU
+                      </span>
+                      <p className="font-semibold text-on-surface truncate" title={gpuCaps?.unmaskedRenderer}>
+                        {gpuCaps?.unmaskedRenderer || "Probing..."}
+                      </p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-mono uppercase text-on-surface-variant">
+                        Vendor
+                      </span>
+                      <p className="font-semibold text-on-surface truncate" title={gpuCaps?.unmaskedVendor}>
+                        {gpuCaps?.unmaskedVendor || "Probing..."}
+                      </p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-mono uppercase text-on-surface-variant">
+                        Max Texture Size
+                      </span>
+                      <p className="font-mono tabular-nums font-semibold text-on-surface">
+                        {gpuCaps?.maxTextureSize ? `${gpuCaps.maxTextureSize} × ${gpuCaps.maxTextureSize} px` : "Probing..."}
+                      </p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-mono uppercase text-on-surface-variant">
+                        WebGL Version
+                      </span>
+                      <p className="font-semibold text-on-surface">
+                        {gpuCaps?.webglVersion || "Probing..."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 1-Click Acceleration Presets */}
+                  <div className="space-y-2 pt-2 border-t border-border-custom">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
+                      1-Click Hardware Acceleration Presets
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      {(["tv32BitRecommended", "maxPerformance", "standardDesktop"] as const).map((presetKey) => {
+                        const preset = GPU_FLAG_PRESETS[presetKey];
+                        return (
+                          <button
+                            key={presetKey}
+                            type="button"
+                            onClick={() => handleApplyPresetInPage(presetKey)}
+                            className="flex flex-col items-start rounded-xl border border-border-custom bg-background/30 p-3 text-left hover:border-primary/50 hover:bg-background/60 transition-all"
+                          >
+                            <span className="text-xs font-bold text-on-surface">
+                              {preset.title}
+                            </span>
+                            <span className="mt-0.5 text-[10px] text-on-surface-variant line-clamp-2">
+                              {preset.description}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Toggleable Hardware Acceleration Flags */}
+                  <div className="space-y-2 pt-2 border-t border-border-custom">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
+                      Granular Hardware Acceleration Flags
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        data-testid="flag-force-gpu-compositing"
+                        onClick={() => handleToggleHardwareFlagInPage("forceGpuCompositing")}
+                        className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                          hardwareFlags.forceGpuCompositing
+                            ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                            : "border-border-custom bg-background/25 hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-bold text-on-surface">Force GPU 3D Compositing</p>
+                          <p className="text-[10px] text-on-surface-variant truncate">Dedicated GPU texture layers (translate3d)</p>
+                        </div>
+                        <span className={`font-mono text-[9px] uppercase font-bold px-2 py-0.5 rounded shrink-0 ${
+                          hardwareFlags.forceGpuCompositing ? "bg-primary text-primary-contrast" : "bg-surface text-on-surface-variant"
+                        }`}>
+                          {hardwareFlags.forceGpuCompositing ? "Active" : "Off"}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        data-testid="flag-bypass-backdrop-filter"
+                        onClick={() => handleToggleHardwareFlagInPage("bypassBackdropFilter")}
+                        className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                          hardwareFlags.bypassBackdropFilter
+                            ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                            : "border-border-custom bg-background/25 hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-bold text-on-surface">Bypass Backdrop Blur Shaders</p>
+                          <p className="text-[10px] text-on-surface-variant truncate">Zero-overhead solid panels for Mali/Adreno</p>
+                        </div>
+                        <span className={`font-mono text-[9px] uppercase font-bold px-2 py-0.5 rounded shrink-0 ${
+                          hardwareFlags.bypassBackdropFilter ? "bg-primary text-primary-contrast" : "bg-surface text-on-surface-variant"
+                        }`}>
+                          {hardwareFlags.bypassBackdropFilter ? "Active" : "Off"}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        data-testid="flag-css-layout-containment"
+                        onClick={() => handleToggleHardwareFlagInPage("cssLayoutContainment")}
+                        className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                          hardwareFlags.cssLayoutContainment
+                            ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                            : "border-border-custom bg-background/25 hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-bold text-on-surface">CSS Layout Containment</p>
+                          <p className="text-[10px] text-on-surface-variant truncate">contain: layout paint to isolate rail reflows</p>
+                        </div>
+                        <span className={`font-mono text-[9px] uppercase font-bold px-2 py-0.5 rounded shrink-0 ${
+                          hardwareFlags.cssLayoutContainment ? "bg-primary text-primary-contrast" : "bg-surface text-on-surface-variant"
+                        }`}>
+                          {hardwareFlags.cssLayoutContainment ? "Active" : "Off"}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        data-testid="flag-limit-texture-resolution"
+                        onClick={() => handleToggleHardwareFlagInPage("limitTextureResolution")}
+                        className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                          hardwareFlags.limitTextureResolution
+                            ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                            : "border-border-custom bg-background/25 hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-bold text-on-surface">Conserve VRAM / Texture Limit</p>
+                          <p className="text-[10px] text-on-surface-variant truncate">Downsamples textures for 32-bit TV WebViews</p>
+                        </div>
+                        <span className={`font-mono text-[9px] uppercase font-bold px-2 py-0.5 rounded shrink-0 ${
+                          hardwareFlags.limitTextureResolution ? "bg-primary text-primary-contrast" : "bg-surface text-on-surface-variant"
+                        }`}>
+                          {hardwareFlags.limitTextureResolution ? "Active" : "Off"}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        data-testid="flag-reduced-overdraw"
+                        onClick={() => handleToggleHardwareFlagInPage("reducedOverdraw")}
+                        className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                          hardwareFlags.reducedOverdraw
+                            ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                            : "border-border-custom bg-background/25 hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-bold text-on-surface">Reduced Overdraw (Hide Orbs)</p>
+                          <p className="text-[10px] text-on-surface-variant truncate">Suppresses ambient glow for raster throughput</p>
+                        </div>
+                        <span className={`font-mono text-[9px] uppercase font-bold px-2 py-0.5 rounded shrink-0 ${
+                          hardwareFlags.reducedOverdraw ? "bg-primary text-primary-contrast" : "bg-surface text-on-surface-variant"
+                        }`}>
+                          {hardwareFlags.reducedOverdraw ? "Active" : "Off"}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        data-testid="flag-rail-inertia-friction"
+                        onClick={() => handleToggleHardwareFlagInPage("railInertiaFriction")}
+                        className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                          hardwareFlags.railInertiaFriction
+                            ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                            : "border-border-custom bg-background/25 hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-bold text-on-surface">Kinetic Rail Momentum</p>
+                          <p className="text-[10px] text-on-surface-variant truncate">Velocity-based friction fling for virtual mouse</p>
+                        </div>
+                        <span className={`font-mono text-[9px] uppercase font-bold px-2 py-0.5 rounded shrink-0 ${
+                          hardwareFlags.railInertiaFriction ? "bg-primary text-primary-contrast" : "bg-surface text-on-surface-variant"
+                        }`}>
+                          {hardwareFlags.railInertiaFriction ? "Active" : "Off"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cloud & Firebase Section */}
+                <div className="space-y-3 pt-4 border-t border-border-custom">
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-emerald-400" />
+                      <span>Cloud Database &amp; Auth Diagnostics</span>
+                    </h3>
+                    <p className="text-xs text-on-surface-variant">
+                      Inspect active user token, Firestore session scope, and security rules connectivity.
+                    </p>
+                  </div>
+                  <FirebaseStatusIndicator userId={user.uid} profileId={currentProfile.id} />
+                </div>
+
+                {/* Performance Diagnostics Shortcut */}
+                <div className="pt-4 border-t border-border-custom">
+                  <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Gauge className="h-4 w-4 text-primary" />
+                        <span className="text-xs font-bold text-on-surface">Live GPU Frame Times & Memory Diagnostics</span>
+                      </div>
+                      <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                        Track 60fps frame times, dropped frames, P99 latency, and 32-bit Android TV JS heap memory in real time.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => switchTab("perf-diagnostics")}
+                      className="px-3.5 py-2 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:opacity-90 shrink-0 self-start sm:self-auto transition-opacity"
+                    >
+                      Open Live Telemetry
+                    </button>
+                  </div>
+                </div>
               </div>
+            )}
+
+            {activeTab === "perf-diagnostics" && (
+              <PerformanceDiagnosticsPanel />
             )}
           </div>
         </div>
       </div>
+
+      <GpuDiagnosticOverlay
+        isOpen={isGpuOverlayOpen}
+        onClose={() => {
+          setIsGpuOverlayOpen(false);
+          setHardwareFlags(readStoredHardwareFlags());
+        }}
+        onFlagsChanged={(next) => setHardwareFlags(next)}
+      />
 
       <ConfirmDialog
         open={confirmAction !== null}

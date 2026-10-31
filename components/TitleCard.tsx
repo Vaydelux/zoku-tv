@@ -6,6 +6,7 @@ import { Plus, Check, Star, Play, CheckCircle2 } from "lucide-react";
 import { useWatchlistStore, useWatchHistoryStore } from "@/stores";
 import { getTitleDetails, TMDBTitle } from "@/lib/tmdb";
 import { isReleasedWithinLast30Days } from "@/lib/media-types";
+import { useCardPlayProgress } from "@/lib/card-play-progress";
 
 interface TitleCardProps {
   title: TMDBTitle;
@@ -18,6 +19,7 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
   const actualMediaType = mediaType || title.media_type || "movie";
   const { addItem, removeItem, hasItem } = useWatchlistStore();
   const { isCompleted, toggleCompleted } = useWatchHistoryStore();
+  const playProgress = useCardPlayProgress(actualMediaType, title.id);
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [synopsis, setSynopsis] = useState(title.overview?.trim() || "");
@@ -186,6 +188,12 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
             <span>{releaseYear}</span>
             <span>·</span>
             <span className="uppercase text-primary font-semibold">{actualMediaType}</span>
+            {playProgress.hasProgress && (
+              <>
+                <span>·</span>
+                <span className="text-primary font-bold">{playProgress.progressPercent}%</span>
+              </>
+            )}
             {watchedCompleted && (
               <>
                 <span>·</span>
@@ -287,6 +295,12 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
                 <span>·</span>
               </>
             )}
+            {playProgress.hasProgress && (
+              <>
+                <span className="text-primary font-bold">{playProgress.label}</span>
+                <span>·</span>
+              </>
+            )}
             <span>{releaseYear}</span>
             <span>·</span>
             <span className="uppercase text-primary font-semibold">{actualMediaType}</span>
@@ -302,10 +316,25 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
 
           <span className="inline-flex items-center gap-1.5 pt-0.5 text-[11px] font-semibold text-primary">
             <Play className="h-3 w-3 fill-primary" />
-            <span>Details & Watch</span>
+            <span>{playProgress.hasProgress ? "Resume" : "Details & Watch"}</span>
           </span>
         </div>
       </div>
+
+      {/* Subtle horizontal progress bar for items with existing play progress */}
+      {playProgress.hasProgress && (
+        <div
+          data-testid="card-play-progress-bar"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-1 bg-white/20 backdrop-blur-xs overflow-hidden"
+          title={`${playProgress.progressPercent}% watched`}
+          aria-label={`${playProgress.progressPercent}% watched`}
+        >
+          <div
+            className="h-full bg-primary shadow-[0_0_8px_var(--primary-glow)] transition-all duration-300 ease-out"
+            style={{ width: `${playProgress.progressPercent}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }

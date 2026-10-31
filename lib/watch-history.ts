@@ -496,3 +496,98 @@ export function buildHistoryDetailsUrl(item: WatchHistoryItem): string {
   }
   return "/home";
 }
+
+export type WatchHistorySortOption =
+  | "most_recent"
+  | "oldest"
+  | "completion_status";
+
+export const WATCH_HISTORY_SORT_OPTIONS: {
+  id: WatchHistorySortOption;
+  label: string;
+}[] = [
+  { id: "most_recent", label: "Most Recent" },
+  { id: "oldest", label: "Oldest" },
+  { id: "completion_status", label: "Completion Status" },
+];
+
+function parseWatchedTimestamp(iso?: string | null): number {
+  if (!iso || typeof iso !== "string") return 0;
+  const parsed = Date.parse(iso);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/**
+ * Pure non-mutating sorter for Watch History items.
+ * - 'most_recent': Newest last_watched_at first
+ * - 'oldest': Oldest last_watched_at first
+ * - 'completion_status': Completed items first, then highest progress %, then most recent
+ */
+export function sortWatchHistoryItems(
+  items: WatchHistoryItem[],
+  sortBy: WatchHistorySortOption
+): WatchHistoryItem[] {
+  if (!Array.isArray(items) || items.length <= 1) {
+    return Array.isArray(items) ? [...items] : [];
+  }
+
+  const indexed = items.map((item, index) => ({ item, index }));
+
+  indexed.sort((a, b) => {
+    const timeA = parseWatchedTimestamp(a.item.last_watched_at);
+    const timeB = parseWatchedTimestamp(b.item.last_watched_at);
+
+    if (sortBy === "oldest") {
+      if (timeA !== timeB) {
+        return timeA - timeB;
+      }
+      return a.index - b.index;
+    }
+
+    if (sortBy === "completion_status") {
+      const completedA = a.item.completed ? 1 : 0;
+      const completedB = b.item.completed ? 1 : 0;
+      if (completedB !== completedA) {
+        return completedB - completedA;
+      }
+
+      const progressA =
+        typeof a.item.progress_percent === "number" &&
+        Number.isFinite(a.item.progress_percent)
+          ? a.item.progress_percent
+          : completedA
+            ? 100
+            : 0;
+      const progressB =
+        typeof b.item.progress_percent === "number" &&
+        Number.isFinite(b.item.progress_percent)
+          ? b.item.progress_percent
+          : completedB
+            ? 100
+            : 0;
+      if (progressB !== progressA) {
+        return progressB - progressA;
+      }
+
+      const countA = a.item.watch_count ?? 1;
+      const countB = b.item.watch_count ?? 1;
+      if (countB !== countA) {
+        return countB - countA;
+      }
+
+      if (timeB !== timeA) {
+        return timeB - timeA;
+      }
+      return a.index - b.index;
+    }
+
+    // Default: "most_recent"
+    if (timeB !== timeA) {
+      return timeB - timeA;
+    }
+    return a.index - b.index;
+  });
+
+  return indexed.map((entry) => entry.item);
+}
+

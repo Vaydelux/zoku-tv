@@ -141,6 +141,63 @@ export function shouldSuppressRailClickAfterDrag(
   return Math.abs(dragDistancePx) >= thresholdPx;
 }
 
+export interface PointerDragSample {
+  x: number;
+  time: number;
+}
+
+/**
+ * Computes release velocity in pixels per frame (~16.67ms) based on trailing
+ * pointer position samples within a recent time window.
+ * Designed for virtual mouse cursors (e.g. Downloader by AFTVnews) and touch/pointer flicks.
+ * Note: Dragging left (negative delta X) increases scrollLeft (reveals titles to the right).
+ */
+export function computeDragVelocity(
+  samples: PointerDragSample[],
+  now = typeof performance !== "undefined" ? performance.now() : Date.now(),
+  windowMs = 120,
+  maxVelocity = 48
+): number {
+  if (!samples || samples.length < 2) return 0;
+  const recent = samples.filter((s) => now - s.time <= windowMs);
+  if (recent.length < 2) return 0;
+
+  const first = recent[0];
+  const last = recent[recent.length - 1];
+  const dt = last.time - first.time;
+  const dx = last.x - first.x;
+  if (dt <= 8 || dx === 0) return 0;
+
+  const pxPerMs = dx / dt;
+  // Invert because pointer drag direction is opposite to scrollLeft displacement
+  const pxPerFrame = -pxPerMs * 16.67;
+  if (Math.abs(pxPerFrame) < 0.001) return 0;
+
+  return Math.max(-maxVelocity, Math.min(maxVelocity, pxPerFrame));
+}
+
+/**
+ * Computes a single decaying step in the velocity-based friction momentum curve.
+ * v_{t+1} = v_t * friction.
+ * Returns the next velocity and the pixel displacement delta to apply to scrollLeft.
+ */
+export function computeFrictionStep(
+  currentVelocity: number,
+  friction = 0.93,
+  stopThreshold = 0.25
+): { nextVelocity: number; delta: number; isStopped: boolean } {
+  if (Math.abs(currentVelocity) <= stopThreshold) {
+    return { nextVelocity: 0, delta: 0, isStopped: true };
+  }
+  const nextVelocity = currentVelocity * friction;
+  const isStopped = Math.abs(nextVelocity) <= stopThreshold;
+  return {
+    nextVelocity: isStopped ? 0 : nextVelocity,
+    delta: currentVelocity,
+    isStopped,
+  };
+}
+
 /**
  * Recognizes Enter, Space, and Android TV remote DPAD_CENTER (keyCode 23 / "Select")
  */

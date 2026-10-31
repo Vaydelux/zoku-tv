@@ -9,6 +9,8 @@ import {
   mergeWatchHistory,
   filterWatchHistoryByCatalog,
   filterWatchHistoryByStatus,
+  WATCH_HISTORY_SORT_OPTIONS,
+  sortWatchHistoryItems,
   buildRewatchUrl,
   type WatchHistoryItem,
   type StorageLike,
@@ -298,7 +300,99 @@ describe("watch-history pure domain logic", () => {
     assert.equal(sanitizedHistory.valid.length, 1);
     assert.equal(sanitizedHistory.valid[0].tmdbId, 872585);
   });
+
+  it("sorts Watch History items by Most Recent, Oldest, and Completion Status without mutating input", () => {
+    assert.deepEqual(
+      WATCH_HISTORY_SORT_OPTIONS.map((o) => o.label),
+      ["Most Recent", "Oldest", "Completion Status"]
+    );
+
+    const items: WatchHistoryItem[] = [
+      {
+        media_type: "movie",
+        tmdbId: 101,
+        title: "Midway Partial (45%)",
+        last_watched_at: "2026-10-29T12:00:00.000Z",
+        progress_percent: 45,
+        completed: false,
+        watch_count: 1,
+      },
+      {
+        media_type: "tv",
+        tmdbId: 202,
+        season: 1,
+        episode: 3,
+        title: "Oldest Completed (100%)",
+        last_watched_at: "2026-10-28T08:00:00.000Z",
+        progress_percent: 100,
+        completed: true,
+        watch_count: 1,
+      },
+      {
+        media_type: "anime",
+        anilistId: 303,
+        season: 1,
+        episode: 8,
+        title: "Newest Partial (82%)",
+        last_watched_at: "2026-10-30T19:30:00.000Z",
+        progress_percent: 82,
+        completed: false,
+        watch_count: 1,
+      },
+      {
+        media_type: "movie",
+        tmdbId: 404,
+        title: "Recent Completed Rewatched (100%)",
+        last_watched_at: "2026-10-30T10:00:00.000Z",
+        progress_percent: 100,
+        completed: true,
+        watch_count: 2,
+      },
+    ];
+
+    const snapshot = items.map((item) => item.title);
+
+    const mostRecent = sortWatchHistoryItems(items, "most_recent");
+    assert.deepEqual(
+      mostRecent.map((item) => item.title),
+      [
+        "Newest Partial (82%)",
+        "Recent Completed Rewatched (100%)",
+        "Midway Partial (45%)",
+        "Oldest Completed (100%)",
+      ]
+    );
+
+    const oldest = sortWatchHistoryItems(items, "oldest");
+    assert.deepEqual(
+      oldest.map((item) => item.title),
+      [
+        "Oldest Completed (100%)",
+        "Midway Partial (45%)",
+        "Recent Completed Rewatched (100%)",
+        "Newest Partial (82%)",
+      ]
+    );
+
+    const byCompletion = sortWatchHistoryItems(items, "completion_status");
+    assert.deepEqual(
+      byCompletion.map((item) => item.title),
+      [
+        "Recent Completed Rewatched (100%)",
+        "Oldest Completed (100%)",
+        "Newest Partial (82%)",
+        "Midway Partial (45%)",
+      ]
+    );
+
+    // Ensure original input array was not mutated
+    assert.deepEqual(
+      items.map((item) => item.title),
+      snapshot
+    );
+  });
 });
+
 
 
 
