@@ -79,7 +79,7 @@ export function CinematicMediaCard({
         <button
           type="button"
           data-tv-focusable="true"
-          className="cinematic-poster-open absolute inset-0 z-10 cursor-pointer rounded-xl outline-offset-[-3px] focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-primary"
+          className="cinematic-poster-open absolute inset-0 z-10 cursor-pointer rounded-xl focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-primary focus-visible:outline-offset-[-3px]"
           onClick={onOpen}
           aria-label={`Open ${title} details`}
           title={overview || title}
@@ -87,7 +87,7 @@ export function CinematicMediaCard({
           <span className="sr-only">Open {title} details</span>
         </button>
 
-        <div className="absolute top-2 right-2 z-20 flex flex-col gap-1.5">
+        <div className="absolute top-2 right-2 z-20 flex flex-col gap-2">
           <button
             type="button"
             data-tv-focusable="true"
@@ -95,7 +95,7 @@ export function CinematicMediaCard({
             aria-pressed={saved}
             aria-label={saved ? `Remove ${title} from Watchlist` : `Add ${title} to Watchlist`}
             onClick={onToggleWatchlist}
-            className={`cinematic-poster-action flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white shadow-sm transition-colors ${saved ? "bg-primary border-primary text-primary-contrast" : "bg-black/70 hover:bg-primary hover:text-primary-contrast"}`}
+            className={`cinematic-poster-action flex h-11 w-11 items-center justify-center rounded-full border border-white/25 text-white shadow-sm transition-colors ${saved ? "bg-primary border-primary text-primary-contrast" : "bg-black/70 hover:bg-primary hover:text-primary-contrast"}`}
           >
             {saved ? <Check className="h-4 w-4" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
           </button>
@@ -105,7 +105,7 @@ export function CinematicMediaCard({
             aria-pressed={watched}
             aria-label={watched ? `Mark ${title} as not watched` : `Mark ${title} as watched`}
             onClick={onToggleWatched}
-            className={`cinematic-poster-action flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white shadow-sm transition-colors ${watched ? "bg-primary border-primary text-primary-contrast" : "bg-black/70 hover:bg-primary hover:text-primary-contrast"}`}
+            className={`cinematic-poster-action flex h-11 w-11 items-center justify-center rounded-full border border-white/25 text-white shadow-sm transition-colors ${watched ? "bg-primary border-primary text-primary-contrast" : "bg-black/70 hover:bg-primary hover:text-primary-contrast"}`}
           >
             <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           </button>
