@@ -103,3 +103,13 @@ When `ADULT_CONTENT_PASSWORD` is absent or invalid (fewer than 12 characters), c
 Direct Zoku movie URLs `/title/movie/:id` and `/watch/movie/:id` cannot fetch accepted movie details from the proxy when restricted, and their player is gated until eligibility succeeds. Related-title endpoints are filtered; parent credits/videos and TV season endpoints require parent-title verification. Current embed providers are external websites, outside Zoku's enforcement boundary.
 
 **Production readiness:** Run `npm run validate`, add the server-only token in the deployment environment, and verify known blocked IDs in search, deep links, paginated browse, watch history and recommendations on a live preview. The server API allowlist is not a substitute for Firebase server authentication or distributed traffic protection. TMDB metadata may still omit some company or maturity classifications, so this is not guaranteed parental-control or age-verification software.
+
+### Live acceptance check (after setting the server-only token)
+
+After Vercel Preview and Production have `TMDB_API_READ_ACCESS_TOKEN` configured, run the smoke verifier against a deployed preview with the filter **ON** (Adult Content **OFF**):
+
+```bash
+ZOKU_BASE_URL=https://your-preview.vercel.app node scripts/verify-tmdb-policy.mjs
+```
+
+This verifies company sync, a blocked direct movie detail, restricted related-title endpoints, discovery filtering and query/path validation. It does not test browser-only history state, D-pad navigation or external embed-provider access. Do not mark the release as fully qualified until those are manually checked in a browser.
