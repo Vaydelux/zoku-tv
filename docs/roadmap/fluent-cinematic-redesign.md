@@ -1,6 +1,6 @@
 # Zoku TV — Fluent Cinematic Redesign: Component Architecture and Migration Plan
 
-Status: **Implementation started on `feature/fluent-cinematic-redesign`** · 2026-11-14  
+Status: **UI implementation completed on feature branch; real browser and TV visual acceptance pending** · 2026-11-14  
 Reference: user-supplied `workspace-3510d446-f68c-4c94-aaae-b4c57f27212b.tar` and screenshots inside `.verification/`.  
 Live reference: `https://preview-chat-3510d446-f68c-4c94-aaae-b4c57f27212b.space-z.ai/` (remote fetch unavailable; local source/screenshots were inspected).  
 
@@ -98,7 +98,7 @@ Viewport checks: 375×812, 390×844, 430×932, 768×1024, 1280×720 (TV), 1440×
 
 ## 6. Delivery milestones and gates
 
-### PR A — Visual foundation and navigation (this branch, in progress)
+### PR A — Visual foundation and navigation (implemented in draft PR #5)
 - Document audited reference + Zoku component mappings and constraints.
 - Add semantic `cinematic-` CSS styles using existing theme roles, scoped with `data-zoku-layout`.
 - Add opt-out `NEXT_PUBLIC_ZOKU_LAYOUT=classic`. Default on redesign branch: cinematic. The flag affects **presentation only**.
@@ -106,19 +106,19 @@ Viewport checks: 375×812, 390×844, 430×932, 768×1024, 1280×720 (TV), 1440×
 - Restyle hero density and section surfaces without editing data fetching.
 - Gate: typecheck + tests + build; manual visual checks on mobile/desktop/TV.
 
-### PR B — Media artwork, rails and catalog composition
+### PR B — Media artwork, rails and catalog composition (implemented in draft PR #5)
 - Convert both movie and anime cards from wide preview to portrait poster-first, with short metadata outside the image, hover/TV actions maintained.
 - Preserve completion/progress markers, watchlist controls, focus parity and all existing rail scrolling.
 - Simplify search/discover filter controls and add Genre landing façade only if it improves navigation.
 - Gate: TMDB/AniList media and saved-state regression matrix.
 
-### PR C — Detail, player shell and settings
+### PR C — Detail, player shell and settings (presentation implemented in draft PR #5)
 - Match reference's atmospheric detail layout, restrained episode selector and error states.
 - Adjust player *chrome only*: no iframe source, embed URL, sandbox, autoplay or security change.
 - Redesign appearance settings with 18 themes, dark/light and profile-specific preferences.
 - Gate: direct-route permissions, adult/Kids filtering, episodes, subtitles/players, D-pad, keyboard and touch.
 
-### PR D — Cross-device qualification and release
+### PR D — Cross-device qualification and release (automated checks added; real devices pending)
 - Screenshot diffs for all major pages at reference and Zoku viewport sizes.
 - Verify all 18 themes × light/dark, contrast, fallbacks and no unthemed hardcoded black text.
 - Verify PWA, browser back, authenticated routing, search/pagination, continue watching, Watchlist persistence, logout/profile switch and adult unlock expiry.
@@ -141,3 +141,17 @@ The supplied prototype's fake movies, art, color palette, logo, name and hash ro
 - Remote preview URL could not be fetched by the available web reader; the attached workspace and reference screenshots were inspected directly.
 - Pixel-perfect fidelity cannot be claimed without live DOM/computed-style inspection.
 - No production deployment from this UI branch; it is isolated from `main` until tests, screenshots and approval.
+
+
+## 9. Implementation and release acceptance
+
+- Shared 2:3 poster card for TMDB and AniList, with native separate buttons for details, Watchlist, and watched status; progress indicators and responsive sizing.
+- Five-destination navigation with a real `/genres` page, protected catalog links, safe-area mobile tab bar and keyboard/TV focus parity. Desktop nav is shown only above tablet widths to prevent collisions.
+- Artwork-led home, quiet search, Discover, Watchlist, Settings, movie and anime detail, and dark theater player shell. No change to underlying embeds or policy endpoints.
+- All 18 Zoku themes and dark/light variants preserved by semantic CSS roles; performance/reduced-motion overrides and existing TV optimization retained.
+- Reversible build flag: `NEXT_PUBLIC_ZOKU_LAYOUT=classic` restores original visual components without data migration. The Genres route remains available directly but is not added to classic navigation.
+- Automated coverage: `lib/design-navigation.test.ts`, `lib/cinematic-media-card.test.ts`, existing content/security tests, TypeScript and Next.js production build.
+
+**Not yet established:** authenticated browser screenshots of all pages, viewport and mobile soft keyboard overlap, full 18-theme contrast evaluation, Android TV D-pad tests, and external provider playback acceptance. These remain release blockers for merging into production even when CI is green.
+
+**Manual path:** Login → Home → Genres → Discover filter → Movie/Anime detail → Watch → Back → Search → Watchlist/History → Settings. Test locked and password-unlocked adult policy; compare at 390px, 768px, 1280px and 1440px, and test both mobile touch and TV remote.
