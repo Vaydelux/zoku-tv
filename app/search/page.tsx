@@ -103,13 +103,9 @@ function SearchPageContent() {
   const urlQueryParam = searchParams.get("q") || "";
   const effectiveInitialQuery = urlQueryParam || savedInitial?.query || "";
 
-  const hasMatchingSavedResults = Boolean(
-    savedInitial &&
-      effectiveInitialQuery &&
-      savedInitial.query.trim().toLowerCase() === effectiveInitialQuery.trim().toLowerCase() &&
-      savedInitial.isKidMode === isKidMode &&
-      (savedInitial.results.length > 0 || savedInitial.animeResults.length > 0)
-  );
+  // Only restore the query. Never render cached results before the adult-content
+  // policy and current company ID list have been checked.
+  const hasMatchingSavedResults = false;
 
   const [inputValue, setInputValue] = useState(effectiveInitialQuery);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -152,12 +148,6 @@ function SearchPageContent() {
     if (!urlQueryParam && savedInitial?.query?.trim()) {
       const restoredQ = savedInitial.query.trim();
       setInputValue(restoredQ);
-      if (savedInitial.isKidMode === isKidMode) {
-        setResults(savedInitial.results);
-        setAnimeResults(savedInitial.animeResults);
-        setActiveFilter(savedInitial.activeFilter || "all");
-        setPage(savedInitial.page || 1);
-      }
       router.replace(`/search?q=${encodeURIComponent(restoredQ)}`, { scroll: false });
     }
   }, [urlQueryParam, savedInitial, isKidMode, router]);
@@ -216,20 +206,8 @@ function SearchPageContent() {
       return;
     }
 
-    // Check if we already have cached results for this exact query on page 1
-    const cached = readSavedSearchSession();
-    if (
-      page === 1 &&
-      cached &&
-      cached.query.trim().toLowerCase() === trimmed.toLowerCase() &&
-      cached.isKidMode === isKidMode &&
-      (cached.results.length > 0 || cached.animeResults.length > 0)
-    ) {
-      setResults(cached.results);
-      setAnimeResults(cached.animeResults);
-      return;
-    }
-
+    // Refetch the query to apply the current content policy on every navigation.
+    // Previously saved pages could contain items unlocked in an earlier session.
     let cancelled = false;
 
     async function performSearch() {
