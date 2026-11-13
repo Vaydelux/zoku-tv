@@ -112,12 +112,12 @@ export default function WatchMoviePage({
     backdrop_path: details?.backdrop_path ?? null,
     vote_average: details?.vote_average ?? 0,
     selectedServerId,
-    ready: Boolean(details) && type === "movie" && !kidsRestricted,
+    ready: Boolean(details && details.id === numericId) && type === "movie" && !kidsRestricted,
   });
 
   if (type === "tv") return null;
 
-  if (!details) {
+  if (!details || details.id !== numericId) {
     return (
       <div className="min-h-screen bg-background text-on-surface flex flex-col items-center justify-center gap-4 p-6 text-center" data-testid="watch-title-eligibility-gate">
         <Navbar />
