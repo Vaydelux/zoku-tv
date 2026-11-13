@@ -105,6 +105,54 @@ html[data-zoku-layout="cinematic"] .hero-media-scrim {
     );
 }
 
+html[data-zoku-layout="cinematic"] .zoku-hero-content {
+  min-height: clamp(450px, 72svh, 830px);
+  padding-inline: var(--cinematic-gutter);
+  padding-bottom: clamp(36px, 6svh, 78px);
+}
+
+html[data-zoku-layout="cinematic"] .zoku-anime-hero,
+html[data-zoku-layout="cinematic"] .zoku-anime-hero-content {
+  min-height: clamp(420px, 68svh, 800px);
+}
+
+html[data-zoku-layout="cinematic"] .zoku-anime-hero-content {
+  padding-inline: var(--cinematic-gutter);
+  padding-bottom: clamp(32px, 6svh, 72px);
+  align-items: flex-end;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-hero .hero-copy h1 {
+  font-size: clamp(2rem, 4vw, 3.8rem);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-anime-hero .hero-copy h2 {
+  font-size: clamp(2rem, 4vw, 3.8rem);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-hero .hero-copy button,
+html[data-zoku-layout="cinematic"] .zoku-anime-hero .hero-copy button {
+  min-height: 44px;
+  box-shadow: none;
+}
+
+@media (max-width: 479px) {
+  html[data-zoku-layout="cinematic"] .zoku-hero-content {
+    min-height: clamp(460px, 66svh, 670px);
+    padding-bottom: 52px;
+  }
+  html[data-zoku-layout="cinematic"] .zoku-anime-hero,
+  html[data-zoku-layout="cinematic"] .zoku-anime-hero-content {
+    min-height: clamp(430px, 66svh, 670px);
+  }
+}
+
 html[data-zoku-layout="cinematic"] .hero-copy {
   max-width: min(620px, 100%);
 }
