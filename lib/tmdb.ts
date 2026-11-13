@@ -776,7 +776,14 @@ export async function discoverMedia(
 
 export async function getTitleDetails(type: "movie" | "tv", id: number): Promise<TMDBTitle> {
   const data = await tmdbFetch(`/${type}/${id}`, { append_to_response: "release_dates,content_ratings,keywords" });
-  if (type === "movie") requireMovieCatalogAvailable();
+  if (type === "movie") {
+    requireMovieCatalogAvailable();
+    // A failed TMDB request can return a generic fallback title for any ID.
+    // Never render a direct movie player without real company metadata.
+    if (isAdultFilterEnabled() && (!Array.isArray(data.production_companies) || data.id !== id)) {
+      throw new Error("This title is unavailable while the adult-content filter is enabled.");
+    }
+  }
   const title = { ...data, media_type: type };
   if (isAdultFilterEnabled() && isRestrictedTmdbTitle(title)) {
     throw new Error("This title is unavailable while the adult-content filter is enabled.");
