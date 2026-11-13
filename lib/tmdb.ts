@@ -1,19 +1,4 @@
 import { filterRestrictedTmdbTitles, isAdultFilterEnabled, isRestrictedTmdbTitle, syncAdultFilterState, requireMovieCatalogAvailable, BLOCKED_COMPANY_IDS, BLOCKED_KEYWORD_IDS } from "@/lib/adult-content";
-const TMDB_ACCESS_TOKEN = (
-  process.env.NEXT_PUBLIC_TMDB_API_READ_ACCESS_TOKEN ||
-  process.env.TMDB_API_READ_ACCESS_TOKEN ||
-  ""
-).trim();
-const TMDB_BASE_URL = "https://api.themoviedb.org/3";
-
-// A valid TMDB v4 Read Access Token is a signed JWT starting with "eyJ"
-const HAS_VALID_V4_JWT =
-  TMDB_ACCESS_TOKEN.startsWith("eyJ") &&
-  TMDB_ACCESS_TOKEN.split(".").length === 3 &&
-  TMDB_ACCESS_TOKEN.length > 100;
-
-let tmdbFallbackMode = !HAS_VALID_V4_JWT;
-
 export interface TMDBTitle {
   id: number;
   adult?: boolean;
@@ -654,63 +639,26 @@ function resolveFallbackResponse(
   return { results: FALLBACK_MOVIES };
 }
 
+/**
+ * Every browser TMDB request goes through the server policy boundary.
+ * Do not cache unlocked content in localStorage or expose the TMDB token to clients.
+ */
 async function tmdbFetch(
   endpoint: string,
   params: Record<string, string | number | boolean | undefined> = {}
 ): Promise<any> {
   await syncAdultFilterState();
-  if (tmdbFallbackMode) {
-    return resolveFallbackResponse(endpoint, params);
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) query.set(key, String(value));
   }
-
-  const queryParams = new URLSearchParams();
-  Object.entries(params).forEach(([key, val]) => {
-    if (val !== undefined && val !== null) {
-      queryParams.append(key, String(val));
-    }
+  const response = await fetch(`/api/tmdb${endpoint}?${query.toString()}`, {
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
   });
-
-  const url = `${TMDB_BASE_URL}${endpoint}?${queryParams.toString()}`;
-  const cached = getCachedData(url);
-  if (cached) return cached;
-
-  if (url in inflight) {
-    return inflight[url];
-  }
-
-  const request = (async () => {
-    try {
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${TMDB_ACCESS_TOKEN}`,
-          Accept: "application/json",
-        },
-        next: { revalidate: 300 },
-      });
-
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-          tmdbFallbackMode = true;
-        }
-        return resolveFallbackResponse(endpoint, params);
-      }
-
-      const data = await res.json();
-      setCachedData(url, data);
-      return data;
-    } catch {
-      tmdbFallbackMode = true;
-      return resolveFallbackResponse(endpoint, params);
-    }
-  })();
-
-  inflight[url] = request;
-
-  try {
-    return await request;
-  } finally {
-    delete inflight[url];
-  }
+  if (!response.ok) throw new Error(`TMDB catalog is unavailable (${response.status})`);
+  return response.json();
 }
 
 export async function getTrending(
