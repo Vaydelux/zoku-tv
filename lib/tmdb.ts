@@ -1,4 +1,4 @@
-import { filterRestrictedTmdbTitles, isAdultFilterEnabled, isRestrictedTmdbTitle, syncAdultFilterState, BLOCKED_COMPANY_IDS, BLOCKED_KEYWORD_IDS } from "@/lib/adult-content";
+import { filterRestrictedTmdbTitles, isAdultFilterEnabled, isRestrictedTmdbTitle, syncAdultFilterState, requireMovieCatalogAvailable, BLOCKED_COMPANY_IDS, BLOCKED_KEYWORD_IDS } from "@/lib/adult-content";
 const TMDB_ACCESS_TOKEN = (
   process.env.NEXT_PUBLIC_TMDB_API_READ_ACCESS_TOKEN ||
   process.env.TMDB_API_READ_ACCESS_TOKEN ||
@@ -776,6 +776,7 @@ export async function discoverMedia(
 
 export async function getTitleDetails(type: "movie" | "tv", id: number): Promise<TMDBTitle> {
   const data = await tmdbFetch(`/${type}/${id}`, { append_to_response: "release_dates,content_ratings,keywords" });
+  if (type === "movie") requireMovieCatalogAvailable();
   const title = { ...data, media_type: type };
   if (isAdultFilterEnabled() && isRestrictedTmdbTitle(title)) {
     throw new Error("This title is unavailable while the adult-content filter is enabled.");
