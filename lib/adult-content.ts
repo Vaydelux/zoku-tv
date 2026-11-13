@@ -24,6 +24,7 @@ const PROMOTIONAL_TERMS = /\b(?:vivamax|vmx original|softcore|erotic (?:film|mov
 let filterEnabled = true;
 const companyCatalogIds = new Set<number>();
 let catalogPromise: Promise<void> | undefined;
+let companyCatalogReady = false;
 
 let syncPromise: Promise<void> | undefined;
 
@@ -40,10 +41,12 @@ export function syncAdultFilterState(): Promise<void> {
     catalogPromise = fetch("/api/vivamax-ids", { credentials: "same-origin", cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Company catalog unavailable");
-        const payload = await response.json() as { ids?: number[] };
+        const payload = await response.json() as { ids?: number[]; complete?: boolean };
+        if (payload.complete !== true || !Array.isArray(payload.ids)) throw new Error("Incomplete company catalog");
+        companyCatalogReady = true;
         for (const id of payload.ids || []) if (Number.isSafeInteger(id) && id > 0) companyCatalogIds.add(id);
       })
-      .catch(() => { /* The direct company, metadata, and keyword checks remain active. */ });
+      .catch(() => { companyCatalogReady = false; /* Fail closed on movie routes until IDs can be checked. */ });
   }
   if (!syncPromise) {
     syncPromise = fetch("/api/adult-content", { credentials: "same-origin", cache: "no-store" })
@@ -70,6 +73,11 @@ export function isRestrictedTmdbTitle(title: AdultContentTitle): boolean {
   if (ratings.some((rating) => BLOCKED_CERTIFICATIONS.has((rating || "").trim().toUpperCase()))) return true;
   return PROMOTIONAL_TERMS.test([title.title, title.name, title.original_title, title.overview].filter(Boolean).join(" "));
 }
+export function requireMovieCatalogAvailable(): void {
+  if (filterEnabled && !companyCatalogReady && typeof window !== "undefined") {
+    throw new Error("Movie content verification is temporarily unavailable.");
+  }
+}
 export function filterRestrictedTmdbTitles<T extends AdultContentTitle>(titles: T[]): T[] {
-  return filterEnabled ? titles.filter((item) => !isRestrictedTmdbTitle(item)) : titles;
+  return filterEnabled ? titles.filter((item) => (item.media_type === "tv" || companyCatalogReady || typeof window === "undefined") && !isRestrictedTmdbTitle(item)) : titles;
 }
