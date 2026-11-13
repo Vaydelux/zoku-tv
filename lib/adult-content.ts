@@ -27,6 +27,8 @@ let catalogPromise: Promise<void> | undefined;
 let companyCatalogReady = false;
 
 let syncPromise: Promise<void> | undefined;
+let policyCheckedAt = 0;
+const POLICY_REFRESH_MS = 30 * 1000;
 
 export function isAdultFilterEnabled(): boolean {
   return filterEnabled;
@@ -34,6 +36,7 @@ export function isAdultFilterEnabled(): boolean {
 export function setAdultFilterEnabled(enabled: boolean): void {
   filterEnabled = enabled;
   syncPromise = undefined;
+  policyCheckedAt = 0;
 }
 export function syncAdultFilterState(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
@@ -48,7 +51,8 @@ export function syncAdultFilterState(): Promise<void> {
       })
       .catch(() => { companyCatalogReady = false; /* Fail closed on movie routes until IDs can be checked. */ });
   }
-  if (!syncPromise) {
+  if (!syncPromise || Date.now() - policyCheckedAt >= POLICY_REFRESH_MS) {
+    policyCheckedAt = Date.now();
     syncPromise = fetch("/api/adult-content", { credentials: "same-origin", cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Content filter status unavailable");
