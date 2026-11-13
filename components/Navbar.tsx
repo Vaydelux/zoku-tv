@@ -479,7 +479,7 @@ export function Navbar() {
                   const Icon =
                     link.href === "/home" ? Home :
                     link.href === "/search" ? Search :
-                    link.href === "/discover" ? Compass :
+                    link.href === "/genres" ? Compass :
                     link.href === "/watchlist" ? Heart : Settings;
                   const isActive = activeNav === link.href;
                   return (
