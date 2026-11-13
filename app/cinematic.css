@@ -191,6 +191,56 @@ html[data-zoku-layout="cinematic"] .zoku-mobile-tab:focus-visible {
   outline-offset: -3px;
 }
 
+/* Quiet page compositions: typography and geometry only; existing data,
+   search, history, settings and content filters continue to own behavior. */
+html[data-zoku-layout="cinematic"] .zoku-cinematic-search .zoku-search-header {
+  max-width: min(750px, 100%);
+  margin-inline: 0;
+  align-items: stretch;
+  text-align: left;
+  gap: 12px;
+  padding-block: 12px 6px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-search .zoku-search-header h1,
+html[data-zoku-layout="cinematic"] .zoku-cinematic-watchlist h1,
+html[data-zoku-layout="cinematic"] .zoku-cinematic-settings h1,
+html[data-zoku-layout="cinematic"] .zoku-cinematic-discover h1 {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  text-transform: none;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-search [data-testid="search-page-input"] {
+  border: 1px solid var(--cinematic-stroke);
+  background-color: var(--cinematic-panel);
+  background-image: none;
+  box-shadow: none;
+  border-radius: var(--cinematic-radius);
+  min-height: 52px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-search [data-testid="search-page-input"]:focus-visible {
+  border-color: var(--cinematic-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cinematic-accent) 19%, transparent);
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-watchlist [role="tablist"] {
+  border-radius: var(--cinematic-radius);
+  box-shadow: none;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-watchlist [role="tablist"] [role="tab"] {
+  min-height: 40px;
+  border-radius: 8px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-settings .glass-panel {
+  box-shadow: none;
+}
+
 @media (max-width: 1023px) {
   html[data-zoku-layout="cinematic"] .zoku-has-mobile-nav {
     padding-bottom: calc(72px + env(safe-area-inset-bottom));
