@@ -93,9 +93,10 @@ export function filterRestrictedTmdbTitles<T extends AdultContentTitle>(titles: 
 }
 
 /** Keep old watchlist, history, and resume items private while the filter is active. */
-export function filterSavedMediaItems<T extends { media_type: string; tmdbId?: number | null; title?: string }>(items: T[]): T[] {
+export function filterSavedMediaItems<T extends { media_type: string; tmdbId?: number | null; anilistId?: number | null; title?: string }>(items: T[], safeAnimeIds?: ReadonlySet<number>): T[] {
   if (!filterEnabled) return items;
   return items.filter((item) => {
+    if (item.media_type === "anime") return Boolean(item.anilistId && safeAnimeIds?.has(item.anilistId));
     if (item.media_type !== "movie") return true;
     if (!companyCatalogReady || !item.tmdbId) return false;
     return !isRestrictedTmdbTitle({ id: item.tmdbId, media_type: "movie", title: item.title });
