@@ -86,6 +86,8 @@ export default function WatchTvPage({
     let cancelled = false;
     setEpisodesLoading(true);
     setDetailError(false);
+    setDetails(null);
+    setEpisodes([]);
     Promise.all([
       getTitleDetails("tv", numericId),
       getSeasonDetails(numericId, seasonNum),
@@ -140,10 +142,10 @@ export default function WatchTvPage({
     backdrop_path: details?.backdrop_path ?? null,
     vote_average: details?.vote_average ?? 0,
     selectedServerId,
-    ready: Boolean(details) && !kidsRestricted,
+    ready: Boolean(details && details.id === numericId) && !kidsRestricted,
   });
 
-  if (!details) {
+  if (!details || details.id !== numericId) {
     return (
       <div className="min-h-screen bg-background text-on-surface flex flex-col items-center justify-center gap-4 p-6 text-center" data-testid="watch-title-eligibility-gate">
         <Navbar />
