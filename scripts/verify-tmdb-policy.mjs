@@ -11,8 +11,12 @@ if (!base || !/^https:\/\//.test(base)) {
   process.exit(2);
 }
 const origin = new URL(base).origin;
+// Compatible with protected Vercel previews when run inside `vc env run`.
+const accessHeaders = process.env.VERCEL_OIDC_TOKEN
+  ? { "x-vercel-trusted-oidc-idp-token": process.env.VERCEL_OIDC_TOKEN }
+  : {};
 async function get(path) {
-  const response = await fetch(new URL(path, origin), { cache: "no-store", redirect: "manual" });
+  const response = await fetch(new URL(path, origin), { cache: "no-store", redirect: "manual", headers: accessHeaders });
   const body = await response.json().catch(() => ({}));
   return { status: response.status, body };
 }
@@ -49,7 +53,7 @@ try {
   const anime = await fetch(new URL("/api/anilist", origin), {
     method: "POST",
     cache: "no-store",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...accessHeaders, "Content-Type": "application/json" },
     body: JSON.stringify({ operation: "browse", variables: { page: 1, perPage: 20 } }),
   });
   const animeBody = await anime.json().catch(() => ({}));
