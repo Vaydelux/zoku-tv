@@ -103,7 +103,7 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
 
   if (isKidMode && !classification.kidsSafe) {
     return (
-      <div className="app-page-shell text-on-surface pb-16">
+      <div className="zoku-cinematic-detail zoku-cinematic-anime-detail app-page-shell text-on-surface pb-16">
         <Navbar />
         <div className="mx-auto max-w-xl px-4 py-20">
           <div
@@ -181,7 +181,7 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
       <Navbar />
 
       <div
-        className="relative h-[40vh] min-h-[280px] bg-cover bg-center"
+        className="zoku-detail-backdrop relative h-[40vh] min-h-[280px] bg-cover bg-center"
         style={{ backgroundImage: banner ? `url(${banner})` : undefined }}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-black/40" />
