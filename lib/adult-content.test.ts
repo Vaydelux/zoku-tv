@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { filterRestrictedTmdbTitles, isRestrictedTmdbTitle, setAdultFilterEnabled, syncAdultFilterState, requireMovieCatalogAvailable } from "./adult-content";
+import { filterRestrictedTmdbTitles, isRestrictedTmdbTitle, setAdultFilterEnabled, syncAdultFilterState, requireMovieCatalogAvailable, filterSavedMediaItems } from "./adult-content";
 
 test("blocks explicit adult flag and VMX company regardless of TMDB adult flag", () => {
   assert.equal(isRestrictedTmdbTitle({ id: 12, adult: true }), true);
@@ -51,6 +51,11 @@ test("syncs multiple company IDs, blocks cached and direct-route titles by ID", 
       ]).map((item) => item.id),
       [6]
     );
+    assert.deepEqual(filterSavedMediaItems([
+      { media_type: "movie", tmdbId: 543210, title: "Restricted" },
+      { media_type: "movie", tmdbId: 6, title: "Permitted" },
+      { media_type: "tv", tmdbId: 543210, title: "Unrelated TV" },
+    ]).map((item) => item.title), ["Permitted", "Unrelated TV"]);
     const { getTitleDetails } = await import("./tmdb");
     await assert.rejects(getTitleDetails("movie", 543210), /unavailable while the adult-content filter is enabled/);
     assert.deepEqual(endpoints.sort(), ["/api/adult-content", "/api/vivamax-ids"].sort());
