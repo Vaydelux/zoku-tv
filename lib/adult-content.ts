@@ -22,6 +22,9 @@ const BLOCKED_MOVIE_IDS = new Set(
 );
 const PROMOTIONAL_TERMS = /\b(?:vivamax|vmx original|softcore|erotic (?:film|movie)|pink film)\b/i;
 let filterEnabled = true;
+const companyCatalogIds = new Set<number>();
+let catalogPromise: Promise<void> | undefined;
+
 let syncPromise: Promise<void> | undefined;
 
 export function isAdultFilterEnabled(): boolean {
@@ -33,6 +36,15 @@ export function setAdultFilterEnabled(enabled: boolean): void {
 }
 export function syncAdultFilterState(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
+  if (!catalogPromise) {
+    catalogPromise = fetch("/api/vivamax-ids", { credentials: "same-origin", cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Company catalog unavailable");
+        const payload = await response.json() as { ids?: number[] };
+        for (const id of payload.ids || []) if (Number.isSafeInteger(id) && id > 0) companyCatalogIds.add(id);
+      })
+      .catch(() => { /* The direct company, metadata, and keyword checks remain active. */ });
+  }
   if (!syncPromise) {
     syncPromise = fetch("/api/adult-content", { credentials: "same-origin", cache: "no-store" })
       .then(async (response) => {
@@ -42,11 +54,11 @@ export function syncAdultFilterState(): Promise<void> {
       })
       .catch(() => { filterEnabled = true; });
   }
-  return syncPromise;
+  return Promise.all([syncPromise, catalogPromise]).then(() => undefined);
 }
 export function isRestrictedTmdbTitle(title: AdultContentTitle): boolean {
   if (title.adult === true) return true;
-  if (title.media_type !== "tv" && BLOCKED_MOVIE_IDS.has(title.id)) return true;
+  if (title.media_type !== "tv" && (BLOCKED_MOVIE_IDS.has(title.id) || companyCatalogIds.has(title.id))) return true;
   if (title.production_companies?.some((company) => BLOCKED_COMPANY_IDS.includes(company.id as 149142))) return true;
   const keywords = [...(title.keywords?.keywords || []), ...(title.keywords?.results || [])];
   if (keywords.some((keyword) => BLOCKED_KEYWORD_IDS.includes(keyword.id as typeof BLOCKED_KEYWORD_IDS[number]))) return true;
