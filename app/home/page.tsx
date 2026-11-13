@@ -32,6 +32,7 @@ import { LoadingBanner } from "@/components/LoadingBanner";
 import { TMDBTitle, TMDBGenre } from "@/lib/tmdb";
 import { loadHomeGenreRails, loadHomeTrending } from "@/lib/load-home-content";
 import { filterSavedMediaItems, syncAdultFilterState } from "@/lib/adult-content";
+import { getEligibleSavedAnimeIds } from "@/lib/anilist";
 import { loadAnimeHomeContent } from "@/lib/load-anime-home-content";
 import type { AniListMedia } from "@/lib/anilist";
 import { filterContinueWatchingByCatalog } from "@/lib/continue-watching";
@@ -91,11 +92,26 @@ export default function HomePage() {
 
   const [cacheRefreshVersion, setCacheRefreshVersion] = useState(0);
   const [adultPolicyReady, setAdultPolicyReady] = useState(false);
+  const [safeAnimeIds, setSafeAnimeIds] = useState<ReadonlySet<number>>(new Set());
   useEffect(() => {
     let active = true;
-    syncAdultFilterState().then(() => { if (active) setAdultPolicyReady(true); });
+    setAdultPolicyReady(false);
+    const saved = [...continueWatchingItems, ...watchHistoryItems, ...watchlistItems];
+    const animeIds = saved.filter((item) => item.media_type === "anime")
+      .map((item) => item.anilistId || 0).filter((id) => Number.isSafeInteger(id) && id > 0);
+    (async () => {
+      try {
+        await syncAdultFilterState();
+        const eligible = await getEligibleSavedAnimeIds(animeIds);
+        if (active) setSafeAnimeIds(eligible);
+      } catch {
+        if (active) setSafeAnimeIds(new Set());
+      } finally {
+        if (active) setAdultPolicyReady(true);
+      }
+    })();
     return () => { active = false; };
-  }, []);
+  }, [continueWatchingItems, watchHistoryItems, watchlistItems, currentProfile?.id]);
 
   const [loadingTrending, setLoadingTrending] = useState(true);
   const [loadingGenreRails, setLoadingGenreRails] = useState(true);
@@ -103,18 +119,18 @@ export default function HomePage() {
   const [isOffline, setIsOffline] = useState(false);
 
   const filteredCw = useMemo(
-    () => adultPolicyReady ? filterSavedMediaItems(filterContinueWatchingByCatalog(continueWatchingItems, catalogMode)) : [],
-    [continueWatchingItems, catalogMode, adultPolicyReady]
+    () => adultPolicyReady ? filterSavedMediaItems(filterContinueWatchingByCatalog(continueWatchingItems, catalogMode), safeAnimeIds) : [],
+    [continueWatchingItems, catalogMode, adultPolicyReady, safeAnimeIds]
   );
 
   const filteredHistory = useMemo(
-    () => adultPolicyReady ? filterSavedMediaItems(filterWatchHistoryByCatalog(watchHistoryItems, catalogMode)) : [],
-    [watchHistoryItems, catalogMode, adultPolicyReady]
+    () => adultPolicyReady ? filterSavedMediaItems(filterWatchHistoryByCatalog(watchHistoryItems, catalogMode), safeAnimeIds) : [],
+    [watchHistoryItems, catalogMode, adultPolicyReady, safeAnimeIds]
   );
 
   const catalogWatchlist = useMemo(
-    () => adultPolicyReady ? filterSavedMediaItems(filterWatchlistByCatalog(watchlistItems, catalogMode)) : [],
-    [watchlistItems, catalogMode, adultPolicyReady]
+    () => adultPolicyReady ? filterSavedMediaItems(filterWatchlistByCatalog(watchlistItems, catalogMode), safeAnimeIds) : [],
+    [watchlistItems, catalogMode, adultPolicyReady, safeAnimeIds]
   );
 
   const tmdbWatchlistPreview = useMemo<TMDBTitle[]>(() => {
