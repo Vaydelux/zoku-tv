@@ -113,6 +113,7 @@ export default function WatchAnimePage({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setAnime(null);
     getAnimeDetails(numericId)
       .then((res) => {
         if (!cancelled) setAnime(res);
@@ -166,8 +167,21 @@ export default function WatchAnimePage({
     selectedServerId: currentServerObj.id,
     serverDomains: currentServerObj.domains,
     embedUrl,
-    ready: Boolean(anime) && !loading && !kidsRestricted,
+    ready: Boolean(anime && anime.id === numericId) && !loading && !kidsRestricted,
   });
+
+  // No third-party player can mount until the trusted AniList endpoint confirms
+  // that this exact ID is allowed under the active adult-content policy.
+  if (!anime || anime.id !== numericId) {
+    return (
+      <div className="min-h-screen bg-background text-on-surface flex flex-col items-center justify-center gap-5 p-6 text-center" data-testid="anime-adult-content-gate">
+        <Navbar />
+        <ShieldAlert className="h-10 w-10 text-primary" />
+        <p className="text-on-surface-variant text-sm">{loading ? "Checking anime availability…" : "This anime is unavailable or restricted by the content filter."}</p>
+        <Link href="/home" className="rounded-xl bg-primary text-primary-contrast px-5 py-3 font-semibold">Back to Home</Link>
+      </div>
+    );
+  }
 
   if (kidsRestricted && anime) {
     return (
