@@ -346,14 +346,14 @@ function SearchPageContent() {
   const queryParam = activeQuery;
 
   return (
-    <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
+    <div className="zoku-cinematic-search app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
       <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
-        <div className="flex flex-col items-center max-w-2xl mx-auto text-center gap-4 py-6">
+        <div className="zoku-search-header flex flex-col items-center max-w-2xl mx-auto text-center gap-4 py-6">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-on-surface">
-              Infinite Search Channel
+              Search
             </h1>
             {isKidMode && (
               <span
@@ -366,7 +366,7 @@ function SearchPageContent() {
             )}
           </div>
           <p className="text-xs text-on-surface-variant max-w-md">
-            Scan across millions of movies, television series, and anime franchises in real-time.
+            Discover movies, TV shows, and anime in one search.
           </p>
 
           <form onSubmit={handleSearchSubmit} className="relative w-full mt-2">
