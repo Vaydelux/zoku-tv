@@ -297,17 +297,21 @@ export async function getAnimeByGenre(genre: string, perPage = 12) {
  * Missing IDs or lookup errors fail closed; persisted user data is unchanged.
  */
 export async function getEligibleSavedAnimeIds(ids: number[]): Promise<Set<number>> {
-  const unique = [...new Set(ids.filter((id) => Number.isSafeInteger(id) && id > 0))].slice(0, 50);
-  if (unique.length === 0) return new Set<number>();
-  const response = await fetch("/api/anilist", {
-    method: "POST",
-    credentials: "same-origin",
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ operation: "eligibility", variables: { ids: unique } }),
-  });
-  if (!response.ok) throw new Error("Saved anime eligibility unavailable");
-  const payload = await response.json() as { data?: { ids?: number[] } };
-  if (!Array.isArray(payload.data?.ids)) throw new Error("Invalid saved anime eligibility response");
-  return new Set(payload.data.ids.filter((id) => unique.includes(id)));
+  const unique = [...new Set(ids.filter((id) => Number.isSafeInteger(id) && id > 0))];
+  const verified = new Set<number>();
+  for (let i = 0; i < unique.length; i += 50) {
+    const chunk = unique.slice(i, i + 50);
+    const response = await fetch("/api/anilist", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ operation: "eligibility", variables: { ids: chunk } }),
+    });
+    if (!response.ok) throw new Error("Saved anime eligibility unavailable");
+    const payload = await response.json() as { data?: { ids?: number[] } };
+    if (!Array.isArray(payload.data?.ids)) throw new Error("Invalid saved anime eligibility response");
+    for (const id of payload.data.ids) if (chunk.includes(id)) verified.add(id);
+  }
+  return verified;
 }
