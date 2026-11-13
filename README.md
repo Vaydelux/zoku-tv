@@ -23,7 +23,7 @@ A cinematic, multi-profile entertainment discovery and streaming portal built wi
 ## Prerequisites
 
 - **Node.js 20+**
-- **[TMDB API](https://www.themoviedb.org/settings/api)** v4 Read Access Token (optional for local development — built-in authentic catalog fallback activates automatically when omitted)
+- **[TMDB API](https://www.themoviedb.org/settings/api)** v4 Read Access Token (required as the server-only `TMDB_API_READ_ACCESS_TOKEN`; missing credentials fail closed)
 - **(Optional) [Firebase](https://console.firebase.google.com/)** project for cloud authentication & cross-device sync
 
 ---
@@ -54,7 +54,7 @@ A cinematic, multi-profile entertainment discovery and streaming portal built wi
 | --- | --- |
 | `npm run dev` | Start Next.js development server |
 | `npm run typecheck` | Run strict TypeScript & JSX compiler validation (`tsc --noEmit`) |
-| `npm test` | Run automated unit, domain, & security isolation test suite (`tsx --test "lib/**/*.test.ts"`) |
+| `npm test` | Run automated unit, domain, & security isolation test suite (`tsx --test lib/*.test.ts`) |
 | `npm run build` | Build production Next.js bundle |
 | `npm run start` | Start production Next.js server |
 | `npm run validate` | Execute full CI validation pipeline (`typecheck` + `test` + `build`) |
@@ -79,27 +79,27 @@ A cinematic, multi-profile entertainment discovery and streaming portal built wi
   - [`docs/release-notes.md`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/docs/release-notes.md)
 
 
-## Adult-content filter
+## Server-enforced TMDB catalog and adult-content policy
 
-The Movies & TV catalog filters known restricted content by default, independently of Kids Mode. The filter combines TMDB adult flags, known Vivamax/VMX company IDs, release certifications, selected keyword IDs and optional movie IDs. TMDB metadata is incomplete and this is a best-effort filter, not an age-verification or guaranteed parental-control boundary.
+**Adult Content is OFF by default** (filtering ON). The catalog, recommendations, movie/TV title details, credits and videos are fetched through `/api/tmdb/[...path]` with a strict route allowlist. Movie and TV detail/child endpoints require server-side eligibility checks. The server reads the signed HttpOnly adult unlock cookie on each request; the client has no authority to override the content policy.
 
-To permit an optional temporary unlock, configure a **server-only** environment variable in `.env.local` (and Vercel Environment Variables when deployed):
+Configure the following in the **server environment** and in Vercel **Production and Preview**:
 
 ```env
+TMDB_API_READ_ACCESS_TOKEN=your-private-v4-read-access-token
 ADULT_CONTENT_PASSWORD=replace-with-a-long-unique-password
-NEXT_PUBLIC_BLOCKED_TMDB_MOVIE_IDS=
+# Optional secret used for signing unlock cookies; 32+ characters
+ADULT_CONTENT_SESSION_SECRET=
+# Optional comma-separated supplemental TMDB movie IDs
+BLOCKED_TMDB_MOVIE_IDS=
 ```
 
-The password must be 12 characters or longer. Never use `NEXT_PUBLIC_ADULT_CONTENT_PASSWORD` or commit real secrets. Open **Settings → Profiles & Kids Mode → Adult Content Filtering** and enter the password to disable the filter for this browser for up to four hours. Re-enable filtering without a password. With no configured password, filtering remains enabled and cannot be switched off through Settings.
+**Remove the legacy `NEXT_PUBLIC_TMDB_API_READ_ACCESS_TOKEN` once the new server-only credential is configured and the application has been deployed.** Because the old credential was published to browser bundles, consider rotating it at TMDB before removing the old Vercel variable. Do not paste tokens or passwords into chats or commit them to the repository.
 
-The current TMDB integration is client-side and uses a public client token. This setting controls Zoku TV's displayed catalog, **not access to the underlying TMDB API**; stronger enforcement requires moving catalog requests and detail/watch authorization to server-side endpoints. Changes to the filter invalidate home and search session caches, but existing browser history or saved watchlist items are not retroactively deleted.
+When `ADULT_CONTENT_PASSWORD` is absent or invalid (fewer than 12 characters), content stays filtered and the adult unlock is unavailable. When configured, Settings permits a temporary four-hour unlock with an HttpOnly, SameSite Strict cookie; the password is verified on the server and basic per-instance brute-force protection is applied. Multiple serverless instances do not share attempt counters; use managed WAF/distributed rate limiting for production abuse resistance.
 
-### Vivamax company movie ID sync
+`/api/vivamax-ids` and the server catalog use TMDB `with_companies=149142`, `include_adult=true`, verify all pages, and fail closed on incomplete/expired company ID data. The company list also includes IDs from `BLOCKED_TMDB_MOVIE_IDS`. Server-side discover, trending and search responses remove known restricted movie IDs and adult-flagged records before returning metadata to clients. The browser separately filters saved/previously cached items but this client-only pass is not relied upon for authorization.
 
-`GET /api/vivamax-ids` queries TMDB Discover Movie with `with_companies=149142` and `include_adult=true`, paginates results, deduplicates movie IDs, and caches the successful catalog in server memory for 24 hours. The browser fetches the ID list before showing TMDB catalog results, so the known IDs are excluded from trending, search, discovery, recommendations, details, and the movie player. On a refresh failure, the last in-memory list is served if available. This covers titles assigned to this TMDB company, not titles released under other company IDs or missing TMDB company attribution. It is not a license or DRM enforcement mechanism.
+Direct Zoku movie URLs `/title/movie/:id` and `/watch/movie/:id` cannot fetch accepted movie details from the proxy when restricted, and their player is gated until eligibility succeeds. Related-title endpoints are filtered; parent credits/videos and TV season endpoints require parent-title verification. Current embed providers are external websites, outside Zoku's enforcement boundary.
 
-For production, set `TMDB_API_READ_ACCESS_TOKEN` on the server. The endpoint currently falls back to `NEXT_PUBLIC_TMDB_API_READ_ACCESS_TOKEN` for compatibility with the existing client API implementation. Move all TMDB calls server-side in a follow-up hardening pass. The company ID sync uses the shared server deployment's in-memory snapshot, which resets on cold starts.
-
-### Direct-route protection with adult content OFF
-
-The default state is **adult content OFF** (filter ON). Movie lists are filtered before rendering, including successive Discover/Search result pages. Direct `/title/movie/:id` and `/watch/movie/:id` navigation must pass catalog sync and the TMDB detail metadata filter; the movie watch UI does not render its external embed until eligibility succeeds. If the company ID list cannot be verified, movie catalog display and direct movie routes fail closed until verification is available. This prioritizes blocking unverified material over availability. Existing watchlist/history entries may remain in local data; their movie watch routes are still gated. Because catalog metadata and player embeds are client-side, these protections do not prevent a technically knowledgeable user from opening an external embed-provider URL directly.
+**Production readiness:** Run `npm run validate`, add the server-only token in the deployment environment, and verify known blocked IDs in search, deep links, paginated browse, watch history and recommendations on a live preview. The server API allowlist is not a substitute for Firebase server authentication or distributed traffic protection. TMDB metadata may still omit some company or maturity classifications, so this is not guaranteed parental-control or age-verification software.
