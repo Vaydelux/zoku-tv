@@ -77,3 +77,19 @@ A cinematic, multi-profile entertainment discovery and streaming portal built wi
   - [`docs/deployment.md`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/docs/deployment.md)
   - [`docs/qa-matrix.md`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/docs/qa-matrix.md)
   - [`docs/release-notes.md`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/docs/release-notes.md)
+
+
+## Adult-content filter
+
+The Movies & TV catalog filters known restricted content by default, independently of Kids Mode. The filter combines TMDB adult flags, known Vivamax/VMX company IDs, release certifications, selected keyword IDs and optional movie IDs. TMDB metadata is incomplete and this is a best-effort filter, not an age-verification or guaranteed parental-control boundary.
+
+To permit an optional temporary unlock, configure a **server-only** environment variable in `.env.local` (and Vercel Environment Variables when deployed):
+
+```env
+ADULT_CONTENT_PASSWORD=replace-with-a-long-unique-password
+NEXT_PUBLIC_BLOCKED_TMDB_MOVIE_IDS=
+```
+
+The password must be 12 characters or longer. Never use `NEXT_PUBLIC_ADULT_CONTENT_PASSWORD` or commit real secrets. Open **Settings → Profiles & Kids Mode → Adult Content Filtering** and enter the password to disable the filter for this browser for up to four hours. Re-enable filtering without a password. With no configured password, filtering remains enabled and cannot be switched off through Settings.
+
+The current TMDB integration is client-side and uses a public client token. This setting controls Zoku TV's displayed catalog, **not access to the underlying TMDB API**; stronger enforcement requires moving catalog requests and detail/watch authorization to server-side endpoints. Changes to the filter invalidate home and search session caches, but existing browser history or saved watchlist items are not retroactively deleted.
