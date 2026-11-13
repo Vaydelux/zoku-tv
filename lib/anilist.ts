@@ -1,5 +1,3 @@
-const ANILIST_URL = "https://graphql.anilist.co";
-const CACHE_TTL_MS = 15 * 60 * 1000;
 
 export interface AniListTitle {
   romaji?: string | null;
@@ -34,6 +32,8 @@ export interface AniListMedia {
   startDate?: { year?: number | null; month?: number | null; day?: number | null } | null;
   studios?: { nodes?: AniListStudioNode[] | null } | null;
   media_type?: "anime";
+  isAdult?: boolean | null;
+  tags?: { name: string; isAdult?: boolean | null }[] | null;
 }
 
 export interface AniListStreamingEpisode {
@@ -126,10 +126,6 @@ export const ANILIST_STUDIOS = [
   "Studio Ghibli",
 ] as const;
 
-const cache: Record<string, { data: unknown; expiry: number }> = {};
-const inflight: Record<string, Promise<unknown>> = {};
-let rateLimitRemaining = 90;
-
 function stripHtml(text: string | null | undefined): string {
   if (!text) return "";
   return text.replace(/<[^>]*>/g, "").trim();
@@ -143,210 +139,27 @@ export function getAnimePoster(media: AniListMedia): string | null {
   return media.coverImage?.large || media.coverImage?.extraLarge || null;
 }
 
-function getCached<T>(key: string): T | null {
-  const hit = cache[key];
-  if (hit && hit.expiry > Date.now()) return hit.data as T;
-  if (typeof window !== "undefined") {
-    try {
-      const stored = localStorage.getItem(`zoku_anilist_cache_${key}`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.expiry > Date.now()) {
-          cache[key] = parsed;
-          return parsed.data as T;
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return null;
-}
+import { BROWSE_QUERY, STUDIO_BROWSE_QUERY, DETAIL_QUERY } from "@/lib/anilist-queries";
 
-function setCached(key: string, data: unknown) {
-  const entry = { data, expiry: Date.now() + CACHE_TTL_MS };
-  cache[key] = entry;
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(`zoku_anilist_cache_${key}`, JSON.stringify(entry));
-    } catch {
-      // ignore
-    }
-  }
-}
-
+/** Restricted AniList requests go through the server; no raw GraphQL query is accepted. */
 async function anilistFetch<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
-  const cacheKey = JSON.stringify({ query, variables });
-  const cached = getCached<T>(cacheKey);
-  if (cached) return cached;
-
-  if (cacheKey in inflight) return inflight[cacheKey] as Promise<T>;
-
-  const promise = (async () => {
-    if (rateLimitRemaining <= 2) {
-      await new Promise((r) => setTimeout(r, 1500));
-    }
-
-    const response = await fetch(ANILIST_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ query, variables }),
-    });
-
-    const remaining = response.headers.get("X-RateLimit-Remaining");
-    if (remaining) rateLimitRemaining = Number.parseInt(remaining, 10);
-
-    if (response.status === 429) {
-      const retryAfter = Number.parseInt(response.headers.get("Retry-After") || "60", 10);
-      await new Promise((r) => setTimeout(r, retryAfter * 1000));
-      return anilistFetch<T>(query, variables);
-    }
-
-    const json = await response.json();
-    if (json.errors?.length) {
-      throw new Error(json.errors[0]?.message || "AniList request failed");
-    }
-
-    setCached(cacheKey, json.data);
-    return json.data as T;
-  })();
-
-  inflight[cacheKey] = promise;
-  try {
-    return await promise;
-  } finally {
-    delete inflight[cacheKey];
+  const operation = query === BROWSE_QUERY ? "browse" : query === STUDIO_BROWSE_QUERY ? "studio" : query === DETAIL_QUERY ? "detail" : null;
+  if (!operation) throw new Error("Unsupported AniList operation");
+  const response = await fetch("/api/anilist", {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ operation, variables }),
+  });
+  if (!response.ok) {
+    if (response.status === 404 && operation === "detail") return { Media: null } as T;
+    throw new Error(`AniList verification unavailable (${response.status})`);
   }
+  const payload = await response.json() as { data?: T };
+  if (!payload.data) throw new Error("Invalid AniList API response");
+  return payload.data;
 }
-
-const BROWSE_MEDIA_FIELDS = `
-  id
-  type
-  title { romaji english native }
-  coverImage { large extraLarge color }
-  bannerImage
-  description(asHtml: false)
-  genres
-  averageScore
-  popularity
-  episodes
-  status
-  format
-  source
-  season
-  seasonYear
-  startDate { year month day }
-  studios(isMain: true) {
-    nodes {
-      id
-      name
-      isAnimationStudio
-    }
-  }
-`;
-
-const BROWSE_QUERY = `
-query (
-  $page: Int,
-  $perPage: Int,
-  $search: String,
-  $genre_in: [String],
-  $season: MediaSeason,
-  $seasonYear: Int,
-  $format: MediaFormat,
-  $source: MediaSource,
-  $sort: [MediaSort]
-) {
-  Page(page: $page, perPage: $perPage) {
-    pageInfo { total currentPage lastPage hasNextPage }
-    media(
-      search: $search,
-      genre_in: $genre_in,
-      season: $season,
-      seasonYear: $seasonYear,
-      format: $format,
-      source: $source,
-      type: ANIME,
-      sort: $sort
-    ) {
-      ${BROWSE_MEDIA_FIELDS}
-    }
-  }
-}`;
-
-const STUDIO_BROWSE_QUERY = `
-query ($studio: String, $page: Int, $perPage: Int, $sort: [MediaSort]) {
-  Studio(search: $studio) {
-    id
-    name
-    media(isMain: true, sort: $sort, page: $page, perPage: $perPage) {
-      pageInfo { total currentPage lastPage hasNextPage }
-      nodes {
-        ${BROWSE_MEDIA_FIELDS}
-      }
-    }
-  }
-}`;
-
-const DETAIL_QUERY = `
-query ($id: Int) {
-  Media(id: $id, type: ANIME) {
-    id
-    title { romaji english native }
-    coverImage { extraLarge large color }
-    bannerImage
-    description(asHtml: false)
-    genres
-    averageScore
-    meanScore
-    popularity
-    episodes
-    status
-    format
-    source
-    season
-    seasonYear
-    startDate { year month day }
-    studios(isMain: true) {
-      nodes {
-        id
-        name
-        isAnimationStudio
-      }
-    }
-    trailer { id site thumbnail }
-    streamingEpisodes { title thumbnail url site }
-    relations {
-      edges {
-        relationType
-        node {
-          id
-          type
-          title { romaji english }
-          episodes
-          format
-          season
-          seasonYear
-          startDate { year month day }
-          coverImage { large }
-        }
-      }
-    }
-    characters(sort: [ROLE, RELEVANCE], perPage: 8) {
-      edges {
-        role
-        node { id name { full } image { large } }
-      }
-    }
-    recommendations(perPage: 8, sort: [RATING_DESC]) {
-      nodes {
-        mediaRecommendation {
-          ${BROWSE_MEDIA_FIELDS}
-        }
-      }
-    }
-  }
-}`;
 
 export async function browseAnime(filters: AniListBrowseFilters = {}) {
   const studioFilter = filters.studio?.trim();
@@ -476,4 +289,29 @@ export async function getPopularAnime(perPage = 12) {
 
 export async function getAnimeByGenre(genre: string, perPage = 12) {
   return browseAnime({ page: 1, perPage, genres: [genre], sort: ["POPULARITY_DESC"] });
+}
+
+/**
+ * Check existing watchlist/history anime IDs on the trusted server before
+ * redisplaying them after the adult-content filter has been re-enabled.
+ * Missing IDs or lookup errors fail closed; persisted user data is unchanged.
+ */
+export async function getEligibleSavedAnimeIds(ids: number[]): Promise<Set<number>> {
+  const unique = [...new Set(ids.filter((id) => Number.isSafeInteger(id) && id > 0))];
+  const verified = new Set<number>();
+  for (let i = 0; i < unique.length; i += 50) {
+    const chunk = unique.slice(i, i + 50);
+    const response = await fetch("/api/anilist", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ operation: "eligibility", variables: { ids: chunk } }),
+    });
+    if (!response.ok) throw new Error("Saved anime eligibility unavailable");
+    const payload = await response.json() as { data?: { ids?: number[] } };
+    if (!Array.isArray(payload.data?.ids)) throw new Error("Invalid saved anime eligibility response");
+    for (const id of payload.data.ids) if (chunk.includes(id)) verified.add(id);
+  }
+  return verified;
 }

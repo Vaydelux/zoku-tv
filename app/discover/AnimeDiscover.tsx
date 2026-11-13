@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useSessionStore } from "@/stores";
+import { isAdultFilterEnabled, syncAdultFilterState } from "@/lib/adult-content";
 import { Navbar } from "@/components/Navbar";
 import { CustomSelect } from "@/components/CustomSelect";
 import { AnimeCard } from "@/components/anime/AnimeCard";
@@ -50,6 +51,12 @@ export function AnimeDiscoverContent() {
   const searchParams = useSearchParams();
   const { currentProfile } = useSessionStore();
   const isKidMode = Boolean(currentProfile?.kidMode);
+  const [adultFilterEnabled, setAdultPolicyEnabled] = useState(true);
+  useEffect(() => {
+    let active = true;
+    syncAdultFilterState().then(() => { if (active) setAdultPolicyEnabled(isAdultFilterEnabled()); });
+    return () => { active = false; };
+  }, []);
 
   const [results, setResults] = useState<AniListMedia[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,7 +109,7 @@ export function AnimeDiscoverContent() {
           ? genreParam
               .split(",")
               .filter(Boolean)
-              .filter((g) => !isKidMode || isAnimeGenreAllowedInKidsMode(g))
+              .filter((g) => (!isKidMode || isAnimeGenreAllowedInKidsMode(g)) && (!adultFilterEnabled || !["ecchi", "hentai"].includes(g.toLowerCase())))
           : undefined;
 
         const data = await browseAnime({
@@ -224,7 +231,7 @@ export function AnimeDiscoverContent() {
   ];
 
   const visibleGenres = ANILIST_GENRES.filter(
-    (g) => !isKidMode || isAnimeGenreAllowedInKidsMode(g)
+    (g) => (!isKidMode || isAnimeGenreAllowedInKidsMode(g)) && (!adultFilterEnabled || !["ecchi", "hentai"].includes(g.toLowerCase()))
   );
 
   const hasActiveFilters = Boolean(

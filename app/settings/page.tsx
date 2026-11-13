@@ -1039,7 +1039,7 @@ function SettingsPageContent() {
                         Adult Content
                       </h4>
                       <p className="text-xs text-on-surface-variant max-w-md leading-relaxed">
-                        Filters TMDB adult flags, known VMX/Vivamax company metadata, explicit age ratings, selected keywords, and blocked IDs. Independent of Kids Mode; metadata may be incomplete.
+                        Adult content is OFF by default. Hides known Vivamax/VMX titles and TMDB age-restricted movies/TV, plus AniList hentai, ecchi, adult-rated anime, and explicit sexual-content tags. Independent of Kids Mode; classifications may be incomplete.
                       </p>
                     </div>
                     <span className="shrink-0 text-[10px] font-bold text-on-surface-variant">

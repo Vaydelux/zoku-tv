@@ -5,7 +5,7 @@ import { GET } from "../app/api/vivamax-ids/route";
 test("Vivamax ID endpoint fetches every TMDB page and deduplicates IDs", async () => {
   const oldToken = process.env.TMDB_API_READ_ACCESS_TOKEN;
   const oldFetch = globalThis.fetch;
-  process.env.TMDB_API_READ_ACCESS_TOKEN = "fixture-token";
+  process.env.TMDB_API_READ_ACCESS_TOKEN = "eyJ.fixture.token";
   const pages: number[] = [];
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = new URL(String(input));

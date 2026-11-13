@@ -78,10 +78,6 @@ export function interleaveAutocompleteSuggestions(
   return suggestions;
 }
 
-// In-memory LRU-like cache for instant typing suggestions
-const autocompleteCache = new Map<string, AutocompleteSuggestion[]>();
-const MAX_CACHE_SIZE = 100;
-
 export async function fetchRealtimeAutocomplete(
   query: string,
   maxTotal = 8,
@@ -90,11 +86,6 @@ export async function fetchRealtimeAutocomplete(
   const normalizedQuery = query.trim().toLowerCase();
   if (normalizedQuery.length < 2) {
     return [];
-  }
-
-  const cacheKey = `${kidMode ? "kid" : "std"}_${maxTotal}_${normalizedQuery}`;
-  if (autocompleteCache.has(cacheKey)) {
-    return autocompleteCache.get(cacheKey)!;
   }
 
   try {
@@ -113,12 +104,6 @@ export async function fetchRealtimeAutocomplete(
       maxTotal,
       kidMode
     );
-
-    if (autocompleteCache.size >= MAX_CACHE_SIZE) {
-      const firstKey = autocompleteCache.keys().next().value;
-      if (firstKey) autocompleteCache.delete(firstKey);
-    }
-    autocompleteCache.set(cacheKey, suggestions);
 
     return suggestions;
   } catch (err) {

@@ -20,6 +20,7 @@ import {
 import { useSessionStore, useWatchlistStore, useWatchHistoryStore } from "@/stores";
 import { getWatchlistItemId } from "@/lib/media-types";
 import { filterSavedMediaItems, syncAdultFilterState } from "@/lib/adult-content";
+import { getEligibleSavedAnimeIds } from "@/lib/anilist";
 import { Navbar } from "@/components/Navbar";
 import { TitleCard } from "@/components/TitleCard";
 import { AnimeCard } from "@/components/anime/AnimeCard";
@@ -48,11 +49,27 @@ export default function WatchlistPage() {
 
   const [activeTab, setActiveTab] = useState<"watchlist" | "history">("watchlist");
   const [adultPolicyReady, setAdultPolicyReady] = useState(false);
+  const [safeAnimeIds, setSafeAnimeIds] = useState<ReadonlySet<number>>(new Set());
   useEffect(() => {
     let active = true;
-    syncAdultFilterState().then(() => { if (active) setAdultPolicyReady(true); });
+    setAdultPolicyReady(false);
+    const animeIds = [...items, ...watchHistoryItems]
+      .filter((item) => item.media_type === "anime")
+      .map((item) => item.anilistId || 0)
+      .filter((id) => Number.isSafeInteger(id) && id > 0);
+    (async () => {
+      try {
+        await syncAdultFilterState();
+        const eligible = await getEligibleSavedAnimeIds(animeIds);
+        if (active) setSafeAnimeIds(eligible);
+      } catch {
+        if (active) setSafeAnimeIds(new Set());
+      } finally {
+        if (active) setAdultPolicyReady(true);
+      }
+    })();
     return () => { active = false; };
-  }, []);
+  }, [items, watchHistoryItems, currentProfile?.id]);
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
@@ -112,13 +129,13 @@ export default function WatchlistPage() {
         catalogMode === "anime"
           ? item.media_type === "anime"
           : item.media_type !== "anime"
-      )) : [],
-    [items, catalogMode, adultPolicyReady]
+      ), safeAnimeIds) : [],
+    [items, catalogMode, adultPolicyReady, safeAnimeIds]
   );
 
   const catalogFilteredHistory = useMemo(
-    () => adultPolicyReady ? filterSavedMediaItems(filterWatchHistoryByCatalog(watchHistoryItems, catalogMode)) : [],
-    [watchHistoryItems, catalogMode, adultPolicyReady]
+    () => adultPolicyReady ? filterSavedMediaItems(filterWatchHistoryByCatalog(watchHistoryItems, catalogMode), safeAnimeIds) : [],
+    [watchHistoryItems, catalogMode, adultPolicyReady, safeAnimeIds]
   );
 
   const searchedItems = useMemo(
