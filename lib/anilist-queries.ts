@@ -136,3 +136,15 @@ query ($id: Int) {
   }
 }`;
 
+
+export const ELIGIBILITY_QUERY = `
+query ($ids: [Int]) {
+  Page(page: 1, perPage: 50) {
+    media(id_in: $ids, type: ANIME) {
+      id
+      isAdult
+      genres
+      tags { name isAdult }
+    }
+  }
+}`;
