@@ -135,7 +135,7 @@ export function Navbar() {
   const networkStatus = getNavbarNetworkStatus(isOnline);
 
   return (
-    <nav
+    <header
       className={`site-nav sticky top-0 z-40 w-full border-b ${networkStatus.navBorderClass} bg-background/90 backdrop-blur-md transition-colors duration-300`}
     >
       <div className="mx-auto w-full px-3 sm:px-6 lg:px-8">
@@ -155,7 +155,7 @@ export function Navbar() {
               </span>
             </Link>
 
-            <div className="zoku-primary-nav hidden lg:flex items-center gap-1" aria-label="Primary navigation">
+            <div className="zoku-primary-nav hidden lg:flex items-center gap-1" role="navigation" aria-label="Primary navigation">
               {navLinks.map((link) => {
                 const isActive = cinematicLayout ? activeNav === link.href : pathname === link.href;
                 return (
@@ -538,6 +538,6 @@ export function Navbar() {
           </div>
         )}
       </div>
-    </nav>
+    </header>
   );
 }
