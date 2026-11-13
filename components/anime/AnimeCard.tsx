@@ -8,6 +8,7 @@ import type { AniListMedia } from "@/lib/anilist";
 import { getAnimeDetails, getAnimeDisplayTitle, getAnimePoster } from "@/lib/anilist";
 import { isReleasedWithinLast30Days } from "@/lib/media-types";
 import { useCardPlayProgress } from "@/lib/card-play-progress";
+import { CinematicMediaCard } from "@/components/CinematicMediaCard";
 
 interface AnimeCardProps {
   anime: AniListMedia;
@@ -126,6 +127,29 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
       router.push(`/anime/${anime.id}`);
     }
   };
+
+  if (process.env.NEXT_PUBLIC_ZOKU_LAYOUT !== "classic") {
+    const artwork = posterFallback || resolvedBanner || anime.bannerImage || null;
+    return (
+      <CinematicMediaCard
+        title={name}
+        imageUrl={artwork}
+        year={year}
+        mediaLabel="Anime"
+        rating={rating}
+        overview={synopsis}
+        recent={isRecentRelease}
+        episodes={anime.episodes}
+        watched={watchedCompleted}
+        saved={isInWatchlist}
+        progressPercent={playProgress.hasProgress ? playProgress.progressPercent : null}
+        fullWidth={fullWidth}
+        onOpen={() => router.push(`/anime/${anime.id}`)}
+        onToggleWatchlist={() => handleWatchlistToggle({ stopPropagation() {}, preventDefault() {} } as React.MouseEvent)}
+        onToggleWatched={() => handleHistoryToggle({ stopPropagation() {}, preventDefault() {} } as React.MouseEvent)}
+      />
+    );
+  }
 
   const widthClasses = fullWidth
     ? "w-full"
