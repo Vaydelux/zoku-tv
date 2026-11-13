@@ -51,6 +51,8 @@ test("syncs multiple company IDs, blocks cached and direct-route titles by ID", 
       ]).map((item) => item.id),
       [6]
     );
+    const { getTitleDetails } = await import("./tmdb");
+    await assert.rejects(getTitleDetails("movie", 543210), /unavailable while the adult-content filter is enabled/);
     assert.deepEqual(endpoints.sort(), ["/api/adult-content", "/api/vivamax-ids"].sort());
   } finally {
     globalThis.fetch = oldFetch;
