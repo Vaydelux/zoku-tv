@@ -75,9 +75,9 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
     };
   }, [isHovered, synopsis, resolvedBanner, anime.id]);
 
-  const handleWatchlistToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleWatchlistToggle = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
     if (isInWatchlist) {
       removeItem("anime", anime.id);
     } else {
@@ -99,9 +99,9 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
     }
   };
 
-  const handleHistoryToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleHistoryToggle = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
     void toggleCompleted({
       media_type: "anime",
       anilistId: anime.id,
@@ -145,8 +145,8 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
         progressPercent={playProgress.hasProgress ? playProgress.progressPercent : null}
         fullWidth={fullWidth}
         onOpen={() => router.push(`/anime/${anime.id}`)}
-        onToggleWatchlist={() => handleWatchlistToggle({ stopPropagation() {}, preventDefault() {} } as React.MouseEvent)}
-        onToggleWatched={() => handleHistoryToggle({ stopPropagation() {}, preventDefault() {} } as React.MouseEvent)}
+        onToggleWatchlist={() => handleWatchlistToggle()}
+        onToggleWatched={() => handleHistoryToggle()}
       />
     );
   }
