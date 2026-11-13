@@ -113,3 +113,11 @@ ZOKU_BASE_URL=https://your-preview.vercel.app node scripts/verify-tmdb-policy.mj
 ```
 
 This verifies company sync, a blocked direct movie detail, restricted related-title endpoints, discovery filtering and query/path validation. It does not test browser-only history state, D-pad navigation or external embed-provider access. Do not mark the release as fully qualified until those are manually checked in a browser.
+
+### AniList hentai and adult anime restrictions
+
+AniList is included in the **same Adult Content OFF by default** setting, independent of Kids Mode. Zoku now fetches AniList results from the fixed-operation internal `POST /api/anilist` server endpoint, rather than arbitrary browser GraphQL. The endpoint requests AniList's `Media.isAdult`, `genres` and `tags { name isAdult }` fields; it blocks `isAdult` titles, Hentai and Ecchi genres, and explicit sexual-content tags (including adult-flagged tags, nudity and sexual violence). Missing maturity metadata fails closed. It filters browse/search/studio pages, recommendations and relations, and rejects restricted direct details; the anime watch iframe never mounts until the exact ID passes its server check. Saved watchlist, Continue Watching and history anime IDs are revalidated in batches before they are displayed, without deleting records.
+
+AniList's server API is not an open GraphQL proxy: only `browse`, `studio`, `detail`, and batch `eligibility` operations are accepted. The password-authorized 4-hour unlock affects both TMDB and AniList. Optional server-only `BLOCKED_ANILIST_ANIME_IDS` provides a manually reviewed supplemental denylist. Kids Mode separately restricts additional genres and mature themes.
+
+**Scope decision:** Mature horror and violence are not automatically classified as hentai; they remain under the existing Kids Mode rules unless AniList marks them adult-rated or with restricted sexual tags. AniList metadata can be incomplete, so this filter cannot guarantee that all inappropriate material has been classified. The external streaming provider is not controlled by Zoku.
