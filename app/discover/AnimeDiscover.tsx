@@ -239,7 +239,7 @@ export function AnimeDiscoverContent() {
   );
 
   return (
-    <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
+    <div className="zoku-cinematic-discover app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
       <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
