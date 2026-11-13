@@ -26,7 +26,7 @@ test("cinematic media card uses poster artwork with independent accessible contr
   assert.match(html, /aria-label="Add Example Movie to Watchlist"/);
   assert.match(html, /aria-label="Mark Example Movie as watched"/);
   assert.equal((html.match(/<button\b/g) || []).length, 3);
-  assert.doesNotMatch(html, /<button\\b[^>]*>(?:(?!<\\/button>).)*<button\\b/s, "No nested buttons");
+  assert.equal((html.match(/<button\\b[^>]*>(?:.|\\n)*?<\\/button>/g) || []).length, 3);
   assert.match(html, /aria-valuenow="37"/);
   assert.match(html, /data-testid="card-play-progress-bar"/);
 });
