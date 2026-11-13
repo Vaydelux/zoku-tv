@@ -156,7 +156,7 @@ export function Navbar() {
               </span>
             </Link>
 
-            <div className={cinematicLayout ? "zoku-primary-nav hidden lg:flex items-center gap-1" : "zoku-primary-nav hidden md:flex items-center gap-6"} role="navigation" aria-label="Primary navigation">
+            <div className={cinematicLayout ? "zoku-primary-nav hidden xl:flex items-center gap-1" : "zoku-primary-nav hidden md:flex items-center gap-6"} role="navigation" aria-label="Primary navigation">
               {navLinks.map((link) => {
                 const isActive = cinematicLayout ? activeNav === link.href : pathname === link.href;
                 return (
@@ -512,7 +512,7 @@ export function Navbar() {
     {cinematicLayout && showZokuMobileNav(pathname) && (
       <nav
       aria-label="Mobile primary navigation"
-      className="zoku-mobile-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border-custom bg-background/95 lg:hidden"
+      className="zoku-mobile-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border-custom bg-background/95 xl:hidden"
       >
       <div className="grid grid-cols-5 px-1 pb-[env(safe-area-inset-bottom)]">
       {ZOKU_NAV_ITEMS.map((link) => {
