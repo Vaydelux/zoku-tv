@@ -27,6 +27,7 @@ let catalogPromise: Promise<void> | undefined;
 let companyCatalogReady = false;
 let catalogAttemptAt = 0;
 const CATALOG_RETRY_MS = 60 * 1000;
+const CATALOG_REFRESH_MS = 60 * 60 * 1000;
 
 let syncPromise: Promise<void> | undefined;
 let policyCheckedAt = 0;
@@ -42,8 +43,9 @@ export function setAdultFilterEnabled(enabled: boolean): void {
 }
 export function syncAdultFilterState(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
-  if (!catalogPromise || (!companyCatalogReady && Date.now() - catalogAttemptAt >= CATALOG_RETRY_MS)) {
+  if (!catalogPromise || Date.now() - catalogAttemptAt >= (companyCatalogReady ? CATALOG_REFRESH_MS : CATALOG_RETRY_MS)) {
     catalogAttemptAt = Date.now();
+    companyCatalogReady = false;
     catalogPromise = fetch("/api/vivamax-ids", { credentials: "same-origin", cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Company catalog unavailable");
