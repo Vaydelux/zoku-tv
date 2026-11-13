@@ -9,7 +9,8 @@ import { AnimeRail } from "@/components/anime/AnimeRail";
 import { ANILIST_GENRES, getPopularAnime, type AniListMedia } from "@/lib/anilist";
 import { isAdultFilterEnabled, syncAdultFilterState } from "@/lib/adult-content";
 import { getGenreIcon } from "@/lib/genreIcons";
-import { isAnimeGenreAllowedInKidsMode, isGenreIdAllowedInKidsMode, filterAnimeForKidsMode, filterTmdbForKidsMode } from "@/lib/kids-mode";
+import { isGenreIdAllowedInKidsMode, filterAnimeForKidsMode, filterTmdbForKidsMode } from "@/lib/kids-mode";
+import { visibleAnimeGenres } from "@/lib/anime-genre-visibility";
 import { getGenres, getTrending, type TMDBGenre, type TMDBTitle } from "@/lib/tmdb";
 import { useSessionStore } from "@/stores";
 
@@ -67,10 +68,8 @@ export default function GenresPage() {
 
   const genres = useMemo(() => {
     if (type === "anime") {
-      return ANILIST_GENRES.filter((name) =>
-        (!isKidMode || isAnimeGenreAllowedInKidsMode(name)) &&
-        (!adultFiltering || !["hentai", "ecchi"].includes(name.toLowerCase()))
-      ).map((name) => ({ id: name, name, icon: Sparkles }));
+      return visibleAnimeGenres(ANILIST_GENRES, isKidMode, adultFiltering)
+        .map((name) => ({ id: name, name, icon: Sparkles }));
     }
     return tmdbGenres
       .filter(({ id }) => !isKidMode || isGenreIdAllowedInKidsMode(id))
