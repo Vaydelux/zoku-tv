@@ -1,5 +1,3 @@
-import "server-only";
-
 const COMPANIES = [149142] as const;
 const MAX_PAGES = 500;
 const CACHE_TTL_MS = 60 * 60 * 1000;
@@ -34,7 +32,7 @@ async function loadCompanyPage(token: string, company: number, page: number) {
   if (!result.ok) throw new Error(`Company lookup unavailable: ${result.status}`);
   const data: unknown = await result.json();
   if (!data || typeof data !== "object" || !("results" in data) || !Array.isArray(data.results) ||
-      !("total_pages" in data) || !Number.isSafeInteger(data.total_pages)) {
+      !("total_pages" in data) || typeof data.total_pages !== "number" || !Number.isSafeInteger(data.total_pages)) {
     throw new Error("Invalid company lookup response");
   }
   const payload = data as { total_pages: number; results: { id: number }[] };
