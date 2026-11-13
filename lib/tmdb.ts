@@ -731,6 +731,7 @@ export async function getGenres(type: "movie" | "tv"): Promise<TMDBGenre[]> {
 
 export async function searchMulti(query: string, page: number = 1): Promise<TMDBTitle[]> {
   if (!query.trim()) return [];
+  await syncAdultFilterState();
   const data = await tmdbFetch("/search/multi", { query, page, include_adult: !isAdultFilterEnabled() });
   return filterRestrictedTmdbTitles((data.results || [])
     .filter((item: any) => item.media_type === "movie" || item.media_type === "tv")
@@ -760,6 +761,7 @@ export async function discoverMedia(
   type: "movie" | "tv",
   params: DiscoverParams = {}
 ): Promise<TMDBTitle[]> {
+  await syncAdultFilterState();
   const filtered = isAdultFilterEnabled();
   const data = await tmdbFetch(`/discover/${type}`, {
     ...params,
