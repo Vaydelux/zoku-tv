@@ -1,0 +1,176 @@
+/*
+ * Fluent Cinematic — presentation-only layer, adapted from the user-supplied
+ * design reference. Zoku remains the source of truth for theme tokens.
+ * Switch off with NEXT_PUBLIC_ZOKU_LAYOUT=classic.
+ */
+html[data-zoku-layout="cinematic"] {
+  --cinematic-canvas: var(--background);
+  --cinematic-panel: var(--surface);
+  --cinematic-panel-hover: var(--surface-hover);
+  --cinematic-ink: var(--on-surface);
+  --cinematic-muted: var(--on-surface-variant);
+  --cinematic-accent: var(--primary);
+  --cinematic-accent-ink: var(--primary-contrast);
+  --cinematic-stroke: var(--border-color);
+  --cinematic-gutter: clamp(16px, 3vw, 48px);
+  --cinematic-radius: 12px;
+  --cinematic-header-height: 64px;
+}
+
+html[data-zoku-layout="cinematic"] body::before {
+  background-image: linear-gradient(
+    to bottom,
+    var(--cinematic-canvas),
+    color-mix(in srgb, var(--cinematic-canvas) 96%, var(--cinematic-panel) 4%)
+  );
+}
+
+/* The reference is deliberately artwork-led rather than dominated by
+   animated background atmosphere. Disable these costly paint layers. */
+html[data-zoku-layout="cinematic"] .ambient-orb,
+html[data-zoku-layout="cinematic"] .ambient-particles,
+html[data-zoku-layout="cinematic"] .ambient-dot {
+  display: none !important;
+  animation: none !important;
+}
+
+html[data-zoku-layout="cinematic"] .site-nav {
+  border-bottom: 1px solid color-mix(in srgb, var(--cinematic-stroke) 70%, transparent);
+  background: color-mix(in srgb, var(--cinematic-canvas) 93%, transparent);
+  box-shadow: none;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-primary-nav .zoku-nav-link {
+  white-space: nowrap;
+  border: 0;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-primary-nav .zoku-nav-link:hover {
+  background-color: color-mix(in srgb, var(--cinematic-ink) 7%, transparent);
+}
+
+html[data-zoku-layout="cinematic"] .zoku-primary-nav .zoku-nav-link::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  bottom: -10px;
+  left: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background-color 160ms ease;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-primary-nav .zoku-nav-link-active::after {
+  background: var(--cinematic-accent);
+}
+
+html[data-zoku-layout="cinematic"] .glass-panel,
+html[data-zoku-layout="cinematic"] .theme-panel {
+  background-color: color-mix(in srgb, var(--cinematic-panel) 96%, transparent);
+  background-image: none;
+  border-color: color-mix(in srgb, var(--cinematic-stroke) 78%, transparent);
+  box-shadow: 0 4px 22px color-mix(in srgb, var(--cinematic-canvas) 18%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+html[data-zoku-layout="cinematic"] .poster-card {
+  border-radius: var(--cinematic-radius);
+  border-color: color-mix(in srgb, var(--cinematic-stroke) 65%, transparent);
+  box-shadow: none;
+}
+
+html[data-zoku-layout="cinematic"] .poster-card:hover,
+html[data-zoku-layout="cinematic"] .poster-card:focus-visible {
+  border-color: var(--cinematic-accent);
+  box-shadow: 0 8px 26px color-mix(in srgb, var(--cinematic-canvas) 28%, transparent);
+}
+
+html[data-zoku-layout="cinematic"] .hero-media-scrim {
+  /* Restore depth over photo while leaving the global canvas quiet. */
+  background: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--cinematic-canvas) 96%, transparent) 0%,
+      color-mix(in srgb, var(--cinematic-canvas) 52%, transparent) 49%,
+      transparent 90%
+    ),
+    linear-gradient(
+      to top,
+      var(--cinematic-canvas) 0%,
+      color-mix(in srgb, var(--cinematic-canvas) 65%, transparent) 26%,
+      transparent 75%
+    );
+}
+
+html[data-zoku-layout="cinematic"] .hero-copy {
+  max-width: min(620px, 100%);
+}
+
+html[data-zoku-layout="cinematic"] .hero-meta-chip {
+  background: none;
+  box-shadow: none;
+  border: 0;
+  padding-inline: 0;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-mobile-tabbar {
+  background: color-mix(in srgb, var(--cinematic-canvas) 96%, transparent);
+  border-top-color: color-mix(in srgb, var(--cinematic-stroke) 80%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+html[data-zoku-layout="cinematic"] .zoku-mobile-tab {
+  position: relative;
+  min-width: 0;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-mobile-tab[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  width: 24px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--cinematic-accent);
+}
+
+html[data-zoku-layout="cinematic"] .zoku-mobile-tab:focus-visible {
+  outline: 3px solid var(--cinematic-accent);
+  outline-offset: -3px;
+}
+
+@media (max-width: 1023px) {
+  html[data-zoku-layout="cinematic"] .zoku-has-mobile-nav {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+  html[data-zoku-layout="cinematic"] .site-nav {
+    backdrop-filter: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  html[data-zoku-layout="cinematic"] .zoku-mobile-tabbar {
+    display: none;
+  }
+}
+
+/* Retain Zoku's Android TV low-overdraw safeguards regardless of CSS order. */
+html[data-zoku-layout="cinematic"][data-tv-webview="true"] .glass-panel,
+html[data-zoku-layout="cinematic"][data-tv-webview="true"] .theme-panel,
+html[data-zoku-layout="cinematic"][data-tv-webview="true"] .zoku-mobile-tabbar,
+html[data-zoku-layout="cinematic"][data-perf-mode="60fps"] .glass-panel,
+html[data-zoku-layout="cinematic"][data-perf-mode="60fps"] .theme-panel,
+html[data-zoku-layout="cinematic"][data-perf-mode="60fps"] .zoku-mobile-tabbar {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-zoku-layout="cinematic"] .zoku-nav-link::after {
+    transition: none;
+  }
+}
