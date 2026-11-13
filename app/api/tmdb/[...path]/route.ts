@@ -47,7 +47,7 @@ async function verifiedDetails(media: TmdbMediaKind, id: number, restrictedIds: 
     }
     if (
       (media === "movie" && (restrictedIds.has(id) || MOVIE_DENYLIST.has(id))) ||
-      isRestrictedTmdbTitle({ ...details, media_type: media })
+      isRestrictedTmdbTitle({ ...details, id, media_type: media })
     ) return null;
   }
   return { ...details, media_type: media };
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       const media: TmdbMediaKind = item.media_type === "tv" || scope.media === "tv" ? "tv" : "movie";
       if (!filtering) return true;
       if (media === "movie" && (MOVIE_DENYLIST.has(item.id) || restrictedIds?.has(item.id))) return false;
-      return !isRestrictedTmdbTitle({ ...item, media_type: media });
+      return !isRestrictedTmdbTitle({ ...item, id: item.id, media_type: media });
     }).map((item: Record<string, any>) => ({
       ...item, media_type: item.media_type || (scope.media === "all" ? "movie" : scope.media),
     }));
