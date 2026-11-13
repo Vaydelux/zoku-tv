@@ -5,6 +5,10 @@ import { clearAdultUnlockFailures, isAdultUnlockLimited, recordAdultUnlockFailur
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function mac(input: string, key: string): string {
+  return createHmac("sha256", key).update(input).digest("hex");
+}
 function json(body: object, status = 200): NextResponse {
   return NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 }
