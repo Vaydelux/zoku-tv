@@ -46,7 +46,26 @@ try {
   const invalidPage = await get("/api/tmdb/discover/movie?page=501");
   assert(invalidPage.status === 400, "Invalid TMDB pagination was accepted");
 
-  process.stdout.write(`PASS — ${ids.length} company IDs loaded; blocked ID ${id} denied; catalog and URL guards verified.\n`);
+  const anime = await fetch(new URL("/api/anilist", origin), {
+    method: "POST",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ operation: "browse", variables: { page: 1, perPage: 20 } }),
+  });
+  const animeBody = await anime.json().catch(() => ({}));
+  assert(anime.status === 200 && Array.isArray(animeBody.data?.Page?.media), "AniList protected catalog unavailable");
+  for (const item of animeBody.data.Page.media) {
+    assert(item.isAdult === false, "AniList adult-rated media leaked to default catalog");
+    assert(!item.genres?.some((genre) => ["hentai", "ecchi"].includes(genre.toLowerCase())), "AniList explicit genre leaked");
+    assert(!item.tags?.some((tag) => tag.isAdult === true), "AniList adult topic tag leaked");
+  }
+  const arbitrary = await fetch(new URL("/api/anilist", origin), {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ operation: "arbitrary", variables: {} }),
+  });
+  assert(arbitrary.status === 404, "AniList unrestricted GraphQL operation accepted");
+
+  process.stdout.write(`PASS — ${ids.length} company IDs; blocked movie ID ${id} denied; TMDB and AniList catalog checks passed.\n`);
 } catch (error) {
   process.stderr.write(`FAIL — ${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 1;
