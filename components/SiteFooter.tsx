@@ -13,7 +13,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import { isBrandRoute } from "@/lib/auth-routes";
+import { shouldHideZokuFooter } from "@/lib/site-footer-routing";
 import { isCloudFirebaseConfigured } from "@/lib/firebase";
 import { useSessionStore } from "@/stores";
 
@@ -37,7 +37,7 @@ export function SiteFooter() {
   }, []);
 
   // Hide on player + pre-app brand surfaces (splash/auth/profiles)
-  if (pathname?.startsWith("/watch") || isBrandRoute(pathname)) return null;
+  if (shouldHideZokuFooter(pathname)) return null;
 
   const catalogLabel =
     currentProfile?.catalogMode === "anime"
