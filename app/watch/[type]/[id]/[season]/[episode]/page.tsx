@@ -71,6 +71,7 @@ export default function WatchTvPage({
   const [details, setDetails] = useState<TMDBTitle | null>(null);
   const [episodes, setEpisodes] = useState<TMDBEpisode[]>([]);
   const [episodesLoading, setEpisodesLoading] = useState(true);
+  const [detailError, setDetailError] = useState(false);
   const [showToolsPanel, setShowToolsPanel] = useState(false);
   const [iframeReady, setIframeReady] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
@@ -84,6 +85,7 @@ export default function WatchTvPage({
     if (type !== "tv") return;
     let cancelled = false;
     setEpisodesLoading(true);
+    setDetailError(false);
     Promise.all([
       getTitleDetails("tv", numericId),
       getSeasonDetails(numericId, seasonNum),
@@ -93,7 +95,7 @@ export default function WatchTvPage({
         setDetails(det);
         setEpisodes(seas.episodes || []);
       })
-      .catch(console.error)
+      .catch(() => { if (!cancelled) setDetailError(true); })
       .finally(() => {
         if (!cancelled) setEpisodesLoading(false);
       });
@@ -140,6 +142,17 @@ export default function WatchTvPage({
     selectedServerId,
     ready: Boolean(details) && !kidsRestricted,
   });
+
+  if (!details) {
+    return (
+      <div className="min-h-screen bg-background text-on-surface flex flex-col items-center justify-center gap-4 p-6 text-center" data-testid="watch-title-eligibility-gate">
+        <Navbar />
+        <ShieldAlert className="h-10 w-10 text-primary" />
+        <p className="text-sm text-on-surface-variant">{detailError ? "This title is unavailable or restricted by the content filter." : "Checking title availability…"}</p>
+        <Link href="/home" className="rounded-xl bg-primary px-5 py-2.5 text-primary-contrast text-sm font-semibold">Back to Home</Link>
+      </div>
+    );
+  }
 
   if (kidsRestricted && details) {
     return (
