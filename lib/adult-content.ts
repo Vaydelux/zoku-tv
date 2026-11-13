@@ -81,3 +81,13 @@ export function requireMovieCatalogAvailable(): void {
 export function filterRestrictedTmdbTitles<T extends AdultContentTitle>(titles: T[]): T[] {
   return filterEnabled ? titles.filter((item) => (item.media_type === "tv" || companyCatalogReady || typeof window === "undefined") && !isRestrictedTmdbTitle(item)) : titles;
 }
+
+/** Keep old watchlist, history, and resume items private while the filter is active. */
+export function filterSavedMediaItems<T extends { media_type: string; tmdbId?: number | null; title?: string }>(items: T[]): T[] {
+  if (!filterEnabled) return items;
+  return items.filter((item) => {
+    if (item.media_type !== "movie") return true;
+    if (!companyCatalogReady || !item.tmdbId) return false;
+    return !isRestrictedTmdbTitle({ id: item.tmdbId, media_type: "movie", title: item.title });
+  });
+}
