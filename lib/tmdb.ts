@@ -766,7 +766,7 @@ export async function discoverMedia(
   const data = await tmdbFetch(`/discover/${type}`, {
     ...params,
     include_adult: !filtered,
-    ...(filtered ? { without_companies: BLOCKED_COMPANY_IDS.join(","), without_keywords: BLOCKED_KEYWORD_IDS.join(",") } : {}),
+    ...(filtered ? { without_companies: BLOCKED_COMPANY_IDS.join(","), without_keywords: BLOCKED_KEYWORD_IDS.join("|") } : {}),
   });
   return filterRestrictedTmdbTitles((data.results || []).map((item: any) => ({
     ...item,
