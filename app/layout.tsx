@@ -60,6 +60,7 @@ export default function RootLayout({
       lang="en"
       className="h-full"
       data-theme="theme-crimson"
+      data-zoku-layout={process.env.NEXT_PUBLIC_ZOKU_LAYOUT === "classic" ? "classic" : "cinematic"}
       suppressHydrationWarning
     >
       <head>
