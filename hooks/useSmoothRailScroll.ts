@@ -93,9 +93,12 @@ export function useSmoothRailScroll(dependencyCount: number) {
 
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
-      // Do not initiate drag if clicking a nested action button inside a card
+      // Poster-first cards use a real full-artwork <button> for accessible
+      // title opening. It must remain draggable in mouse-driven rails, while
+      // Watchlist/History buttons and rail controls must never start a drag.
       const target = e.target as HTMLElement | null;
-      if (target?.closest("button")) return;
+      const button = target?.closest("button");
+      if (button && !button.classList.contains("cinematic-poster-open")) return;
 
       if (motionControlsRef.current) {
         motionControlsRef.current.stop();
