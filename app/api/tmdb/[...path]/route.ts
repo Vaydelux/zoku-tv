@@ -84,6 +84,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       if (!details) return json({ error: "Title unavailable" }, 404);
       if (scope.kind === "detail") return json(details);
       const child = await fetchTmdb(scope.path, query);
+      if (scope.path.endsWith("/similar") || scope.path.endsWith("/recommendations")) {
+        if (!Array.isArray(child.results)) throw new Error("Malformed related-title results");
+        return json({ ...child, results: child.results.filter((item: Record<string, any>) => {
+          if (!item || !Number.isSafeInteger(item.id) || item.id <= 0) return false;
+          if (!filtering) return true;
+          if (scope.media === "movie" && (MOVIE_DENYLIST.has(item.id) || restrictedIds?.has(item.id))) return false;
+          return !isRestrictedTmdbTitle({ ...item, id: item.id, media_type: scope.media });
+        }) });
+      }
       return json(child);
     }
 
