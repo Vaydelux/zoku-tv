@@ -31,6 +31,7 @@ import { RailSortDropdown } from "@/components/RailSortDropdown";
 import { LoadingBanner } from "@/components/LoadingBanner";
 import { TMDBTitle, TMDBGenre } from "@/lib/tmdb";
 import { loadHomeGenreRails, loadHomeTrending } from "@/lib/load-home-content";
+import { filterSavedMediaItems, syncAdultFilterState } from "@/lib/adult-content";
 import { loadAnimeHomeContent } from "@/lib/load-anime-home-content";
 import type { AniListMedia } from "@/lib/anilist";
 import { filterContinueWatchingByCatalog } from "@/lib/continue-watching";
@@ -89,6 +90,12 @@ export default function HomePage() {
   const setSelectedRailFilter = setActiveFilter;
 
   const [cacheRefreshVersion, setCacheRefreshVersion] = useState(0);
+  const [adultPolicyReady, setAdultPolicyReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    syncAdultFilterState().then(() => { if (active) setAdultPolicyReady(true); });
+    return () => { active = false; };
+  }, []);
 
   const [loadingTrending, setLoadingTrending] = useState(true);
   const [loadingGenreRails, setLoadingGenreRails] = useState(true);
@@ -96,18 +103,18 @@ export default function HomePage() {
   const [isOffline, setIsOffline] = useState(false);
 
   const filteredCw = useMemo(
-    () => filterContinueWatchingByCatalog(continueWatchingItems, catalogMode),
-    [continueWatchingItems, catalogMode]
+    () => adultPolicyReady ? filterSavedMediaItems(filterContinueWatchingByCatalog(continueWatchingItems, catalogMode)) : [],
+    [continueWatchingItems, catalogMode, adultPolicyReady]
   );
 
   const filteredHistory = useMemo(
-    () => filterWatchHistoryByCatalog(watchHistoryItems, catalogMode),
-    [watchHistoryItems, catalogMode]
+    () => adultPolicyReady ? filterSavedMediaItems(filterWatchHistoryByCatalog(watchHistoryItems, catalogMode)) : [],
+    [watchHistoryItems, catalogMode, adultPolicyReady]
   );
 
   const catalogWatchlist = useMemo(
-    () => filterWatchlistByCatalog(watchlistItems, catalogMode),
-    [watchlistItems, catalogMode]
+    () => adultPolicyReady ? filterSavedMediaItems(filterWatchlistByCatalog(watchlistItems, catalogMode)) : [],
+    [watchlistItems, catalogMode, adultPolicyReady]
   );
 
   const tmdbWatchlistPreview = useMemo<TMDBTitle[]>(() => {
