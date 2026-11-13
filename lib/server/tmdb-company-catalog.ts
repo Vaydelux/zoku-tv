@@ -63,6 +63,9 @@ export async function restrictedMovieCatalog(): Promise<RestrictedMovieCatalog> 
         }
       }
     }
+    for (const id of (process.env.BLOCKED_TMDB_MOVIE_IDS || "").split(",").map(Number)) {
+      if (Number.isSafeInteger(id) && id > 0) ids.add(id);
+    }
     cached = { ids: [...ids], refreshedAt: Date.now() };
     return cached;
   })();
