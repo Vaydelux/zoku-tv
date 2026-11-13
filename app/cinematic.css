@@ -191,6 +191,73 @@ html[data-zoku-layout="cinematic"] .zoku-mobile-tab:focus-visible {
   outline-offset: -3px;
 }
 
+
+/* Poster-first catalog shared across TMDB and AniList.
+   No nested interactive elements, independent keyboard-visible actions. */
+html[data-zoku-layout="cinematic"] .cinematic-poster-card {
+  scroll-snap-align: start;
+  color: var(--cinematic-ink);
+}
+
+html[data-zoku-layout="cinematic"] .cinematic-poster-art {
+  border-color: color-mix(in srgb, var(--cinematic-stroke) 72%, transparent);
+  background: var(--cinematic-panel);
+  transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+html[data-zoku-layout="cinematic"] .cinematic-poster-card:hover .cinematic-poster-art,
+html[data-zoku-layout="cinematic"] .cinematic-poster-card:focus-within .cinematic-poster-art {
+  border-color: var(--cinematic-accent);
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--cinematic-canvas) 35%, transparent);
+}
+
+html[data-zoku-layout="cinematic"] .cinematic-poster-action:focus-visible,
+html[data-zoku-layout="cinematic"] .cinematic-poster-open:focus-visible {
+  outline: 3px solid var(--cinematic-accent);
+  outline-offset: -2px;
+}
+
+html[data-zoku-layout="cinematic"] .rail-section {
+  padding-block: 14px 20px;
+  scroll-margin-top: 76px;
+}
+
+html[data-zoku-layout="cinematic"] .rail-section h2 {
+  border: 0;
+  padding-left: 0;
+  font-size: clamp(1rem, 1.75vw, 1.22rem);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: -0.012em;
+}
+
+html[data-zoku-layout="cinematic"] .rail-section .rail-scroll-track {
+  gap: clamp(10px, 1.55vw, 22px);
+  padding-inline: var(--cinematic-gutter);
+  scroll-padding-inline: var(--cinematic-gutter);
+  scroll-snap-type: x proximity;
+}
+
+html[data-zoku-layout="cinematic"] .rail-section > div:first-child {
+  padding-inline: var(--cinematic-gutter);
+}
+
+html[data-zoku-layout="cinematic"] .rail-card-slot {
+  flex-shrink: 0;
+  will-change: auto;
+}
+
+html[data-zoku-layout="cinematic"][data-tv-mode="true"] .cinematic-poster-art,
+html[data-zoku-layout="cinematic"][data-tv-mode="true"] .cinematic-poster-action {
+  transition-duration: 80ms;
+}
+
+@media (hover: none) {
+  html[data-zoku-layout="cinematic"] .cinematic-poster-art img {
+    transform: none !important;
+  }
+}
+
 /* Quiet page compositions: typography and geometry only; existing data,
    search, history, settings and content filters continue to own behavior. */
 html[data-zoku-layout="cinematic"] .zoku-cinematic-search .zoku-search-header {
