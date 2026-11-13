@@ -92,8 +92,12 @@ export function AnimeDiscoverContent() {
   }, [genreParam, season, seasonYear, sortBy, format, source, studio, isKidMode, adultFilterEnabled]);
 
   useEffect(() => {
+    // Never keep previous unrestricted/profile results painted while the next
+    // set is being verified by the AniList server.
+    setResults([]);
+    setHasNextPage(false);
     setPage(1);
-  }, [sortBy, genreParam, season, seasonYear, format, source, studio, isKidMode, adultFilterEnabled]);
+  }, [sortBy, genreParam, season, seasonYear, format, source, studio, isKidMode, adultFilterEnabled, currentProfile?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -158,7 +162,7 @@ export function AnimeDiscoverContent() {
     return () => {
       cancelled = true;
     };
-  }, [page, sortBy, genreParam, season, seasonYear, format, source, studio, isKidMode, adultFilterEnabled]);
+  }, [page, sortBy, genreParam, season, seasonYear, format, source, studio, isKidMode, adultFilterEnabled, currentProfile?.id]);
 
   const updateUrlFilters = (updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString());
