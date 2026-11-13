@@ -335,6 +335,41 @@ html[data-zoku-layout="cinematic"][data-perf-mode="60fps"] .zoku-mobile-tabbar {
 }
 
 
+/* Keep footer from becoming a separate hardcoded dark theme.
+   The original classic footer remains byte-for-byte unchanged in classic mode. */
+html[data-zoku-layout="cinematic"] footer.zoku-cinematic-footer {
+  background: color-mix(in srgb, var(--surface) 94%, var(--background));
+  border-top-color: color-mix(in srgb, var(--border-color) 75%, transparent);
+  color: var(--on-surface-variant);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html[data-zoku-layout="cinematic"] footer.zoku-cinematic-footer [class*="text-white"] {
+  color: var(--on-surface-variant);
+}
+
+html[data-zoku-layout="cinematic"] footer.zoku-cinematic-footer .font-bold,
+html[data-zoku-layout="cinematic"] footer.zoku-cinematic-footer strong {
+  color: var(--on-surface);
+}
+
+html[data-zoku-layout="cinematic"] footer.zoku-cinematic-footer [class*="border-white"] {
+  border-color: color-mix(in srgb, var(--border-color) 62%, transparent);
+}
+
+html[data-zoku-layout="cinematic"] footer.zoku-cinematic-footer [class*="bg-white"] {
+  background-color: color-mix(in srgb, var(--on-surface) 5%, transparent);
+}
+
+html[data-zoku-layout="cinematic"] footer.zoku-cinematic-footer nav a:hover,
+html[data-zoku-layout="cinematic"] footer.zoku-cinematic-footer nav a:focus-visible {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
 /* Genre destination — a real catalogue facade using existing TMDB/AniList APIs. */
 html[data-zoku-layout="cinematic"] .zoku-cinematic-genres main {
   max-width: 1550px;
