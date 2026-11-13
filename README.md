@@ -77,3 +77,29 @@ A cinematic, multi-profile entertainment discovery and streaming portal built wi
   - [`docs/deployment.md`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/docs/deployment.md)
   - [`docs/qa-matrix.md`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/docs/qa-matrix.md)
   - [`docs/release-notes.md`](file:///c:/Users/Jericho.Mosqueda/Downloads/zoku-tv/docs/release-notes.md)
+
+
+## Adult-content filter
+
+The Movies & TV catalog filters known restricted content by default, independently of Kids Mode. The filter combines TMDB adult flags, known Vivamax/VMX company IDs, release certifications, selected keyword IDs and optional movie IDs. TMDB metadata is incomplete and this is a best-effort filter, not an age-verification or guaranteed parental-control boundary.
+
+To permit an optional temporary unlock, configure a **server-only** environment variable in `.env.local` (and Vercel Environment Variables when deployed):
+
+```env
+ADULT_CONTENT_PASSWORD=replace-with-a-long-unique-password
+NEXT_PUBLIC_BLOCKED_TMDB_MOVIE_IDS=
+```
+
+The password must be 12 characters or longer. Never use `NEXT_PUBLIC_ADULT_CONTENT_PASSWORD` or commit real secrets. Open **Settings → Profiles & Kids Mode → Adult Content Filtering** and enter the password to disable the filter for this browser for up to four hours. Re-enable filtering without a password. With no configured password, filtering remains enabled and cannot be switched off through Settings.
+
+The current TMDB integration is client-side and uses a public client token. This setting controls Zoku TV's displayed catalog, **not access to the underlying TMDB API**; stronger enforcement requires moving catalog requests and detail/watch authorization to server-side endpoints. Changes to the filter invalidate home and search session caches, but existing browser history or saved watchlist items are not retroactively deleted.
+
+### Vivamax company movie ID sync
+
+`GET /api/vivamax-ids` queries TMDB Discover Movie with `with_companies=149142` and `include_adult=true`, paginates results, deduplicates movie IDs, and caches the successful catalog in server memory for 24 hours. The browser fetches the ID list before showing TMDB catalog results, so the known IDs are excluded from trending, search, discovery, recommendations, details, and the movie player. On a refresh failure, the last in-memory list is served if available. This covers titles assigned to this TMDB company, not titles released under other company IDs or missing TMDB company attribution. It is not a license or DRM enforcement mechanism.
+
+For production, set `TMDB_API_READ_ACCESS_TOKEN` on the server. The endpoint currently falls back to `NEXT_PUBLIC_TMDB_API_READ_ACCESS_TOKEN` for compatibility with the existing client API implementation. Move all TMDB calls server-side in a follow-up hardening pass. The company ID sync uses the shared server deployment's in-memory snapshot, which resets on cold starts.
+
+### Direct-route protection with adult content OFF
+
+The default state is **adult content OFF** (filter ON). Movie lists are filtered before rendering, including successive Discover/Search result pages. Direct `/title/movie/:id` and `/watch/movie/:id` navigation must pass catalog sync and the TMDB detail metadata filter; the movie watch UI does not render its external embed until eligibility succeeds. If the company ID list cannot be verified, movie catalog display and direct movie routes fail closed until verification is available. This prioritizes blocking unverified material over availability. Existing watchlist/history entries may remain in local data; their movie watch routes are still gated. Because catalog metadata and player embeds are client-side, these protections do not prevent a technically knowledgeable user from opening an external embed-provider URL directly.

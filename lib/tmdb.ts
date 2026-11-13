@@ -1,3 +1,4 @@
+import { filterRestrictedTmdbTitles, isAdultFilterEnabled, isRestrictedTmdbTitle, syncAdultFilterState, requireMovieCatalogAvailable, BLOCKED_COMPANY_IDS, BLOCKED_KEYWORD_IDS } from "@/lib/adult-content";
 const TMDB_ACCESS_TOKEN = (
   process.env.NEXT_PUBLIC_TMDB_API_READ_ACCESS_TOKEN ||
   process.env.TMDB_API_READ_ACCESS_TOKEN ||
@@ -15,6 +16,12 @@ let tmdbFallbackMode = !HAS_VALID_V4_JWT;
 
 export interface TMDBTitle {
   id: number;
+  adult?: boolean;
+  certification?: string;
+  production_companies?: { id: number; name?: string }[];
+  keywords?: { keywords?: { id: number }[]; results?: { id: number }[] };
+  release_dates?: { results?: { iso_3166_1: string; release_dates: { certification?: string }[] }[] };
+  content_ratings?: { results?: { iso_3166_1: string; rating?: string }[] };
   title?: string;
   name?: string;
   overview: string;
@@ -651,6 +658,7 @@ async function tmdbFetch(
   endpoint: string,
   params: Record<string, string | number | boolean | undefined> = {}
 ): Promise<any> {
+  await syncAdultFilterState();
   if (tmdbFallbackMode) {
     return resolveFallbackResponse(endpoint, params);
   }
@@ -710,10 +718,10 @@ export async function getTrending(
   timeWindow: "day" | "week" = "day"
 ): Promise<TMDBTitle[]> {
   const data = await tmdbFetch(`/trending/${type}/${timeWindow}`);
-  return (data.results || []).map((item: any) => ({
+  return filterRestrictedTmdbTitles((data.results || []).map((item: any) => ({
     ...item,
     media_type: item.media_type || (type === "all" ? "movie" : type),
-  }));
+  })));
 }
 
 export async function getGenres(type: "movie" | "tv"): Promise<TMDBGenre[]> {
@@ -723,13 +731,14 @@ export async function getGenres(type: "movie" | "tv"): Promise<TMDBGenre[]> {
 
 export async function searchMulti(query: string, page: number = 1): Promise<TMDBTitle[]> {
   if (!query.trim()) return [];
-  const data = await tmdbFetch("/search/multi", { query, page });
-  return (data.results || [])
+  await syncAdultFilterState();
+  const data = await tmdbFetch("/search/multi", { query, page, include_adult: !isAdultFilterEnabled() });
+  return filterRestrictedTmdbTitles((data.results || [])
     .filter((item: any) => item.media_type === "movie" || item.media_type === "tv")
     .map((item: any) => ({
       ...item,
       media_type: item.media_type,
-    }));
+    })));
 }
 
 export interface DiscoverParams {
@@ -752,22 +761,34 @@ export async function discoverMedia(
   type: "movie" | "tv",
   params: DiscoverParams = {}
 ): Promise<TMDBTitle[]> {
+  await syncAdultFilterState();
+  const filtered = isAdultFilterEnabled();
   const data = await tmdbFetch(`/discover/${type}`, {
     ...params,
-    include_adult: false,
+    include_adult: !filtered,
+    ...(filtered ? { without_companies: BLOCKED_COMPANY_IDS.join(","), without_keywords: BLOCKED_KEYWORD_IDS.join("|") } : {}),
   });
-  return (data.results || []).map((item: any) => ({
+  return filterRestrictedTmdbTitles((data.results || []).map((item: any) => ({
     ...item,
     media_type: type,
-  }));
+  })));
 }
 
 export async function getTitleDetails(type: "movie" | "tv", id: number): Promise<TMDBTitle> {
-  const data = await tmdbFetch(`/${type}/${id}`);
-  return {
-    ...data,
-    media_type: type,
-  };
+  const data = await tmdbFetch(`/${type}/${id}`, { append_to_response: "release_dates,content_ratings,keywords" });
+  if (type === "movie") {
+    requireMovieCatalogAvailable();
+    // A failed TMDB request can return a generic fallback title for any ID.
+    // Never render a direct movie player without real company metadata.
+    if (isAdultFilterEnabled() && (!Array.isArray(data.production_companies) || data.id !== id)) {
+      throw new Error("This title is unavailable while the adult-content filter is enabled.");
+    }
+  }
+  const title = { ...data, media_type: type };
+  if (isAdultFilterEnabled() && isRestrictedTmdbTitle(title)) {
+    throw new Error("This title is unavailable while the adult-content filter is enabled.");
+  }
+  return title;
 }
 
 export async function getRecommendations(
@@ -775,18 +796,18 @@ export async function getRecommendations(
   id: number
 ): Promise<TMDBTitle[]> {
   const data = await tmdbFetch(`/${type}/${id}/recommendations`);
-  return (data.results || []).map((item: any) => ({
+  return filterRestrictedTmdbTitles((data.results || []).map((item: any) => ({
     ...item,
     media_type: type,
-  }));
+  })));
 }
 
 export async function getSimilar(type: "movie" | "tv", id: number): Promise<TMDBTitle[]> {
   const data = await tmdbFetch(`/${type}/${id}/similar`);
-  return (data.results || []).map((item: any) => ({
+  return filterRestrictedTmdbTitles((data.results || []).map((item: any) => ({
     ...item,
     media_type: type,
-  }));
+  })));
 }
 
 export async function getCredits(type: "movie" | "tv", id: number): Promise<TMDBCredit[]> {

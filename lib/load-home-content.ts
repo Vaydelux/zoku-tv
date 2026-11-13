@@ -1,4 +1,5 @@
 import { discoverMedia, getGenres, getTrending, TMDBGenre, TMDBTitle } from "@/lib/tmdb";
+import { filterRestrictedTmdbTitles, syncAdultFilterState } from "@/lib/adult-content";
 
 export type GenreRail = { genre: TMDBGenre; titles: TMDBTitle[] };
 
@@ -36,12 +37,17 @@ export async function loadHomeTrending(): Promise<{
   trendingMovies: TMDBTitle[];
   trendingTV: TMDBTitle[];
 }> {
+  await syncAdultFilterState();
   const cached = readSessionCache<{
     heroSlides: TMDBTitle[];
     trendingMovies: TMDBTitle[];
     trendingTV: TMDBTitle[];
   }>(TRENDING_CACHE_KEY);
-  if (cached) return cached;
+  if (cached) return {
+    heroSlides: filterRestrictedTmdbTitles(cached.heroSlides),
+    trendingMovies: filterRestrictedTmdbTitles(cached.trendingMovies),
+    trendingTV: filterRestrictedTmdbTitles(cached.trendingTV),
+  };
 
   const [trendingAll, movies, tv] = await Promise.all([
     getTrending("all", "week"),
@@ -84,6 +90,7 @@ async function loadAllTmdbGenres(): Promise<TMDBGenre[]> {
 
 export async function loadHomeGenreRails(prefGenreIds: number[]): Promise<GenreRail[]> {
   if (prefGenreIds.length === 0) return [];
+  await syncAdultFilterState();
 
   const allGenres = await loadAllTmdbGenres();
   const resultsById = new Map<number, GenreRail>();
@@ -92,7 +99,7 @@ export async function loadHomeGenreRails(prefGenreIds: number[]): Promise<GenreR
   for (const genreId of prefGenreIds) {
     const cachedRail = readSessionCache<GenreRail>(`${GENRE_ITEM_CACHE_PREFIX}${genreId}`);
     if (cachedRail && cachedRail.titles?.length > 0) {
-      resultsById.set(genreId, cachedRail);
+      resultsById.set(genreId, { ...cachedRail, titles: filterRestrictedTmdbTitles(cachedRail.titles) });
     } else {
       uncachedGenreIds.push(genreId);
     }

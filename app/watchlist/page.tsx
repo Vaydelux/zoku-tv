@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useSessionStore, useWatchlistStore, useWatchHistoryStore } from "@/stores";
 import { getWatchlistItemId } from "@/lib/media-types";
+import { filterSavedMediaItems, syncAdultFilterState } from "@/lib/adult-content";
 import { Navbar } from "@/components/Navbar";
 import { TitleCard } from "@/components/TitleCard";
 import { AnimeCard } from "@/components/anime/AnimeCard";
@@ -46,6 +47,12 @@ export default function WatchlistPage() {
   const removeWatchHistoryItem = useWatchHistoryStore((state) => state.removeItem);
 
   const [activeTab, setActiveTab] = useState<"watchlist" | "history">("watchlist");
+  const [adultPolicyReady, setAdultPolicyReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    syncAdultFilterState().then(() => { if (active) setAdultPolicyReady(true); });
+    return () => { active = false; };
+  }, []);
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
@@ -101,17 +108,17 @@ export default function WatchlistPage() {
 
   const catalogFilteredItems = useMemo(
     () =>
-      items.filter((item) =>
+      adultPolicyReady ? filterSavedMediaItems(items.filter((item) =>
         catalogMode === "anime"
           ? item.media_type === "anime"
           : item.media_type !== "anime"
-      ),
-    [items, catalogMode]
+      )) : [],
+    [items, catalogMode, adultPolicyReady]
   );
 
   const catalogFilteredHistory = useMemo(
-    () => filterWatchHistoryByCatalog(watchHistoryItems, catalogMode),
-    [watchHistoryItems, catalogMode]
+    () => adultPolicyReady ? filterSavedMediaItems(filterWatchHistoryByCatalog(watchHistoryItems, catalogMode)) : [],
+    [watchHistoryItems, catalogMode, adultPolicyReady]
   );
 
   const searchedItems = useMemo(

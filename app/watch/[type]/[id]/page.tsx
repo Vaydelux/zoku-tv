@@ -55,6 +55,7 @@ export default function WatchMoviePage({
 
   const [details, setDetails] = useState<TMDBTitle | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(true);
+  const [detailError, setDetailError] = useState(false);
   const [showToolsPanel, setShowToolsPanel] = useState(false);
   const [iframeReady, setIframeReady] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
@@ -75,7 +76,7 @@ export default function WatchMoviePage({
       .then((res) => {
         if (!cancelled) setDetails(res);
       })
-      .catch(console.error)
+      .catch(() => { if (!cancelled) setDetailError(true); })
       .finally(() => {
         if (!cancelled) setDetailsLoading(false);
       });
@@ -111,10 +112,23 @@ export default function WatchMoviePage({
     backdrop_path: details?.backdrop_path ?? null,
     vote_average: details?.vote_average ?? 0,
     selectedServerId,
-    ready: Boolean(details) && type === "movie" && !kidsRestricted,
+    ready: Boolean(details && details.id === numericId) && type === "movie" && !kidsRestricted,
   });
 
   if (type === "tv") return null;
+
+  if (!details || details.id !== numericId) {
+    return (
+      <div className="min-h-screen bg-background text-on-surface flex flex-col items-center justify-center gap-4 p-6 text-center" data-testid="watch-title-eligibility-gate">
+        <Navbar />
+        <ShieldAlert className="h-10 w-10 text-primary" />
+        <p className="text-sm text-on-surface-variant">{detailError ? "This title is unavailable or restricted by the content filter." : "Checking title availability…"}</p>
+        <Link href="/home" className="rounded-xl bg-primary px-5 py-2.5 text-primary-contrast text-sm font-semibold">Back to Home</Link>
+      </div>
+    );
+  }
+
+
 
   if (kidsRestricted && details) {
     return (
