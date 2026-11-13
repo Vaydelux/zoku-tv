@@ -42,6 +42,7 @@ import { ConfirmDialog } from "@/components/ui/Primitives";
 import { GpuDiagnosticOverlay } from "@/components/GpuDiagnosticOverlay";
 import { PerformanceDiagnosticsPanel } from "@/components/PerformanceDiagnosticsPanel";
 import { getGenres, TMDBGenre } from "@/lib/tmdb";
+import { setAdultFilterEnabled } from "@/lib/adult-content";
 import { getGenreIcon } from "@/lib/genreIcons";
 import {
   applyTheme,
@@ -107,6 +108,10 @@ function SettingsPageContent() {
   const [localIframeMode, setLocalIframeMode] = useState<"Strict" | "Compatibility">("Strict");
   const [localCatalogMode, setLocalCatalogMode] = useState<CatalogMode>("tmdb");
   const [saving, setSaving] = useState(false);
+  const [adultFilterEnabled, setAdultFilterEnabledState] = useState(true);
+  const [adultFilterConfigured, setAdultFilterConfigured] = useState(false);
+  const [adultUnlockPassword, setAdultUnlockPassword] = useState("");
+  const [adultFilterBusy, setAdultFilterBusy] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [confirmAction, setConfirmAction] = useState<
@@ -117,6 +122,55 @@ function SettingsPageContent() {
   const [hardwareFlags, setHardwareFlags] = useState<HardwareAccelerationFlags>(() =>
     readStoredHardwareFlags()
   );
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/adult-content", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((state: { filterEnabled?: boolean; configured?: boolean }) => {
+        if (active) {
+          setAdultFilterEnabledState(state.filterEnabled !== false);
+          setAdultFilterConfigured(state.configured === true);
+        }
+      }).catch(() => { if (active) setAdultFilterEnabledState(true); });
+    return () => { active = false; };
+  }, []);
+
+  const handleAdultFilterToggle = async () => {
+    if (adultFilterBusy) return;
+    if (adultFilterEnabled && !adultUnlockPassword) {
+      notifyError("Enter the configured password to show mature titles.");
+      return;
+    }
+    setAdultFilterBusy(true);
+    try {
+      const response = await fetch("/api/adult-content", {
+        method: adultFilterEnabled ? "POST" : "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: adultFilterEnabled ? JSON.stringify({ password: adultUnlockPassword }) : undefined,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to update the filter");
+      const next = result.filterEnabled !== false;
+      setAdultFilterEnabledState(next);
+      setAdultFilterEnabled(next);
+      setAdultUnlockPassword("");
+      // Catalog and search session caches must not retain titles across preference changes.
+      if (typeof window !== "undefined") {
+        for (const storage of [sessionStorage, localStorage]) {
+          for (const key of Object.keys(storage)) {
+            if (key.startsWith("zoku_home_tmdb_") || key === "zoku_last_search_session_v1") storage.removeItem(key);
+          }
+        }
+        window.location.reload();
+      }
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : "Failed to update content filter.");
+    } finally {
+      setAdultFilterBusy(false);
+    }
+  };
 
   useEffect(() => {
     const caps = probeGpuCapabilities();
@@ -972,6 +1026,56 @@ function SettingsPageContent() {
                     {currentProfile.kidMode ? "Disable Kids Mode" : "Enable Kids Mode"}
                   </button>
                 </div>
+              </div>
+            )}
+
+            {activeTab === "profiles" && (
+              <div className="mt-6">
+                <div className="rounded-2xl border border-border-custom bg-background/30 p-5 space-y-4" data-testid="settings-adult-content-filter">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold text-on-surface flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-primary" />
+                        Adult Content Filtering
+                      </h4>
+                      <p className="text-xs text-on-surface-variant max-w-md leading-relaxed">
+                        Filters TMDB adult flags, known VMX/Vivamax company metadata, explicit age ratings, selected keywords, and blocked IDs. Independent of Kids Mode; metadata may be incomplete.
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-[10px] font-bold text-on-surface-variant">
+                      {adultFilterEnabled ? "FILTER ON" : "FILTER OFF"}
+                    </span>
+                  </div>
+                  {adultFilterEnabled && (
+                    <div className="space-y-1">
+                      <label htmlFor="adult-filter-password" className="text-xs text-on-surface-variant">
+                        Password to disable filtering
+                      </label>
+                      <input
+                        id="adult-filter-password"
+                        type="password"
+                        autoComplete="off"
+                        value={adultUnlockPassword}
+                        onChange={(event) => setAdultUnlockPassword(event.target.value)}
+                        placeholder={adultFilterConfigured ? "Enter server password" : "Configure ADULT_CONTENT_PASSWORD first"}
+                        className="w-full rounded-xl border border-border-custom bg-background/60 px-3 py-2.5 text-sm text-on-surface outline-none focus:border-primary"
+                      />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleAdultFilterToggle}
+                    disabled={adultFilterBusy || (adultFilterEnabled && (!adultFilterConfigured || !adultUnlockPassword))}
+                    aria-pressed={!adultFilterEnabled}
+                    className="rounded-xl bg-primary text-primary-contrast px-4 py-2.5 text-xs font-bold disabled:opacity-40"
+                  >
+                    {adultFilterBusy ? "Updating…" : adultFilterEnabled ? "Disable Adult Filter" : "Enable Adult Filter"}
+                  </button>
+                  <p className="text-[11px] text-on-surface-variant">
+                    Filter is on by default. Password unlock lasts up to four hours in this browser.
+                  </p>
+                </div>
+
               </div>
             )}
 
