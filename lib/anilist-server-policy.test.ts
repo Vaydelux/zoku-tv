@@ -65,8 +65,10 @@ test("server prevents restricted anime direct details and filters nested recomme
   const password = process.env.ADULT_CONTENT_PASSWORD;
   delete process.env.ADULT_CONTENT_PASSWORD;
   let calls = 0;
-  globalThis.fetch = (async () => {
+  globalThis.fetch = (async (_input: unknown, options: RequestInit) => {
     calls += 1;
+    const variables = JSON.parse(String(options.body || "{}")).variables as { id: number };
+    if (variables.id === 80801) return Response.json({ data: { Media: hentai } });
     return Response.json({ data: { Media: {
       ...safe(100),
       relations: { edges: [{ node: safe(101) }, { node: hentai }] },
@@ -83,7 +85,12 @@ test("server prevents restricted anime direct details and filters nested recomme
     const data = (await res.json()).data.Media;
     assert.deepEqual(data.relations.edges.map((x: { node: { id: number } }) => x.node.id), [101]);
     assert.deepEqual(data.recommendations.nodes.map((x: { mediaRecommendation: { id: number } }) => x.mediaRecommendation.id), [102]);
-    assert.equal(calls, 1);
+    const restricted = await POST(new NextRequest("https://zoku.example/api/anilist", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ operation: "detail", variables: { id: 80801 } }),
+    }));
+    assert.equal(restricted.status, 404);
+    assert.equal(calls, 2);
   } finally {
     globalThis.fetch = originalFetch;
     if (password === undefined) delete process.env.ADULT_CONTENT_PASSWORD;
