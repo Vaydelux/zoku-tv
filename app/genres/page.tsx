@@ -114,7 +114,7 @@ export default function GenresPage() {
             <div role="status" className="rounded-xl border border-border-custom bg-surface p-7 text-center text-on-surface-variant">Catalog temporarily unavailable. Try again shortly.</div>
           ) : genres.length ? (
             <div className="zoku-genre-grid grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {genres.map((genre, index) => {
+              {genres.map((genre) => {
                 const Icon = genre.icon;
                 const url = type === "anime"
                   ? `/discover?type=anime&genres=${encodeURIComponent(genre.id)}`
@@ -122,7 +122,6 @@ export default function GenresPage() {
                 return (
                   <Link key={genre.id} href={url} data-tv-focusable="true"
                     className="zoku-genre-tile group relative flex min-h-[116px] flex-col justify-end overflow-hidden rounded-xl border border-border-custom p-4 text-on-surface transition-transform focus-visible:outline focus-visible:outline-3 focus-visible:outline-primary"
-                    style={{ ["--genre-index" as string]: index % 6 } as React.CSSProperties}
                     aria-label={`Browse ${genre.name} ${type === "anime" ? "anime" : type === "tv" ? "TV shows" : "movies"}`}>
                     <Icon className="pointer-events-none absolute right-4 top-4 h-8 w-8 opacity-25 transition-transform group-hover:scale-110" aria-hidden="true" />
                     <span className="relative z-10 text-base font-bold">{genre.name}</span>
