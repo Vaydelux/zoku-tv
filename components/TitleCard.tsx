@@ -74,9 +74,9 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
     };
   }, [isHovered, synopsis, resolvedBackdrop, actualMediaType, title.id]);
 
-  const handleWatchlistToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleWatchlistToggle = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
     if (isInWatchlist) {
       removeItem(actualMediaType, title.id);
     } else {
@@ -93,9 +93,9 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
     }
   };
 
-  const handleHistoryToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleHistoryToggle = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
     void toggleCompleted({
       media_type: actualMediaType,
       tmdbId: title.id,
@@ -143,8 +143,8 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
         progressPercent={playProgress.hasProgress ? playProgress.progressPercent : null}
         fullWidth={fullWidth}
         onOpen={handleClick}
-        onToggleWatchlist={() => handleWatchlistToggle({ stopPropagation() {}, preventDefault() {} } as React.MouseEvent)}
-        onToggleWatched={() => handleHistoryToggle({ stopPropagation() {}, preventDefault() {} } as React.MouseEvent)}
+        onToggleWatchlist={() => handleWatchlistToggle()}
+        onToggleWatched={() => handleHistoryToggle()}
       />
     );
   }
