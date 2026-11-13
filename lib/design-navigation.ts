@@ -4,7 +4,7 @@
 export const ZOKU_NAV_ITEMS = [
   { label: "Home", href: "/home" },
   { label: "Search", href: "/search" },
-  { label: "Discover", href: "/discover" },
+  { label: "Genres", href: "/genres" },
   { label: "Watchlist", href: "/watchlist" },
   { label: "Settings", href: "/settings" },
 ] as const;
@@ -19,7 +19,7 @@ export function activeZokuNavHref(pathname: string | null): ZokuNavHref | null {
   if (match) return match.href;
   // Existing explicit genre routes belong to Discover; title/player routes do not
   // pretend to be one of the five primary destinations.
-  if (pathname === "/genres" || pathname.startsWith("/genre/")) return "/discover";
+  if (pathname === "/discover" || pathname.startsWith("/discover/") || pathname.startsWith("/genre/")) return "/genres";
   return null;
 }
 
