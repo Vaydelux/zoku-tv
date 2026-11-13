@@ -27,10 +27,8 @@ import {
   browseAnime,
   type AniListMedia,
 } from "@/lib/anilist";
-import {
-  filterAnimeForKidsMode,
-  isAnimeGenreAllowedInKidsMode,
-} from "@/lib/kids-mode";
+import { filterAnimeForKidsMode } from "@/lib/kids-mode";
+import { visibleAnimeGenres } from "@/lib/anime-genre-visibility";
 
 export default function AnimeDiscoverPage() {
   return (
@@ -84,18 +82,18 @@ export function AnimeDiscoverContent() {
   const [localStudio, setLocalStudio] = useState(studio);
 
   useEffect(() => {
-    setSelectedGenres(genreParam ? genreParam.split(",").filter(Boolean) : []);
+    setSelectedGenres(genreParam ? visibleAnimeGenres(genreParam.split(",").filter(Boolean), isKidMode, adultFilterEnabled) : []);
     setLocalSeason(season);
     setLocalYear(seasonYear);
     setLocalSort(sortBy);
     setLocalFormat(format);
     setLocalSource(source);
     setLocalStudio(studio);
-  }, [genreParam, season, seasonYear, sortBy, format, source, studio]);
+  }, [genreParam, season, seasonYear, sortBy, format, source, studio, isKidMode, adultFilterEnabled]);
 
   useEffect(() => {
     setPage(1);
-  }, [sortBy, genreParam, season, seasonYear, format, source, studio]);
+  }, [sortBy, genreParam, season, seasonYear, format, source, studio, isKidMode, adultFilterEnabled]);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,17 +103,22 @@ export function AnimeDiscoverContent() {
       else setLoadingMore(true);
 
       try {
-        const requestedGenres = genreParam
-          ? genreParam
-              .split(",")
-              .filter(Boolean)
-              .filter((g) => (!isKidMode || isAnimeGenreAllowedInKidsMode(g)) && (!adultFilterEnabled || !["ecchi", "hentai"].includes(g.toLowerCase())))
-          : undefined;
+        const rawGenres = genreParam.split(",").filter(Boolean);
+        const requestedGenres = visibleAnimeGenres(rawGenres, isKidMode, adultFilterEnabled);
+        // Do not silently replace a blocked genre selection with the entire
+        // catalog: that is misleading, especially when parental mode is active.
+        if (rawGenres.length > 0 && requestedGenres.length === 0) {
+          if (!cancelled) {
+            setResults([]);
+            setHasNextPage(false);
+          }
+          return;
+        }
 
         const data = await browseAnime({
           page,
           perPage: 20,
-          genres: requestedGenres?.length ? requestedGenres : undefined,
+          genres: requestedGenres.length ? requestedGenres : undefined,
           season: season || undefined,
           seasonYear: seasonYear ? Number(seasonYear) : undefined,
           format: format || undefined,
@@ -136,6 +139,12 @@ export function AnimeDiscoverContent() {
         setHasNextPage(Boolean(data.pageInfo?.hasNextPage));
       } catch (err) {
         console.error("Anime discover failed:", err);
+        // A failed revalidation must not leave stale previously-unlocked
+        // adult anime visible after profile or filtering changes.
+        if (!cancelled) {
+          setResults([]);
+          setHasNextPage(false);
+        }
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -149,7 +158,7 @@ export function AnimeDiscoverContent() {
     return () => {
       cancelled = true;
     };
-  }, [page, sortBy, genreParam, season, seasonYear, format, source, studio, isKidMode]);
+  }, [page, sortBy, genreParam, season, seasonYear, format, source, studio, isKidMode, adultFilterEnabled]);
 
   const updateUrlFilters = (updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -230,9 +239,7 @@ export function AnimeDiscoverContent() {
     ...ANILIST_SEASONS.map((s) => ({ value: s, label: s })),
   ];
 
-  const visibleGenres = ANILIST_GENRES.filter(
-    (g) => (!isKidMode || isAnimeGenreAllowedInKidsMode(g)) && (!adultFilterEnabled || !["ecchi", "hentai"].includes(g.toLowerCase()))
-  );
+  const visibleGenres = visibleAnimeGenres(ANILIST_GENRES, isKidMode, adultFilterEnabled);
 
   const hasActiveFilters = Boolean(
     format || source || studio || season || seasonYear || selectedGenres.length > 0
