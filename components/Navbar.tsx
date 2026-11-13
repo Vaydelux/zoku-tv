@@ -5,8 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { 
   Search, 
-  Home,
-  Compass,
   Tv, 
   LogOut, 
   Settings, 
@@ -25,7 +23,8 @@ import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
 import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 import { usePerfMode } from "@/hooks/usePerfMode";
-import { ZOKU_NAV_ITEMS, activeZokuNavHref, showZokuMobileNav } from "@/lib/design-navigation";
+import { ZOKU_NAV_ITEMS, activeZokuNavHref } from "@/lib/design-navigation";
+import { MobileTabBar } from "@/components/MobileTabBar";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -509,35 +508,7 @@ export function Navbar() {
         )}
       </div>
     </header>
-    {cinematicLayout && showZokuMobileNav(pathname) && (
-      <nav
-      aria-label="Mobile primary navigation"
-      className="zoku-mobile-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border-custom bg-background/95 xl:hidden"
-      >
-      <div className="grid grid-cols-5 px-1 pb-[env(safe-area-inset-bottom)]">
-      {ZOKU_NAV_ITEMS.map((link) => {
-      const Icon =
-      link.href === "/home" ? Home :
-      link.href === "/search" ? Search :
-      link.href === "/genres" ? Compass :
-      link.href === "/watchlist" ? Heart : Settings;
-      const isActive = activeNav === link.href;
-      return (
-      <Link
-      key={link.href}
-      href={link.href}
-      aria-current={isActive ? "page" : undefined}
-      data-tv-focusable="true"
-      className={`zoku-mobile-tab flex min-h-[60px] flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[11px] font-medium transition-colors ${isActive ? "text-primary" : "text-on-surface-variant hover:text-on-surface"}`}
-      >
-      <Icon className="h-5 w-5" aria-hidden="true" />
-      <span>{link.label}</span>
-      </Link>
-      );
-      })}
-      </div>
-      </nav>
-    )}
+    {cinematicLayout && <MobileTabBar pathname={pathname} />}
     </>
   );
 }
