@@ -57,6 +57,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [seasonDetail, setSeasonDetail] = useState<TMDBSeasonDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [eligibilityError, setEligibilityError] = useState(false);
   const [loadingSeason, setLoadingSeason] = useState(false);
 
   useEffect(() => {
@@ -66,6 +67,8 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
 
     async function loadTitleData() {
       setLoading(true);
+      setEligibilityError(false);
+      setDetails(null);
       try {
         const [titleDetails, castList, videoList, similarList] = await Promise.all([
           getTitleDetails(mediaType, titleId),
@@ -87,6 +90,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
         }
       } catch (err) {
         console.error("Failed to load title details:", err);
+        if (!cancelled) setEligibilityError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -134,7 +138,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
   if (!details) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background text-on-surface gap-4">
-        <p className="font-semibold">Failed to find requested archive title.</p>
+        <p className="font-semibold">{eligibilityError ? "This title is unavailable or restricted by the content filter." : "Title unavailable."}</p>
         <button
           onClick={() => router.back()}
           className="px-4 py-2 bg-primary rounded-xl text-xs font-semibold"
