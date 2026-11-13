@@ -1036,14 +1036,14 @@ function SettingsPageContent() {
                     <div className="space-y-1">
                       <h4 className="text-xs font-bold text-on-surface flex items-center gap-2">
                         <ShieldCheck className="h-4 w-4 text-primary" />
-                        Adult Content Filtering
+                        Adult Content
                       </h4>
                       <p className="text-xs text-on-surface-variant max-w-md leading-relaxed">
                         Filters TMDB adult flags, known VMX/Vivamax company metadata, explicit age ratings, selected keywords, and blocked IDs. Independent of Kids Mode; metadata may be incomplete.
                       </p>
                     </div>
                     <span className="shrink-0 text-[10px] font-bold text-on-surface-variant">
-                      {adultFilterEnabled ? "FILTER ON" : "FILTER OFF"}
+                      {adultFilterEnabled ? "OFF (FILTER ACTIVE)" : "ON (UNLOCKED)"}
                     </span>
                   </div>
                   {adultFilterEnabled && (
@@ -1066,13 +1066,14 @@ function SettingsPageContent() {
                     type="button"
                     onClick={handleAdultFilterToggle}
                     disabled={adultFilterBusy || (adultFilterEnabled && (!adultFilterConfigured || !adultUnlockPassword))}
-                    aria-pressed={!adultFilterEnabled}
+                    role="switch"
+                    aria-checked={!adultFilterEnabled}
                     className="rounded-xl bg-primary text-primary-contrast px-4 py-2.5 text-xs font-bold disabled:opacity-40"
                   >
-                    {adultFilterBusy ? "Updating…" : adultFilterEnabled ? "Disable Adult Filter" : "Enable Adult Filter"}
+                    {adultFilterBusy ? "Updating…" : adultFilterEnabled ? "Enable Adult Content" : "Disable Adult Content"}
                   </button>
                   <p className="text-[11px] text-on-surface-variant">
-                    Filter is on by default. Password unlock lasts up to four hours in this browser.
+                    Adult content is OFF by default. Turning it ON requires the server password and lasts up to four hours in this browser.
                   </p>
                 </div>
 
