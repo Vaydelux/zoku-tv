@@ -373,7 +373,7 @@ function SearchPageContent() {
             <input
               ref={searchInputRef}
               type="text"
-              autoFocus
+              aria-label="Search movies, TV shows and anime"
               data-testid="search-page-input"
               placeholder="Search movies, TV shows, anime series, franchises..."
               value={inputValue}
