@@ -135,6 +135,7 @@ export function Navbar() {
   const networkStatus = getNavbarNetworkStatus(isOnline);
 
   return (
+    <>
     <header
       className={`site-nav sticky top-0 z-40 w-full border-b ${networkStatus.navBorderClass} bg-background/90 backdrop-blur-md transition-colors duration-300`}
     >
@@ -467,48 +468,17 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Reference-informed mobile tab navigation; the original classic row remains available. */}
-        {cinematicLayout ? (
-          showZokuMobileNav(pathname) && (
-            <nav
-              aria-label="Mobile primary navigation"
-              className="zoku-mobile-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border-custom bg-background/95 lg:hidden"
-            >
-              <div className="grid grid-cols-5 px-1 pb-[env(safe-area-inset-bottom)]">
-                {ZOKU_NAV_ITEMS.map((link) => {
-                  const Icon =
-                    link.href === "/home" ? Home :
-                    link.href === "/search" ? Search :
-                    link.href === "/genres" ? Compass :
-                    link.href === "/watchlist" ? Heart : Settings;
-                  const isActive = activeNav === link.href;
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      aria-current={isActive ? "page" : undefined}
-                      data-tv-focusable="true"
-                      className={`zoku-mobile-tab flex min-h-[60px] flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[11px] font-medium transition-colors ${isActive ? "text-primary" : "text-on-surface-variant hover:text-on-surface"}`}
-                    >
-                      <Icon className="h-5 w-5" aria-hidden="true" />
-                      <span>{link.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </nav>
-          )
-        ) : (
-          <div className="flex md:hidden items-center justify-around gap-1 border-t border-border-custom/60 py-1.5">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link key={link.href} href={link.href}
-                  className={`flex-1 rounded-lg py-1.5 text-center text-xs font-semibold transition-all ${isActive ? "bg-primary text-primary-contrast shadow-sm" : "text-on-surface-variant hover:bg-surface-hover hover:text-on-surface"}`}
-                >{link.name}</Link>
-              );
-            })}
-          </div>
+        {!cinematicLayout && (
+            <div className="flex md:hidden items-center justify-around gap-1 border-t border-border-custom/60 py-1.5">
+              {navLinks.map((link) => {
+                const isActive = pathname === link.href;
+                return (
+                  <Link key={link.href} href={link.href}
+                    className={`flex-1 rounded-lg py-1.5 text-center text-xs font-semibold transition-all ${isActive ? "bg-primary text-primary-contrast shadow-sm" : "text-on-surface-variant hover:bg-surface-hover hover:text-on-surface"}`}
+                  >{link.name}</Link>
+                );
+              })}
+            </div>
         )}
 
         {/* Compact, touch-friendly scrollable rail filter interface on small screens (< md) */}
@@ -539,5 +509,35 @@ export function Navbar() {
         )}
       </div>
     </header>
+    {cinematicLayout && showZokuMobileNav(pathname) && (
+      <nav
+      aria-label="Mobile primary navigation"
+      className="zoku-mobile-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border-custom bg-background/95 lg:hidden"
+      >
+      <div className="grid grid-cols-5 px-1 pb-[env(safe-area-inset-bottom)]">
+      {ZOKU_NAV_ITEMS.map((link) => {
+      const Icon =
+      link.href === "/home" ? Home :
+      link.href === "/search" ? Search :
+      link.href === "/genres" ? Compass :
+      link.href === "/watchlist" ? Heart : Settings;
+      const isActive = activeNav === link.href;
+      return (
+      <Link
+      key={link.href}
+      href={link.href}
+      aria-current={isActive ? "page" : undefined}
+      data-tv-focusable="true"
+      className={`zoku-mobile-tab flex min-h-[60px] flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[11px] font-medium transition-colors ${isActive ? "text-primary" : "text-on-surface-variant hover:text-on-surface"}`}
+      >
+      <Icon className="h-5 w-5" aria-hidden="true" />
+      <span>{link.label}</span>
+      </Link>
+      );
+      })}
+      </div>
+      </nav>
+    )}
+    </>
   );
 }
