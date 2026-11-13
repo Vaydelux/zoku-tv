@@ -111,12 +111,16 @@ export async function POST(request: NextRequest) {
       if (filterEnabled && excluded(media)) return responseJson({ error: "Anime unavailable" }, 404);
       json.data.Media = sanitizeAniListDetail(media, filterEnabled);
       if (filterEnabled) {
-        json.data.Media.relations.edges = (json.data.Media.relations?.edges || []).filter((edge: { node?: AniListSafetyMedia | null }) =>
-          edge.node && !BLOCKED_ANIME_IDS.has(edge.node.id)
-        );
-        json.data.Media.recommendations.nodes = (json.data.Media.recommendations?.nodes || []).filter((node: { mediaRecommendation?: AniListSafetyMedia | null }) =>
-          node.mediaRecommendation && !BLOCKED_ANIME_IDS.has(node.mediaRecommendation.id)
-        );
+        if (json.data.Media.relations) {
+          json.data.Media.relations.edges = (json.data.Media.relations.edges || []).filter((edge: { node?: AniListSafetyMedia | null }) =>
+            edge.node && !BLOCKED_ANIME_IDS.has(edge.node.id)
+          );
+        }
+        if (json.data.Media.recommendations) {
+          json.data.Media.recommendations.nodes = (json.data.Media.recommendations.nodes || []).filter((node: { mediaRecommendation?: AniListSafetyMedia | null }) =>
+            node.mediaRecommendation && !BLOCKED_ANIME_IDS.has(node.mediaRecommendation.id)
+          );
+        }
       }
     } else {
       if (!Array.isArray(json.data.Page?.media)) throw new Error("Malformed AniList eligibility");
