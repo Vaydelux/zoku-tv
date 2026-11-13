@@ -37,6 +37,9 @@ test("syncs multiple company IDs, blocks cached and direct-route titles by ID", 
     if (path === "/api/adult-content") {
       return Response.json({ filterEnabled: true });
     }
+    if (path.startsWith("/api/tmdb/movie/543210?")) {
+      return Response.json({ id: 543210, media_type: "movie", production_companies: [], adult: false });
+    }
     throw new Error(`Unexpected URL: ${path}`);
   }) as typeof fetch;
   try {
@@ -58,7 +61,7 @@ test("syncs multiple company IDs, blocks cached and direct-route titles by ID", 
     ]).map((item) => item.title), ["Permitted", "Unrelated TV"]);
     const { getTitleDetails } = await import("./tmdb");
     await assert.rejects(getTitleDetails("movie", 543210), /unavailable while the adult-content filter is enabled/);
-    assert.deepEqual(endpoints.sort(), ["/api/adult-content", "/api/vivamax-ids"].sort());
+    assert.deepEqual(endpoints.filter((p) => !p.startsWith("/api/tmdb/")).sort(), ["/api/adult-content", "/api/vivamax-ids"].sort());
   } finally {
     globalThis.fetch = oldFetch;
     if (oldWindow) Object.defineProperty(globalThis, "window", oldWindow);
