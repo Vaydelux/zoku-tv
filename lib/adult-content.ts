@@ -25,6 +25,8 @@ let filterEnabled = true;
 const companyCatalogIds = new Set<number>();
 let catalogPromise: Promise<void> | undefined;
 let companyCatalogReady = false;
+let catalogAttemptAt = 0;
+const CATALOG_RETRY_MS = 60 * 1000;
 
 let syncPromise: Promise<void> | undefined;
 let policyCheckedAt = 0;
@@ -40,14 +42,16 @@ export function setAdultFilterEnabled(enabled: boolean): void {
 }
 export function syncAdultFilterState(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
-  if (!catalogPromise) {
+  if (!catalogPromise || (!companyCatalogReady && Date.now() - catalogAttemptAt >= CATALOG_RETRY_MS)) {
+    catalogAttemptAt = Date.now();
     catalogPromise = fetch("/api/vivamax-ids", { credentials: "same-origin", cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Company catalog unavailable");
         const payload = await response.json() as { ids?: number[]; complete?: boolean };
         if (payload.complete !== true || !Array.isArray(payload.ids)) throw new Error("Incomplete company catalog");
-        companyCatalogReady = true;
+        companyCatalogIds.clear();
         for (const id of payload.ids || []) if (Number.isSafeInteger(id) && id > 0) companyCatalogIds.add(id);
+        companyCatalogReady = true;
       })
       .catch(() => { companyCatalogReady = false; /* Fail closed on movie routes until IDs can be checked. */ });
   }
