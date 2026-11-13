@@ -46,6 +46,9 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
 
     async function load() {
       setLoading(true);
+      setDetails(null);
+      setRecommendations([]);
+      setSeasons([]);
       try {
         const data = await getAnimeDetails(anilistId);
         if (cancelled) return;
@@ -81,7 +84,7 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
     );
   }
 
-  if (!details) {
+  if (!details || details.id !== anilistId) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background gap-4">
         <p>Anime details could not be loaded.</p>
