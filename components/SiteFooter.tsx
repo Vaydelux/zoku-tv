@@ -44,6 +44,45 @@ export function SiteFooter() {
       ? "AniList Anime Catalog"
       : "TMDB Movies & TV Catalog";
 
+  if (cinematicLayout) {
+    return (
+      <footer
+        className="zoku-reference-footer relative z-10 mt-auto border-t border-border-custom bg-background px-[var(--cinematic-gutter)] py-5 text-on-surface-variant"
+        data-testid="site-footer"
+      >
+        <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast">
+              <Tv className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <strong className="block text-sm font-semibold text-on-surface">Zoku TV</strong>
+              <span className="block truncate text-[11px]">Movies, TV and anime discovery</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+            <span>Metadata by TMDB &amp; AniList</span>
+            <Link href="/genres" className="hover:text-on-surface hover:underline">Genres</Link>
+            <Link href="/settings" className="hover:text-on-surface hover:underline">Settings</Link>
+          </div>
+        </div>
+        <details className="mx-auto mt-4 max-w-[1240px] border-t border-border-custom/50 pt-3 text-[11px]">
+          <summary className="w-fit cursor-pointer rounded text-on-surface-variant hover:text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+            Streaming, catalog and connection information
+          </summary>
+          <div className="mt-3 grid gap-2 leading-relaxed sm:grid-cols-2">
+            <p>Zoku TV does not host or store streamed videos. External playback availability, quality, captions and advertisements depend on the providers used.</p>
+            <p>
+              Catalog: {catalogLabel}. This product uses TMDB metadata but is not endorsed or certified by TMDB. Anime metadata is from AniList.
+              Browser {isOnline ? "online" : "offline"}; {isCloudFirebaseConfigured ? "cloud sync configured" : "local-only profile storage"}.
+              {currentProfile?.kidMode ? " Kids Mode active." : ""}
+            </p>
+          </div>
+        </details>
+      </footer>
+    );
+  }
+
   return (
     <footer
       className={`${cinematicLayout ? "zoku-cinematic-footer" : ""} relative z-10 mt-auto border-t border-white/10 bg-[#05060b]/95 px-4 sm:px-6 lg:px-8 py-8 text-white/70 backdrop-blur-xl transition-colors duration-300`}
