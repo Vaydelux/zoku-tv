@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Play } from "lucide-react";
 import type { AniListMedia } from "@/lib/anilist";
 import { getAnimeDisplayTitle, getAnimePoster } from "@/lib/anilist";
+import { CinematicAnimeHero } from "@/components/anime/CinematicAnimeHero";
 
 interface AnimeHeroBannerProps {
   slides: AniListMedia[];
@@ -13,6 +14,10 @@ interface AnimeHeroBannerProps {
 export function AnimeHeroBanner({ slides, loading = false }: AnimeHeroBannerProps) {
   const router = useRouter();
   const current = slides[0];
+
+  if (process.env.NEXT_PUBLIC_ZOKU_LAYOUT !== "classic") {
+    return <CinematicAnimeHero slides={slides} loading={loading} />;
+  }
 
   if (loading) {
     return <div className="h-[45vh] min-h-[300px] bg-surface animate-pulse" />;
