@@ -22,6 +22,7 @@ import {
 } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { HeroCarousel } from "@/components/HeroCarousel";
+import { HomeBrowseShell } from "@/components/HomeBrowseShell";
 import { TitleRail } from "@/components/TitleRail";
 import { AnimeRail } from "@/components/anime/AnimeRail";
 import { AnimeHeroBanner } from "@/components/anime/AnimeHeroBanner";
@@ -66,6 +67,7 @@ export default function HomePage() {
   const watchlistItems = useWatchlistStore((state) => state.items);
 
   const catalogMode = currentProfile?.catalogMode ?? "tmdb";
+  const cinematicLayout = process.env.NEXT_PUBLIC_ZOKU_LAYOUT !== "classic";
   const isKidMode = Boolean(currentProfile?.kidMode);
   const currentTheme = getThemeOption(currentProfile?.themePreference);
   const currentAppearance = normalizeAppearance(currentProfile?.appearancePreference);
@@ -387,7 +389,12 @@ export default function HomePage() {
         <HeroCarousel slides={heroSlides} loading={loadingTrending} />
       )}
 
-      {/* Focused Catalog & Filter Bar */}
+      {/* Reference-style understated browse controls, original filter tools retained. */}
+      <HomeBrowseShell
+        cinematic={cinematicLayout}
+        catalogMode={catalogMode}
+        onCatalogChange={handleCatalogToggle}
+      >
       <div className="relative z-20 mx-auto -mt-3 sm:-mt-4 w-full px-3 sm:px-6 lg:px-8">
         <div className="glass-panel rounded-2xl p-2.5 sm:p-4 shadow-xl">
           <div className="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -534,8 +541,9 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+      </HomeBrowseShell>
 
-      <section className="relative z-10 bg-transparent pt-2 sm:pt-4 space-y-2 md:space-y-3 pb-16">
+      <section className="zoku-home-rails relative z-10 bg-transparent pt-2 sm:pt-4 space-y-2 md:space-y-3 pb-16">
         {isOffline && (
           <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
             <div className="glass-panel rounded-2xl border border-amber-500/30 p-5 space-y-2 shadow-xl">
