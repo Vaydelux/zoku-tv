@@ -25,6 +25,7 @@ import {
 import { AnimeCard } from "@/components/anime/AnimeCard";
 import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
+import { shouldOfferMoreSearchResults, getSearchPageResultStatus } from "@/lib/search-result-status";
 
 type SearchFilterTab = "all" | "movies_tv" | "anime";
 
@@ -120,6 +121,8 @@ function SearchPageContent() {
   );
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [searchStatus, setSearchStatus] = useState<"ok" | "partial" | "unavailable">("ok");
   const [page, setPage] = useState<number>(() =>
     hasMatchingSavedResults && savedInitial ? savedInitial.page : 1
   );
@@ -202,6 +205,8 @@ function SearchPageContent() {
       if (!inputValue.trim()) {
         setResults([]);
         setAnimeResults([]);
+        setHasMore(false);
+        setSearchStatus("ok");
       }
       return;
     }
@@ -213,6 +218,10 @@ function SearchPageContent() {
     async function performSearch() {
       if (page === 1) {
         setLoading(true);
+        setResults([]);
+        setAnimeResults([]);
+        setHasMore(false);
+        setSearchStatus("ok");
       } else {
         setLoadingMore(true);
       }
@@ -223,6 +232,16 @@ function SearchPageContent() {
         ]);
 
         if (cancelled) return;
+
+        setSearchStatus(getSearchPageResultStatus({
+          tmdbFailed: tmdbPromise.status === "rejected",
+          animeFailed: animePromise.status === "rejected",
+        }));
+        setHasMore(shouldOfferMoreSearchResults({
+          page,
+          tmdbResultCount: tmdbPromise.status === "fulfilled" ? tmdbPromise.value.length : 0,
+          animeHasNextPage: animePromise.status === "fulfilled" && Boolean(animePromise.value.pageInfo?.hasNextPage),
+        }));
 
         let nextTmdbResults: TMDBTitle[] = [];
         let nextAnimeResults: AniListMedia[] = [];
@@ -262,6 +281,14 @@ function SearchPageContent() {
         }
       } catch (err) {
         console.error("Search failed:", err);
+        if (!cancelled) {
+          setSearchStatus("unavailable");
+          setHasMore(false);
+          if (page === 1) {
+            setResults([]);
+            setAnimeResults([]);
+          }
+        }
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -460,7 +487,7 @@ function SearchPageContent() {
             <div className="flex items-center justify-between border-b border-border-custom pb-3">
               <span className="text-xs font-mono uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
                 <History className="h-4 w-4 text-primary" />
-                <span>Search Portal History</span>
+                <span>Recent searches</span>
               </span>
               {history.length > 0 && (
                 <button
@@ -468,7 +495,7 @@ function SearchPageContent() {
                   className="text-[10px] text-red-500 hover:underline flex items-center gap-1 font-semibold"
                 >
                   <Trash2 className="h-3 w-3" />
-                  <span>Clear Portal</span>
+                  <span>Clear history</span>
                 </button>
               )}
             </div>
@@ -488,8 +515,8 @@ function SearchPageContent() {
               </div>
             ) : (
               <div className="text-center py-6 text-xs text-on-surface-variant space-y-1">
-                <p className="font-semibold">Your query scanner is vacant.</p>
-                <p className="text-[10px]">Start searching to see history logs here.</p>
+                <p className="font-semibold">No recent searches.</p>
+                <p className="text-[10px]">Your recent searches will appear here.</p>
               </div>
             )}
           </div>
@@ -503,15 +530,16 @@ function SearchPageContent() {
                 </span>
               </p>
               <p className="text-xs font-mono text-on-surface-variant">
-                Total Found: {totalResultsCount} results ({results.length} Movies/TV ·{" "}
+                Showing {totalResultsCount} results ({results.length} Movies/TV ·{" "}
                 {animeResults.length} Anime)
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 border-b border-border-custom pb-4">
+            <div role="group" aria-label="Filter search results" className="flex flex-wrap items-center gap-2 border-b border-border-custom pb-4">
               <button
                 type="button"
                 onClick={() => setActiveFilter("all")}
+                aria-pressed={activeFilter === "all"}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                   activeFilter === "all"
                     ? "bg-primary text-primary-contrast shadow-sm"
@@ -528,6 +556,7 @@ function SearchPageContent() {
               <button
                 type="button"
                 onClick={() => setActiveFilter("movies_tv")}
+                aria-pressed={activeFilter === "movies_tv"}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
                   activeFilter === "movies_tv"
                     ? "bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm"
@@ -544,6 +573,7 @@ function SearchPageContent() {
               <button
                 type="button"
                 onClick={() => setActiveFilter("anime")}
+                aria-pressed={activeFilter === "anime"}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
                   activeFilter === "anime"
                     ? "bg-gradient-to-r from-violet-600/30 to-fuchsia-600/30 text-fuchsia-300 border-fuchsia-400/60 shadow-sm"
@@ -558,6 +588,14 @@ function SearchPageContent() {
               </button>
             </div>
 
+            {searchStatus !== "ok" && !loading && (
+              <p role="status" className="rounded-xl border border-border-custom bg-surface px-4 py-3 text-sm text-on-surface-variant">
+                {searchStatus === "unavailable"
+                  ? "Search is temporarily unavailable. Please retry your search."
+                  : "Some results may be missing because one catalog is temporarily unavailable."}
+              </p>
+            )}
+
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
@@ -571,11 +609,11 @@ function SearchPageContent() {
               <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
                 <Film className="h-12 w-12 text-on-surface-variant" />
                 <div className="space-y-1">
-                  <p className="font-semibold text-sm">No scanner results found.</p>
+                  <p className="font-semibold text-sm">No matching titles found.</p>
                   <p className="text-xs text-on-surface-variant max-w-xs">
                     {isKidMode
                       ? "No Kids Mode family-safe titles matched your query."
-                      : "Please check spelling or search for wider words, genre titles, or franchise creators."}
+                      : "Try a different title, genre, or keyword."}
                   </p>
                 </div>
               </div>
@@ -647,7 +685,7 @@ function SearchPageContent() {
                     </div>
                   ))}
 
-                <div className="flex justify-center pt-4">
+                {hasMore && <div className="flex justify-center pt-4">
                   <button
                     onClick={() => setPage((p) => p + 1)}
                     disabled={loadingMore}
@@ -662,7 +700,7 @@ function SearchPageContent() {
                       <span>Load More Results</span>
                     )}
                   </button>
-                </div>
+                </div>}
               </div>
             )}
           </div>
