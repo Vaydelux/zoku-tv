@@ -10,6 +10,42 @@ const GENRE_ITEM_CACHE_PREFIX = "zoku_home_tmdb_genre_rail_v2_";
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CONCURRENCY_BATCH_SIZE = 6;
 
+/**
+ * Preserve a featured hero when TMDB returns legitimate titles but no
+ * backdrops. HeroCarousel already supplies artwork fallback presentation.
+ * Prefer real image-bearing movies, then image-bearing all-media results,
+ * then safe synopsis-bearing titles, and finally any safe catalog result.
+ * Input lists are already server-policy filtered; never synthesize IDs.
+ */
+export function pickFeaturedHeroSlides(
+  movies: readonly TMDBTitle[],
+  trendingAll: readonly TMDBTitle[],
+  count = HERO_SLIDE_COUNT,
+): TMDBTitle[] {
+  if (count <= 0) return [];
+  const catalogs = [movies, trendingAll];
+  for (const preferred of [
+    (title: TMDBTitle) => Boolean(title.backdrop_path && title.overview),
+    (title: TMDBTitle) => Boolean(title.overview),
+    (_title: TMDBTitle) => true,
+  ]) {
+    const chosen: TMDBTitle[] = [];
+    const seen = new Set<string>();
+    for (const catalog of catalogs) {
+      for (const title of catalog) {
+        const kind = title.media_type === "tv" ? "tv" : "movie";
+        const key = `${kind}_${title.id}`;
+        if (!Number.isSafeInteger(title.id) || title.id <= 0 || seen.has(key) || !preferred(title)) continue;
+        seen.add(key);
+        chosen.push(title);
+        if (chosen.length >= count) return chosen;
+      }
+    }
+    if (chosen.length > 0) return chosen;
+  }
+  return [];
+}
+
 function readSessionCache<T>(key: string): T | null {
   if (typeof window === "undefined") return null;
   try {
@@ -55,13 +91,7 @@ export async function loadHomeTrending(): Promise<{
     getTrending("tv", "day"),
   ]);
 
-  const movieCandidates = movies.filter((title) => title.backdrop_path && title.overview);
-  let heroSlides = movieCandidates.slice(0, HERO_SLIDE_COUNT);
-
-  if (heroSlides.length === 0) {
-    const fallback = trendingAll.filter((title) => title.backdrop_path && title.overview);
-    heroSlides = fallback.slice(0, HERO_SLIDE_COUNT);
-  }
+  const heroSlides = pickFeaturedHeroSlides(movies, trendingAll);
 
   const result = {
     heroSlides,
