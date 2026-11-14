@@ -270,9 +270,6 @@ html[data-zoku-layout="cinematic"] .cinematic-poster-action {
   html[data-zoku-layout="cinematic"] .zoku-continue-card .zoku-continue-remove {
     opacity: 1;
   }
-  html[data-zoku-layout="cinematic"] .zoku-continue-rail .zoku-continue-manage {
-    display: none;
-  }
   html[data-zoku-layout="cinematic"] .zoku-genres-top {
     gap: 12px;
   }
