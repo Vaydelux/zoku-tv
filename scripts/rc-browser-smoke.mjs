@@ -207,14 +207,21 @@ async function runBrowserChecks() {
     for (let index = 0; index < 12; index++) {
       await page.keyboard.press("ArrowDown");
     }
+    await languageList.locator('[data-highlighted="true"]', { hasText: "Arabic" }).waitFor();
     assert.match(await firstHighlight.innerText(), /Arabic/, "keyboard navigation must advance beyond initially visible languages");
+    await page.waitForFunction(() => {
+      const menu = document.querySelector('[role="listbox"][aria-label="Original Language"]');
+      return menu instanceof HTMLElement && menu.scrollTop > 0;
+    });
     const scrolled = await languageList.evaluate((element) => element.scrollTop);
     assert.ok(scrolled > 0, "language list must scroll to keep the highlighted item visible");
     await page.keyboard.press("ArrowDown");
+    await languageList.locator('[data-highlighted="true"]', { hasText: "Thai" }).waitFor();
     assert.match(await firstHighlight.innerText(), /Thai/, "ArrowDown must not reset navigation to the first item");
     const nextScroll = await languageList.evaluate((element) => element.scrollTop);
     assert.ok(nextScroll >= scrolled - 1, "moving downward must not jump back to the top");
     await page.keyboard.press("ArrowUp");
+    await languageList.locator('[data-highlighted="true"]', { hasText: "Arabic" }).waitFor();
     assert.match(await firstHighlight.innerText(), /Arabic/, "ArrowUp must preserve the scrolled navigation position");
     await page.screenshot({ path: artifacts + "/discover-language-keyboard-scroll.png", animations: "disabled" });
     await page.keyboard.press("Enter");
