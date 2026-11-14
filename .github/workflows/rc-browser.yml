@@ -57,6 +57,16 @@ jobs:
           "$CHROME_PATH" --version
           CHROME_PATH="$CHROME_PATH" npm run test:browser
 
+      - name: Verify public production baseline (no account or mocks)
+        env:
+          ZOKU_PUBLIC_BASE_URL: https://zoku-tv.vercel.app
+          RC_ARTIFACT_DIR: artifacts/release-candidate
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || true)"
+          if [[ -z "$CHROME_PATH" ]]; then exit 1; fi
+          CHROME_PATH="$CHROME_PATH" node scripts/rc-public-baseline-smoke.mjs
+
       - name: Preserve browser acceptance screenshots and report
         if: always()
         uses: actions/upload-artifact@v4
