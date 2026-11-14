@@ -189,6 +189,7 @@ async function runBrowserChecks() {
         fullPage: true, animations: "disabled",
       });
       const interactive = await page.locator('[data-tv-focusable="true"]:visible').count();
+      assert.ok(interactive > 0, "Home " + viewport.label + " has no visible TV-focusable controls");
       evidence.push({ check: "Home " + viewport.label + " focusable controls", result: "pass", count: interactive });
     }
 
