@@ -298,3 +298,71 @@ html[data-zoku-layout="cinematic"] .cinematic-poster-action {
     transform: none !important;
   }
 }
+
+/* Keep screenshot-sized carousel pills while making the native button
+   focus target substantially larger. The original 6px buttons were hard to
+   activate on touch and with an Android TV remote. */
+html[data-zoku-layout="cinematic"] .zoku-hero [aria-label="Carousel slides"] button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  width: 32px;
+  min-height: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: transparent;
+  outline-offset: -2px;
+  transition: none;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-hero [aria-label="Carousel slides"] button::before {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 6px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--on-surface) 50%, transparent);
+}
+
+html[data-zoku-layout="cinematic"] .zoku-hero [aria-label="Carousel slides"] button[aria-selected="true"]::before {
+  width: 28px;
+  background: var(--primary);
+}
+
+html[data-zoku-layout="cinematic"] .zoku-hero [aria-label="Carousel slides"] button:focus-visible {
+  outline: 2px solid var(--primary);
+}
+
+html[data-zoku-layout="cinematic"] .zoku-hero [aria-label="Carousel slides"] button:focus-visible::before {
+  background: var(--primary);
+}
+
+/* Search typography stays close to the reference's reading column,
+   while all four media tabs and genre filters remain real controls. */
+html[data-zoku-layout="cinematic"] .zoku-cinematic-search > div:not(.site-nav) {
+  max-width: 1120px;
+  margin-inline: auto;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-media-tabs > button {
+  min-height: 44px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-search .zoku-poster-grid > .animate-pulse {
+  aspect-ratio: 2 / 3;
+}
+
+@media (max-width: 639px) {
+  html[data-zoku-layout="cinematic"] .zoku-cinematic-search .zoku-media-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+  html[data-zoku-layout="cinematic"] .zoku-cinematic-search .zoku-media-tabs > button {
+    flex: none;
+  }
+}
