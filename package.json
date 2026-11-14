@@ -16,7 +16,7 @@
     "firebase:deploy:firestore": "firebase deploy --only firestore:rules,firestore:indexes"
   },
   "dependencies": {
-    "@next/swc-wasm-nodejs": "^15.0.5",
+    "@next/swc-wasm-nodejs": "15.5.29",
     "@types/d3": "^7.4.3",
     "clsx": "^2.1.1",
     "d3": "^7.9.0",
@@ -24,7 +24,7 @@
     "framer-motion": "^11.11.17",
     "lucide-react": "^0.395.0",
     "motion": "^11.11.17",
-    "next": "15.5.28",
+    "next": "15.5.29",
     "react": "19.2.9",
     "react-dom": "19.2.9",
     "tailwind-merge": "^2.3.0",
@@ -33,8 +33,8 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0-alpha.14",
     "@types/node": "^20.14.9",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
     "postcss": "^8.4.38",
     "tailwindcss": "^4.0.0-alpha.14",
     "tsx": "^4.23.15",
