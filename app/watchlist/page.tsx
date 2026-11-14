@@ -438,11 +438,14 @@ function WatchlistPageContent() {
 
             {/* Analytics Section with D3 Visualizations */}
             {items.length > 0 && (
-              <WatchlistAnalyticsSection
+              <details className="zoku-watchlist-insights rounded-xl border border-border-custom/60 bg-surface/50">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">Library insights</summary>
+                <div className="p-4 pt-0"><WatchlistAnalyticsSection
                 items={items}
                 catalogFilteredItems={catalogFilteredItems}
                 catalogMode={catalogMode}
-              />
+              /></div>
+              </details>
             )}
 
             {/* Titles Grid or Empty States */}
