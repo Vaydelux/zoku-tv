@@ -193,6 +193,34 @@ async function runBrowserChecks() {
       evidence.push({ check: "Home " + viewport.label + " focusable controls", result: "pass", count: interactive });
     }
 
+    // Regression: Original Language must not snap to the selected first item
+    // on every ArrowDown / TV remote navigation event.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(new URL("/discover?type=movie", base).href, { waitUntil: "domcontentloaded" });
+    const languageTrigger = page.getByTestId("discover-language-select");
+    await languageTrigger.waitFor();
+    await languageTrigger.click();
+    const languageList = page.getByRole("listbox", { name: "Original Language" });
+    await languageList.waitFor();
+    const firstHighlight = languageList.locator('[data-highlighted="true"]');
+    assert.match(await firstHighlight.innerText(), /All Languages/, "menu must begin at selected language");
+    for (let index = 0; index < 12; index++) {
+      await page.keyboard.press("ArrowDown");
+    }
+    assert.match(await firstHighlight.innerText(), /Arabic/, "keyboard navigation must advance beyond initially visible languages");
+    const scrolled = await languageList.evaluate((element) => element.scrollTop);
+    assert.ok(scrolled > 0, "language list must scroll to keep the highlighted item visible");
+    await page.keyboard.press("ArrowDown");
+    assert.match(await firstHighlight.innerText(), /Thai/, "ArrowDown must not reset navigation to the first item");
+    const nextScroll = await languageList.evaluate((element) => element.scrollTop);
+    assert.ok(nextScroll >= scrolled - 1, "moving downward must not jump back to the top");
+    await page.keyboard.press("ArrowUp");
+    assert.match(await firstHighlight.innerText(), /Arabic/, "ArrowUp must preserve the scrolled navigation position");
+    await page.screenshot({ path: artifacts + "/discover-language-keyboard-scroll.png", animations: "disabled" });
+    await page.keyboard.press("Enter");
+    await page.waitForURL(/language=ar(?:&|$)/, { timeout: 15_000 });
+    evidence.push({ check: "Original Language D-pad scroll and selection stability", result: "pass", scrollTop: nextScroll });
+
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(new URL("/search?q=Demo", base).href, { waitUntil: "domcontentloaded" });
     await page.getByText("Demo Movie", { exact: true }).first().waitFor({ timeout: 20_000 });
