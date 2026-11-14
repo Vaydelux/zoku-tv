@@ -102,10 +102,11 @@ function SearchPageContent() {
 
   const savedInitial = useMemo(() => readSavedSearchSession(profileId), [profileId]);
   const urlQueryParam = searchParams.get("q") || "";
-  const effectiveInitialQuery = urlQueryParam || savedInitial?.query || "";
 
   // Remounting on profile/Kids Mode changes clears all previous catalog data.
-  const [inputValue, setInputValue] = useState(effectiveInitialQuery);
+  // Match the server render first; profile-scoped query restoration happens
+  // after hydration in an effect, avoiding input-value hydration mismatch.
+  const [inputValue, setInputValue] = useState(urlQueryParam);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [results, setResults] = useState<TMDBTitle[]>([]);
   const [animeResults, setAnimeResults] = useState<AniListMedia[]>([]);
