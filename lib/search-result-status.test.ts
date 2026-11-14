@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   getSearchPageResultStatus,
   shouldOfferMoreSearchResults,
+  matchesSearchMediaTab,
 } from "./search-result-status";
 
 test("pagination stops after both protected providers are exhausted", () => {
@@ -21,4 +22,16 @@ test("search reports errors when providers fail rather than silently showing sta
   assert.equal(getSearchPageResultStatus({ tmdbFailed: true, animeFailed: false }), "partial");
   assert.equal(getSearchPageResultStatus({ tmdbFailed: false, animeFailed: true }), "partial");
   assert.equal(getSearchPageResultStatus({ tmdbFailed: true, animeFailed: true }), "unavailable");
+});
+
+test("reference media tabs distinguish Movies, Series and Anime without changing provider IDs", () => {
+  assert.equal(matchesSearchMediaTab("movie", "all"), true);
+  assert.equal(matchesSearchMediaTab("tv", "all"), true);
+  assert.equal(matchesSearchMediaTab("anime", "all"), true);
+  assert.equal(matchesSearchMediaTab("movie", "movie"), true);
+  assert.equal(matchesSearchMediaTab("tv", "movie"), false);
+  assert.equal(matchesSearchMediaTab("tv", "tv"), true);
+  assert.equal(matchesSearchMediaTab("movie", "tv"), false);
+  assert.equal(matchesSearchMediaTab("anime", "anime"), true);
+  assert.equal(matchesSearchMediaTab("anime", "movie"), false);
 });
