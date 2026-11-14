@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Compass, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
-import { TitleRail } from "@/components/TitleRail";
-import { AnimeRail } from "@/components/anime/AnimeRail";
+import { TitleCard } from "@/components/TitleCard";
+import { AnimeCard } from "@/components/anime/AnimeCard";
 import { ANILIST_GENRES, getPopularAnime, type AniListMedia } from "@/lib/anilist";
 import { isAdultFilterEnabled, syncAdultFilterState } from "@/lib/adult-content";
 import { getGenreIcon } from "@/lib/genreIcons";
@@ -84,12 +84,13 @@ export default function GenresPage() {
     <div className="zoku-cinematic-genres app-page-shell min-h-screen pb-12 text-on-surface">
       <Navbar />
       <main className="mx-auto w-full px-4 pt-8 pb-14 sm:px-6 lg:px-8" aria-labelledby="genres-page-title">
-        <header className="mb-6">
+        <div className="zoku-genres-top mb-6 flex flex-wrap items-end justify-between gap-4">
+        <header className="min-w-0">
           <h1 id="genres-page-title" className="font-display text-3xl font-bold tracking-tight">Genres</h1>
           <p className="mt-2 text-sm text-on-surface-variant">Find something worth watching. Every genre opens the real catalog with your content restrictions applied.</p>
         </header>
 
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="zoku-genre-controls flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-1 rounded-xl border border-border-custom bg-surface p-1" role="group" aria-label="Catalog">
             {(["movie", "tv", "anime"] as const).map((kind) => (
               <button key={kind} type="button" data-tv-focusable="true" aria-pressed={kind === type}
@@ -102,6 +103,7 @@ export default function GenresPage() {
           <Link href={browseHref} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border-custom px-3 py-2 text-sm font-semibold text-on-surface hover:border-primary hover:text-primary">
             Browse all <ArrowRight className="h-4 w-4" />
           </Link>
+        </div>
         </div>
 
         <section aria-label={`${type} genre categories`} className="mb-12">
@@ -124,7 +126,7 @@ export default function GenresPage() {
                     aria-label={`Browse ${genre.name} ${type === "anime" ? "anime" : type === "tv" ? "TV shows" : "movies"}`}>
                     <Icon className="pointer-events-none absolute right-4 top-4 h-8 w-8 opacity-25 transition-transform group-hover:scale-110" aria-hidden="true" />
                     <span className="relative z-10 text-base font-bold">{genre.name}</span>
-                    <span className="relative z-10 mt-1 inline-flex items-center gap-1 text-xs font-medium opacity-70">Explore <ArrowRight className="h-3 w-3" /></span>
+                    <span className="relative z-10 mt-1 text-[10px] font-semibold uppercase tracking-widest opacity-70">{type === "anime" ? "Anime" : type === "tv" ? "TV series" : "Movies"}</span>
                   </Link>
                 );
               })}
@@ -135,15 +137,21 @@ export default function GenresPage() {
         </section>
 
         {!loading && !error && (
-          <section aria-label="Popular titles">
+          <section aria-label="Trending titles" className="zoku-genres-showcase">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-xl font-bold"><Compass className="h-5 w-5 text-primary" /> Popular now</h2>
-              <Link href={browseHref} className="inline-flex items-center gap-2 text-sm font-medium text-primary">See all titles <ArrowRight className="h-4 w-4" /></Link>
+              <div>
+                <h2 className="text-xl font-bold tracking-tight text-on-surface">Trending titles</h2>
+                <p className="mt-1 text-xs text-on-surface-variant">Explore recent popular releases under your content settings</p>
+              </div>
+              <Link href={browseHref} className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-primary">Browse all <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
             </div>
-            {type === "anime"
-              ? popularAnime.length > 0 && <AnimeRail title="Popular Anime" items={popularAnime} showSortDropdown={false} />
-              : popularTitles.length > 0 && <TitleRail title={type === "tv" ? "Popular TV Shows" : "Popular Movies"} items={popularTitles} mediaType={type} showSortDropdown={false} />}
-            {(type === "anime" ? popularAnime.length : popularTitles.length) === 0 && (
+            {(type === "anime" ? popularAnime.length : popularTitles.length) > 0 ? (
+              <div className="zoku-poster-grid grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {type === "anime"
+                  ? popularAnime.map((item) => <AnimeCard key={item.id} anime={item} fullWidth />)
+                  : popularTitles.map((item) => <TitleCard key={item.id} title={item} mediaType={type} fullWidth />)}
+              </div>
+            ) : (
               <p className="text-sm text-on-surface-variant">No titles available under the current content restrictions.</p>
             )}
           </section>
