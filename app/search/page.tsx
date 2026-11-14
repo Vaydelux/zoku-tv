@@ -362,9 +362,15 @@ function SearchPageContent() {
   const genreFilteredTmdb = useMemo(() => results.filter((title) => matchesSearchGenre({ kind: title.media_type === "tv" ? "tv" : "movie", data: title }, selectedGenre)), [results, selectedGenre]);
   const genreFilteredAnime = useMemo(() => animeResults.filter((anime) => matchesSearchGenre({ kind: "anime", data: anime }, selectedGenre)), [animeResults, selectedGenre]);
   const availableGenres = useMemo(() => SEARCH_MEDIA_GENRES.filter(({ label }) =>
-    results.some((title) => matchesSearchGenre({ kind: title.media_type === "tv" ? "tv" : "movie", data: title }, label)) ||
-    animeResults.some((anime) => matchesSearchGenre({ kind: "anime", data: anime }, label))
-  ), [results, animeResults]);
+    ((activeFilter === "all" || activeFilter === "movie" || activeFilter === "tv") &&
+      results.some((title) => {
+        const kind = title.media_type === "tv" ? "tv" : "movie";
+        return matchesSearchMediaTab(kind, activeFilter) &&
+          matchesSearchGenre({ kind, data: title }, label);
+      })) ||
+    ((activeFilter === "all" || activeFilter === "anime") &&
+      animeResults.some((anime) => matchesSearchGenre({ kind: "anime", data: anime }, label)))
+  ), [results, animeResults, activeFilter]);
   const filteredTmdbByType = useMemo(() =>
     genreFilteredTmdb.filter((title) => matchesSearchMediaTab(title.media_type === "tv" ? "tv" : "movie", activeFilter)),
     [genreFilteredTmdb, activeFilter]
