@@ -143,6 +143,7 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
         progressPercent={playProgress.hasProgress ? playProgress.progressPercent : null}
         fullWidth={fullWidth}
         onOpen={handleClick}
+        onPlay={() => router.push(`/watch/${actualMediaType}/${title.id}`)}
         onToggleWatchlist={() => handleWatchlistToggle()}
         onToggleWatched={() => handleHistoryToggle()}
       />
