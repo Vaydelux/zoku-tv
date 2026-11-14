@@ -330,6 +330,128 @@ html[data-zoku-layout="cinematic"] .zoku-mobile-tabbar {
   box-shadow: none;
 }
 
+/* Reference settings are a narrow centered stack, not an administration
+   dashboard with a permanent left sidebar. Preserve each functional section
+   as a keyboard-accessible horizontal tab in cinematic mode. */
+html[data-zoku-layout="cinematic"] .zoku-settings-layout {
+  display: block;
+  max-width: 100%;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-settings-nav {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  max-width: 100%;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--surface) 80%, var(--background));
+  scrollbar-width: thin;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-settings-nav > p {
+  display: none;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-settings-nav > button {
+  min-width: max-content;
+  flex: 0 0 auto;
+  min-height: 42px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  padding-inline: 12px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-settings-content {
+  margin-top: 20px;
+  width: 100%;
+  max-width: 900px;
+  min-height: 300px;
+  border-radius: 16px;
+  border-color: color-mix(in srgb, var(--on-surface) 13%, transparent);
+  padding: clamp(20px, 3vw, 40px);
+  box-shadow: none;
+  background: var(--surface);
+  backdrop-filter: none;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-settings h1 {
+  text-transform: none;
+  font-size: 30px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-settings-content h2 {
+  font-size: 17px;
+  font-weight: 650;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-settings-content button {
+  outline-offset: 3px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-watchlist h1 {
+  text-transform: none;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-watchlist > div:not(.site-nav) {
+  padding-top: 28px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-watchlist-insights {
+  margin-block: 8px 14px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-watchlist-insights > summary {
+  list-style: none;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-watchlist-insights > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The reference's genre tiles intentionally use distinct muted hues; they
+   are illustrations, while all interactive controls still use theme tokens. */
+html[data-zoku-layout="cinematic"] .zoku-genre-grid .zoku-genre-tile {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+html[data-zoku-layout="cinematic"] .zoku-genre-grid .zoku-genre-tile:nth-child(8n+1) {
+  background: linear-gradient(130deg, #0c7842, #073421);
+}
+html[data-zoku-layout="cinematic"] .zoku-genre-grid .zoku-genre-tile:nth-child(8n+2) {
+  background: linear-gradient(130deg, #0a7d7d, #063435);
+}
+html[data-zoku-layout="cinematic"] .zoku-genre-grid .zoku-genre-tile:nth-child(8n+3) {
+  background: linear-gradient(130deg, #9c104a, #430723);
+}
+html[data-zoku-layout="cinematic"] .zoku-genre-grid .zoku-genre-tile:nth-child(8n+4) {
+  background: linear-gradient(130deg, #a11b16, #430808);
+}
+html[data-zoku-layout="cinematic"] .zoku-genre-grid .zoku-genre-tile:nth-child(8n+5) {
+  background: linear-gradient(130deg, #078a86, #063a3a);
+}
+html[data-zoku-layout="cinematic"] .zoku-genre-grid .zoku-genre-tile:nth-child(8n+6) {
+  background: linear-gradient(130deg, #c46a10, #35201c);
+}
+html[data-zoku-layout="cinematic"] .zoku-genre-grid .zoku-genre-tile:nth-child(8n+7) {
+  background: linear-gradient(130deg, #a52116, #490b15);
+}
+html[data-zoku-layout="cinematic"] .zoku-genre-grid .zoku-genre-tile:nth-child(8n) {
+  background: linear-gradient(130deg, #7b1bb7, #320957);
+}
+
 @media (max-width: 767px) {
   html[data-zoku-layout="cinematic"] .zoku-header-icon[aria-label="Search titles"] {
     display: none;
