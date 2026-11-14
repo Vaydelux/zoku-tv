@@ -379,7 +379,12 @@ export function Navbar() {
             {currentProfile && (
               <div className={`zoku-profile-control relative ${isDropdownOpen ? "z-50" : "z-20"}`} ref={dropdownRef}>
                 <button
+                  type="button"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  aria-label={`Profile menu for ${currentProfile.name}`}
+                  aria-haspopup="menu"
+                  aria-expanded={isDropdownOpen}
+                  data-tv-focusable="true"
                   className="theme-panel flex items-center gap-2 rounded-full p-1 pr-2.5 hover:border-primary/60 transition-all duration-300"
                 >
                   <ProfileAvatarDisplay
