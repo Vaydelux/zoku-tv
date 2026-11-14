@@ -1,0 +1,297 @@
+/*
+ * Zoku cinematic fidelity refinements
+ * Grounded in the supplied reference screenshots and pattern components.
+ * Presentation-only; API / policy / player behavior remains untouched.
+ * The classic build mode is deliberately unaffected.
+ */
+
+/* One calm, consistent app shell. */
+html[data-zoku-layout="cinematic"] {
+  --cinematic-gutter: clamp(16px, 3vw, 44px);
+}
+
+html[data-zoku-layout="cinematic"] .site-nav > div > div {
+  height: 64px;
+}
+
+html[data-zoku-layout="cinematic"] .site-nav .zoku-primary-nav {
+  gap: 0;
+  margin-left: 0;
+}
+
+html[data-zoku-layout="cinematic"] .site-nav .zoku-nav-link {
+  padding-inline: clamp(9px, 1.1vw, 15px);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-brand-lockup .font-display {
+  font-size: 15px;
+  letter-spacing: -0.025em;
+}
+
+/* The reference hero directly meets the first rail — no intermediate toolbar
+   or card overlapping the image. Filters are an accessible icon at hero edge. */
+html[data-zoku-layout="cinematic"] .zoku-home-browse {
+  height: 0;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  z-index: 31;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-home-filters {
+  z-index: 32;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-home-filters > summary {
+  min-height: 44px;
+  box-shadow: none;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-home-filters-panel {
+  background: var(--surface);
+  isolation: isolate;
+  scrollbar-width: thin;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-home-filters-panel > div:first-child {
+  display: flex;
+  margin: 0 0 12px;
+  padding: 0 0 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: none;
+  box-shadow: none;
+}
+
+/* Restore breathing room beneath the hero while matching the source's
+   flat, edge-to-edge content rows. */
+html[data-zoku-layout="cinematic"] .zoku-home-rails {
+  padding-top: clamp(28px, 3vw, 44px);
+}
+
+html[data-zoku-layout="cinematic"] .zoku-home-rails .rail-section {
+  margin: 0;
+  padding-top: 10px;
+  padding-bottom: clamp(20px, 2vw, 32px);
+}
+
+html[data-zoku-layout="cinematic"] .rail-section > div:first-child {
+  padding-inline: var(--cinematic-gutter);
+}
+
+html[data-zoku-layout="cinematic"] .rail-section > div:first-child h2 {
+  border: 0;
+  padding: 0;
+  font-size: clamp(17px, 1.5vw, 21px);
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+html[data-zoku-layout="cinematic"] .rail-section > div:first-child h2 > svg,
+html[data-zoku-layout="cinematic"] .rail-section > div:first-child > div:first-child > span.font-mono {
+  display: none;
+}
+
+html[data-zoku-layout="cinematic"] .rail-section .rail-scroll-track {
+  gap: 12px;
+  padding-inline: var(--cinematic-gutter);
+  scroll-padding-inline: var(--cinematic-gutter);
+  padding-block: 8px 12px;
+}
+
+html[data-zoku-layout="cinematic"] .rail-section .rail-card-slot {
+  z-index: auto;
+}
+
+html[data-zoku-layout="cinematic"] .rail-section .rail-card-slot:focus-within,
+html[data-zoku-layout="cinematic"] .rail-section .rail-card-slot:hover {
+  z-index: 2;
+}
+
+/* Small header-aligned rail controls instead of large overlay arrows over art. */
+@media (min-width: 768px) {
+  html[data-zoku-layout="cinematic"] .rail-section .rail-nav-btn {
+    top: -48px;
+    right: var(--cinematic-gutter);
+    left: auto;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    padding: 0;
+    background-image: none;
+    box-shadow: none;
+    opacity: 1;
+    transform: none !important;
+  }
+  html[data-zoku-layout="cinematic"] .rail-section .rail-nav-btn[data-testid="rail-nav-left"] {
+    right: calc(var(--cinematic-gutter) + 42px);
+  }
+  html[data-zoku-layout="cinematic"] .rail-section .rail-nav-btn:hover,
+  html[data-zoku-layout="cinematic"] .rail-section .rail-nav-btn:focus-visible {
+    transform: none !important;
+    box-shadow: none;
+  }
+  html[data-zoku-layout="cinematic"] .rail-section .rail-nav-btn svg {
+    height: 16px;
+    width: 16px;
+    transform: none;
+  }
+}
+
+/* Continue watching: true 16:9 media thumbnails with progress and captions
+   below, rather than legacy hover-only content and nested buttons. */
+html[data-zoku-layout="cinematic"] .zoku-continue-card {
+  scroll-snap-align: start;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-continue-card > div:first-child {
+  box-shadow: none;
+  border-radius: 12px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-continue-card .zoku-continue-remove {
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-continue-card:hover .zoku-continue-remove,
+html[data-zoku-layout="cinematic"] .zoku-continue-card:focus-within .zoku-continue-remove {
+  opacity: 1;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-continue-card .zoku-continue-open:hover + .zoku-continue-remove {
+  opacity: 1;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-continue-rail .zoku-continue-manage > summary {
+  font-size: 11px;
+  color: var(--on-surface-variant);
+}
+
+/* Genre header shares the same row as the mode selector, leaving the tiles
+   nearer the title (reference). The actual protected catalog remains real. */
+html[data-zoku-layout="cinematic"] .zoku-genres-top {
+  margin-bottom: 22px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-genres-top > header {
+  max-width: 590px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-genre-controls {
+  gap: 8px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-genre-controls > a {
+  border-color: transparent;
+  padding-inline: 10px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-genre-tile > span:last-child {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-genres-showcase {
+  margin-top: 32px;
+}
+
+/* Compact poster typography and imagery density as in reference. */
+html[data-zoku-layout="cinematic"] .cinematic-poster-card > div:last-child {
+  padding-top: 9px;
+}
+
+html[data-zoku-layout="cinematic"] .cinematic-poster-card h3 {
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+html[data-zoku-layout="cinematic"] .cinematic-poster-art {
+  box-shadow: none;
+}
+
+html[data-zoku-layout="cinematic"] .cinematic-poster-action {
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  html[data-zoku-layout="cinematic"] .zoku-brand-lockup .font-display {
+    display: none;
+  }
+  html[data-zoku-layout="cinematic"] .site-nav > div {
+    padding-inline: 16px;
+  }
+  html[data-zoku-layout="cinematic"] .zoku-hero,
+  html[data-zoku-layout="cinematic"] .zoku-hero-content {
+    height: max(490px, 70svh);
+    min-height: 490px;
+  }
+  html[data-zoku-layout="cinematic"] .zoku-hero-content {
+    padding-bottom: 76px;
+  }
+  html[data-zoku-layout="cinematic"] .zoku-home-rails {
+    padding-top: 28px;
+  }
+  html[data-zoku-layout="cinematic"] .zoku-home-filters {
+    right: 16px;
+    bottom: 54px;
+  }
+  html[data-zoku-layout="cinematic"] .zoku-home-filters > summary {
+    width: 44px;
+    padding: 0;
+  }
+  html[data-zoku-layout="cinematic"] .zoku-home-filters-panel {
+    position: fixed;
+    top: auto;
+    right: 12px;
+    left: 12px;
+    bottom: calc(75px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: min(68dvh, 620px);
+    overflow-y: auto;
+  }
+  html[data-zoku-layout="cinematic"] .rail-section .rail-nav-btn {
+    display: none;
+  }
+  html[data-zoku-layout="cinematic"] .rail-section > div:first-child {
+    padding-inline: 16px;
+  }
+  html[data-zoku-layout="cinematic"] .rail-section .rail-scroll-track {
+    gap: 12px;
+    padding-inline: 16px;
+    scroll-padding-inline: 16px;
+  }
+  html[data-zoku-layout="cinematic"] .zoku-continue-card .zoku-continue-remove {
+    opacity: 1;
+  }
+  html[data-zoku-layout="cinematic"] .zoku-continue-rail .zoku-continue-manage {
+    display: none;
+  }
+  html[data-zoku-layout="cinematic"] .zoku-genres-top {
+    gap: 12px;
+  }
+}
+
+@media (hover: none) {
+  html[data-zoku-layout="cinematic"] .zoku-continue-card .zoku-continue-remove {
+    opacity: 1;
+  }
+  html[data-zoku-layout="cinematic"] .cinematic-poster-art img,
+  html[data-zoku-layout="cinematic"] .zoku-continue-card img {
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-zoku-layout="cinematic"] .zoku-continue-card img,
+  html[data-zoku-layout="cinematic"] .zoku-continue-card .zoku-continue-remove {
+    transition: none;
+    transform: none !important;
+  }
+}
