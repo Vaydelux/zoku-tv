@@ -145,16 +145,36 @@ export async function getGenres(type: "movie" | "tv"): Promise<TMDBGenre[]> {
   return data.genres || [];
 }
 
-export async function searchMulti(query: string, page: number = 1): Promise<TMDBTitle[]> {
-  if (!query.trim()) return [];
+export interface TMDBSearchPage {
+  results: TMDBTitle[];
+  /** Derived from upstream page metadata, not the policy-filtered item count. */
+  hasNextPage: boolean;
+}
+
+export async function searchMultiPage(query: string, page: number = 1): Promise<TMDBSearchPage> {
+  if (!query.trim()) return { results: [], hasNextPage: false };
   await syncAdultFilterState();
   const data = await tmdbFetch("/search/multi", { query, page, include_adult: !isAdultFilterEnabled() });
-  return filterRestrictedTmdbTitles((data.results || [])
+  if (!Array.isArray(data.results)) throw new Error("Invalid TMDB search results");
+  const results = filterRestrictedTmdbTitles(data.results
     .filter((item: any) => item.media_type === "movie" || item.media_type === "tv")
     .map((item: any) => ({
       ...item,
       media_type: item.media_type,
     })));
+  const upstreamPage = Number(data.page);
+  const totalPages = Number(data.total_pages);
+  return {
+    results,
+    hasNextPage: Number.isSafeInteger(upstreamPage) &&
+      Number.isSafeInteger(totalPages) && upstreamPage >= 1 &&
+      totalPages > upstreamPage,
+  };
+}
+
+/** Compatibility API used by autocomplete and other UI surfaces. */
+export async function searchMulti(query: string, page: number = 1): Promise<TMDBTitle[]> {
+  return (await searchMultiPage(query, page)).results;
 }
 
 export interface DiscoverParams {
