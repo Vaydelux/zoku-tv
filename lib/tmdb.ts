@@ -156,7 +156,7 @@ export async function searchMultiPage(query: string, page: number = 1): Promise<
   await syncAdultFilterState();
   const data = await tmdbFetch("/search/multi", { query, page, include_adult: !isAdultFilterEnabled() });
   if (!Array.isArray(data.results)) throw new Error("Invalid TMDB search results");
-  const results = filterRestrictedTmdbTitles(data.results
+  const results = filterRestrictedTmdbTitles<TMDBTitle>((data.results as TMDBTitle[])
     .filter((item: any) => item.media_type === "movie" || item.media_type === "tv")
     .map((item: any) => ({
       ...item,
