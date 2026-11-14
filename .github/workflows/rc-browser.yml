@@ -1,0 +1,69 @@
+name: Zoku RC Browser Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  browser-and-policy-smoke:
+    name: Browser, Responsive Layout & Policy Gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    steps:
+      - name: Checkout release candidate
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install exact locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build release candidate
+        run: npm run build
+
+      - name: Start production-mode candidate server
+        run: |
+          set -euo pipefail
+          npm run start -- -p 3000 > /tmp/zoku-rc-server.log 2>&1 &
+          echo $! > /tmp/zoku-rc-server.pid
+          for i in $(seq 1 75); do
+            if curl -fsS http://127.0.0.1:3000/login >/dev/null; then
+              echo "Production candidate responds on localhost"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/zoku-rc-server.log
+          exit 1
+
+      - name: Real Chromium acceptance, restricted API checks and screenshots
+        env:
+          ZOKU_BASE_URL: http://127.0.0.1:3000
+          RC_ARTIFACT_DIR: artifacts/release-candidate
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || true)"
+          if [[ -z "$CHROME_PATH" ]]; then
+            echo "Chrome is missing from the runner; cannot claim browser-tested"
+            exit 1
+          fi
+          "$CHROME_PATH" --version
+          CHROME_PATH="$CHROME_PATH" npm run test:browser
+
+      - name: Preserve browser acceptance screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zoku-rc-browser-evidence
+          path: |
+            artifacts/release-candidate/
+            /tmp/zoku-rc-server.log
+          retention-days: 3
+          if-no-files-found: warn
