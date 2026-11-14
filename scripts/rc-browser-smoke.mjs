@@ -91,6 +91,10 @@ async function installIsolatedCatalog(context) {
     if (path.includes("/991111")) {
       payload = { error: "Restricted by policy" };
       code = 404;
+    } else if (path.includes("/trending/tv/") || path.includes("/discover/tv")) {
+      payload = { results: [series], total_pages: 1, page: 1 };
+    } else if (path.includes("/trending/movie/") || path.includes("/discover/movie")) {
+      payload = { results: [movie], total_pages: 1, page: 1 };
     } else if (path.endsWith("/genre/movie/list") || path.endsWith("/genre/tv/list")) {
       payload = { genres: [{ id: 12, name: "Adventure" }, { id: 16, name: "Animation" }] };
     } else if (path.endsWith("/movie/101")) {
@@ -163,7 +167,12 @@ async function runBrowserChecks() {
     await page.getByRole("button", { name: /Select profile RC Smoke/ }).click();
     await page.waitForURL(/\/home(?:\?|$)/, { timeout: 20_000 });
     await page.locator(".app-page-shell").waitFor();
+    // Some valid TMDB titles have no backdrop image; Home must still show the
+    // text-and-gradient hero instead of dropping the entire featured section.
+    await page.locator('.zoku-hero').waitFor({ timeout: 20_000 });
+    await page.locator('.zoku-hero').getByRole("heading", { name: "Demo Movie" }).waitFor({ timeout: 20_000 });
     evidence.push({ check: "local-only sign-in and profile selection", result: "pass" });
+    evidence.push({ check: "featured hero survives missing TMDB backdrop", result: "pass" });
 
     const viewports = [
       { width: 390, height: 844, label: "phone" },
@@ -192,6 +201,9 @@ async function runBrowserChecks() {
     await page.getByText("Demo Series", { exact: true }).first().waitFor();
     await page.getByRole("button", { name: "Anime", exact: true }).click();
     await page.getByText("Demo Anime", { exact: true }).first().waitFor();
+    assert.equal(await page.getByRole("button", { name: "Load More Results" }).count(), 0,
+      "One-page TMDB and AniList catalogs must not show infinite Load More");
+    evidence.push({ check: "Search stops after authoritative provider last pages", result: "pass" });
     await assertNoHorizontalOverflow(page, "Search mobile media tabs");
     await page.screenshot({ path: artifacts + "/search-mobile.png", fullPage: true, animations: "disabled" });
     evidence.push({ check: "search All/Movies/Series/Anime tab switching", result: "pass" });
