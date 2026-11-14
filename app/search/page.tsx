@@ -403,6 +403,7 @@ function SearchPageContent() {
           </p>
 
           <form onSubmit={handleSearchSubmit} className="relative w-full mt-2">
+            <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-on-surface-variant" aria-hidden="true" />
             <input
               ref={searchInputRef}
               type="text"
@@ -421,7 +422,7 @@ function SearchPageContent() {
                   setShowAutocomplete(true);
                 }
               }}
-              className="glass-panel w-full rounded-xl py-3.5 pl-4 pr-[10.5rem] text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
+              className="glass-panel w-full rounded-xl py-3.5 pl-11 pr-[10.5rem] text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
               {inputValue && (
