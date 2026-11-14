@@ -20,7 +20,7 @@
     "@types/d3": "^7.4.3",
     "clsx": "^2.1.1",
     "d3": "^7.9.0",
-    "firebase": "^10.12.2",
+    "firebase": "13.3.0",
     "framer-motion": "^11.11.17",
     "lucide-react": "^0.395.0",
     "motion": "^11.11.17",
@@ -35,9 +35,12 @@
     "@types/node": "^20.14.9",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
-    "postcss": "^8.4.38",
+    "postcss": "8.5.33",
     "tailwindcss": "^4.0.0-alpha.14",
     "tsx": "^4.23.15",
     "typescript": "^5.5.4"
+  },
+  "overrides": {
+    "postcss": "8.5.33"
   }
 }
