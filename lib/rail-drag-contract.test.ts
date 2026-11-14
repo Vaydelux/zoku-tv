@@ -11,6 +11,7 @@ test("poster-first media artwork remains draggable with a mouse", () => {
   assert.equal(canBeginRailDrag(null), true);
   assert.equal(canBeginRailDrag(elementWithClasses("cinematic-poster-open")), true);
   assert.equal(canBeginRailDrag(elementWithClasses("cinematic-poster-open", "focus-visible:outline")), true);
+  assert.equal(canBeginRailDrag(elementWithClasses("zoku-continue-open")), true);
 });
 
 test("secondary actions and rail navigation never hijack mouse click as drag", () => {
