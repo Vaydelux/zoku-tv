@@ -26,6 +26,7 @@ import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
 import { shouldOfferMoreSearchResults, getSearchPageResultStatus, matchesSearchMediaTab, type SearchMediaTab } from "@/lib/search-result-status";
 import { SEARCH_MEDIA_GENRES, matchesSearchGenre, type SearchGenreLabel } from "@/lib/search-media-genre";
+import { LEGACY_SEARCH_SESSION_KEY, searchQueryStorageKey, searchViewScopeKey, sanitizeSavedSearchQuery, type SavedSearchQuery } from "@/lib/search-session-scope";
 
 type SearchFilterTab = SearchMediaTab;
 
@@ -33,50 +34,48 @@ type CombinedSearchResult =
   | { kind: "movie" | "tv"; data: TMDBTitle }
   | { kind: "anime"; data: AniListMedia };
 
-interface SavedSearchSession {
-  query: string;
-  results: TMDBTitle[];
-  animeResults: AniListMedia[];
-  activeFilter: SearchFilterTab;
-  page: number;
-  isKidMode: boolean;
-}
+let memorySearchSession: SavedSearchQuery | null = null;
 
-const SEARCH_SESSION_STORAGE_KEY = "zoku_last_search_session_v1";
-let memorySearchSession: SavedSearchSession | null = null;
-
-function readSavedSearchSession(): SavedSearchSession | null {
-  if (memorySearchSession) return memorySearchSession;
+function readSavedSearchSession(profileId: string): SavedSearchQuery | null {
+  if (!profileId) return null;
+  if (memorySearchSession?.profileId === profileId) return memorySearchSession;
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(SEARCH_SESSION_STORAGE_KEY);
+    // Delete the previous unscoped cache containing complete movie/anime data.
+    sessionStorage.removeItem(LEGACY_SEARCH_SESSION_KEY);
+    const key = searchQueryStorageKey(profileId);
+    if (!key) return null;
+    const raw = sessionStorage.getItem(key);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as SavedSearchSession;
-    if (parsed && typeof parsed.query === "string") {
-      memorySearchSession = parsed;
-      return parsed;
-    }
+    const saved = sanitizeSavedSearchQuery(JSON.parse(raw), profileId);
+    if (saved) memorySearchSession = saved;
+    return saved;
   } catch {
-    // ignore storage errors
+    return null;
   }
-  return null;
 }
 
-function writeSavedSearchSession(session: SavedSearchSession | null) {
-  memorySearchSession = session;
+function writeSavedSearchSession(session: SavedSearchQuery | null, profileId: string) {
+  const key = searchQueryStorageKey(profileId);
+  if (!key) return;
+  const saved = sanitizeSavedSearchQuery(session, profileId);
+  if (memorySearchSession?.profileId === profileId) memorySearchSession = null;
+  if (saved) memorySearchSession = saved;
   if (typeof window === "undefined") return;
   try {
-    if (!session || !session.query.trim()) {
-      sessionStorage.removeItem(SEARCH_SESSION_STORAGE_KEY);
-    } else {
-      sessionStorage.setItem(SEARCH_SESSION_STORAGE_KEY, JSON.stringify(session));
-    }
+    sessionStorage.removeItem(LEGACY_SEARCH_SESSION_KEY);
+    if (saved) sessionStorage.setItem(key, JSON.stringify(saved));
+    else sessionStorage.removeItem(key);
   } catch {
-    // ignore storage errors
+    // Query persistence is optional; server policy remains authoritative.
   }
 }
 
 export default function SearchPage() {
+  const profileId = useSessionStore((state) => state.currentProfile?.id);
+  const isKidMode = useSessionStore((state) => Boolean(state.currentProfile?.kidMode));
+  const viewScopeKey = searchViewScopeKey(profileId, isKidMode);
+
   return (
     <Suspense
       fallback={
@@ -85,7 +84,7 @@ export default function SearchPage() {
         </div>
       }
     >
-      <SearchPageContent />
+      <SearchPageContent key={viewScopeKey} />
     </Suspense>
   );
 }
@@ -96,37 +95,27 @@ function SearchPageContent() {
   const { currentProfile } = useSessionStore();
   const { history, loadHistory, addQuery, clearHistory } = useSearchHistoryStore();
   const isKidMode = Boolean(currentProfile?.kidMode);
+  const profileId = currentProfile?.id ?? "";
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const restoredOnMountRef = useRef(false);
 
-  const savedInitial = useMemo(() => readSavedSearchSession(), []);
+  const savedInitial = useMemo(() => readSavedSearchSession(profileId), [profileId]);
   const urlQueryParam = searchParams.get("q") || "";
   const effectiveInitialQuery = urlQueryParam || savedInitial?.query || "";
 
-  // Only restore the query. Never render cached results before the adult-content
-  // policy and current company ID list have been checked.
-  const hasMatchingSavedResults = false;
-
+  // Remounting on profile/Kids Mode changes clears all previous catalog data.
   const [inputValue, setInputValue] = useState(effectiveInitialQuery);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [results, setResults] = useState<TMDBTitle[]>(() =>
-    hasMatchingSavedResults && savedInitial ? savedInitial.results : []
-  );
-  const [animeResults, setAnimeResults] = useState<AniListMedia[]>(() =>
-    hasMatchingSavedResults && savedInitial ? savedInitial.animeResults : []
-  );
+  const [results, setResults] = useState<TMDBTitle[]>([]);
+  const [animeResults, setAnimeResults] = useState<AniListMedia[]>([]);
   const [selectedGenre, setSelectedGenre] = useState<SearchGenreLabel>("All genres");
-  const [activeFilter, setActiveFilter] = useState<SearchFilterTab>(() =>
-    hasMatchingSavedResults && savedInitial ? savedInitial.activeFilter : "all"
-  );
+  const [activeFilter, setActiveFilter] = useState<SearchFilterTab>("all");
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [searchStatus, setSearchStatus] = useState<"ok" | "partial" | "unavailable">("ok");
-  const [page, setPage] = useState<number>(() =>
-    hasMatchingSavedResults && savedInitial ? savedInitial.page : 1
-  );
+  const [page, setPage] = useState(1);
 
   const activeQuery = urlQueryParam || inputValue.trim();
 
@@ -134,8 +123,9 @@ function SearchPageContent() {
     setSelectedGenre("All genres");
   }, [urlQueryParam, currentProfile?.id]);
 
-  // Automatically focus the search input on mount / back navigation
+  // Do not summon the soft keyboard on phones when opening Search.
   useEffect(() => {
+    if (!window.matchMedia("(min-width: 768px) and (pointer: fine)").matches) return;
     const inputEl = searchInputRef.current;
     if (inputEl) {
       inputEl.focus({ preventScroll: true });
@@ -179,7 +169,7 @@ function SearchPageContent() {
         if (trimmed) {
           router.replace(`/search?q=${encodeURIComponent(trimmed)}`, { scroll: false });
         } else {
-          writeSavedSearchSession(null);
+          writeSavedSearchSession(null, profileId);
           router.replace("/search", { scroll: false });
         }
       }
@@ -188,21 +178,13 @@ function SearchPageContent() {
     return () => clearTimeout(timer);
   }, [inputValue, urlQueryParam, router]);
 
-  // Persist current search state to sessionStorage whenever results or filter change
+  // Persist query text only, per profile; never cache filtered media results.
   useEffect(() => {
-    const trimmed = activeQuery.trim();
-    if (!trimmed) return;
-    if (results.length === 0 && animeResults.length === 0) return;
-
-    writeSavedSearchSession({
-      query: trimmed,
-      results,
-      animeResults,
-      activeFilter,
-      page,
-      isKidMode,
-    });
-  }, [activeQuery, results, animeResults, activeFilter, page, isKidMode]);
+    const query = urlQueryParam.trim();
+    if (query && profileId) {
+      writeSavedSearchSession({ profileId, query }, profileId);
+    }
+  }, [urlQueryParam, profileId]);
 
   useEffect(() => {
     const trimmed = urlQueryParam.trim();
@@ -318,7 +300,7 @@ function SearchPageContent() {
       setPage(1);
       router.replace(`/search?q=${encodeURIComponent(trimmed)}`, { scroll: false });
     } else {
-      writeSavedSearchSession(null);
+      writeSavedSearchSession(null, profileId);
       setResults([]);
       setAnimeResults([]);
       router.replace("/search", { scroll: false });
@@ -331,7 +313,7 @@ function SearchPageContent() {
     setResults([]);
     setAnimeResults([]);
     setPage(1);
-    writeSavedSearchSession(null);
+    writeSavedSearchSession(null, profileId);
     router.replace("/search", { scroll: false });
     searchInputRef.current?.focus();
   };
@@ -348,14 +330,7 @@ function SearchPageContent() {
     const trimmed = activeQuery.trim();
     if (trimmed) {
       void addQuery(trimmed);
-      writeSavedSearchSession({
-        query: trimmed,
-        results,
-        animeResults,
-        activeFilter,
-        page,
-        isKidMode,
-      });
+      writeSavedSearchSession({ profileId, query: trimmed }, profileId);
     }
   };
 
@@ -484,14 +459,7 @@ function SearchPageContent() {
                 setShowAutocomplete(false);
                 const savedQuery = inputValue.trim() || suggestion.title;
                 void addQuery(savedQuery);
-                writeSavedSearchSession({
-                  query: savedQuery,
-                  results,
-                  animeResults,
-                  activeFilter,
-                  page,
-                  isKidMode,
-                });
+                writeSavedSearchSession({ profileId, query: savedQuery }, profileId);
                 router.push(suggestion.href);
               }}
               onViewAll={(q) => {
