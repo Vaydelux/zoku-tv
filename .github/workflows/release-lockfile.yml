@@ -1,0 +1,37 @@
+name: One-time frozen release lockfile
+
+on:
+  push:
+    branches:
+      - release/frozen-security-2026-11-15
+    paths:
+      - package.json
+      - .github/workflows/release-lockfile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout reviewed release branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Resolve dependencies without install scripts
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit and push reproducible lockfile
+        run: |
+          set -euo pipefail
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfile already up to date"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "build(release): lock patched dependencies for reproducible installs"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
