@@ -166,7 +166,7 @@ export function Navbar() {
               </span>
             </Link>
 
-            <div className={cinematicLayout ? "zoku-primary-nav hidden md:flex items-center gap-1" : "zoku-primary-nav hidden md:flex items-center gap-6"} role="navigation" aria-label="Primary navigation">
+            <div className={cinematicLayout ? "zoku-primary-nav hidden lg:flex items-center gap-1" : "zoku-primary-nav hidden md:flex items-center gap-6"} role="navigation" aria-label="Primary navigation">
               {navLinks.map((link) => {
                 const isActive = cinematicLayout ? activeNav === link.href : pathname === link.href;
                 return (
@@ -379,7 +379,12 @@ export function Navbar() {
             {currentProfile && (
               <div className={`zoku-profile-control relative ${isDropdownOpen ? "z-50" : "z-20"}`} ref={dropdownRef}>
                 <button
+                  type="button"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  aria-label={`Profile menu for ${currentProfile.name}`}
+                  aria-controls="zoku-profile-popover"
+                  aria-expanded={isDropdownOpen}
+                  data-tv-focusable="true"
                   className="theme-panel flex items-center gap-2 rounded-full p-1 pr-2.5 hover:border-primary/60 transition-all duration-300"
                 >
                   <ProfileAvatarDisplay
@@ -398,6 +403,7 @@ export function Navbar() {
                 {isDropdownOpen && (
                   <div
                     ref={profileMenuRef}
+                    id="zoku-profile-popover"
                     className="glass-panel absolute right-0 mt-2 w-60 max-w-[calc(100vw-1.5rem)] max-h-[calc(100dvh-4.75rem)] overflow-y-auto rounded-2xl border border-border-custom bg-surface/95 p-2 shadow-2xl backdrop-blur-2xl animate-scale-up z-50"
                   >
                     <div className="px-3 py-2.5 border-b border-border-custom">

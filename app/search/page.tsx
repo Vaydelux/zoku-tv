@@ -9,7 +9,6 @@ import {
   ArrowRight,
   Film,
   Sparkles,
-  Layers,
   Shield,
   X,
 } from "lucide-react";
@@ -25,10 +24,10 @@ import {
 import { AnimeCard } from "@/components/anime/AnimeCard";
 import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
-import { shouldOfferMoreSearchResults, getSearchPageResultStatus } from "@/lib/search-result-status";
+import { shouldOfferMoreSearchResults, getSearchPageResultStatus, matchesSearchMediaTab, type SearchMediaTab } from "@/lib/search-result-status";
 import { SEARCH_MEDIA_GENRES, matchesSearchGenre, type SearchGenreLabel } from "@/lib/search-media-genre";
 
-type SearchFilterTab = "all" | "movies_tv" | "anime";
+type SearchFilterTab = SearchMediaTab;
 
 type CombinedSearchResult =
   | { kind: "movie" | "tv"; data: TMDBTitle }
@@ -363,10 +362,21 @@ function SearchPageContent() {
   const genreFilteredTmdb = useMemo(() => results.filter((title) => matchesSearchGenre({ kind: title.media_type === "tv" ? "tv" : "movie", data: title }, selectedGenre)), [results, selectedGenre]);
   const genreFilteredAnime = useMemo(() => animeResults.filter((anime) => matchesSearchGenre({ kind: "anime", data: anime }, selectedGenre)), [animeResults, selectedGenre]);
   const availableGenres = useMemo(() => SEARCH_MEDIA_GENRES.filter(({ label }) =>
-    results.some((title) => matchesSearchGenre({ kind: title.media_type === "tv" ? "tv" : "movie", data: title }, label)) ||
-    animeResults.some((anime) => matchesSearchGenre({ kind: "anime", data: anime }, label))
-  ), [results, animeResults]);
-  const visibleResultCount = genreFilteredTmdb.length + genreFilteredAnime.length;
+    ((activeFilter === "all" || activeFilter === "movie" || activeFilter === "tv") &&
+      results.some((title) => {
+        const kind = title.media_type === "tv" ? "tv" : "movie";
+        return matchesSearchMediaTab(kind, activeFilter) &&
+          matchesSearchGenre({ kind, data: title }, label);
+      })) ||
+    ((activeFilter === "all" || activeFilter === "anime") &&
+      animeResults.some((anime) => matchesSearchGenre({ kind: "anime", data: anime }, label)))
+  ), [results, animeResults, activeFilter]);
+  const filteredTmdbByType = useMemo(() =>
+    genreFilteredTmdb.filter((title) => matchesSearchMediaTab(title.media_type === "tv" ? "tv" : "movie", activeFilter)),
+    [genreFilteredTmdb, activeFilter]
+  );
+  const visibleResultCount = (activeFilter === "anime" ? 0 : filteredTmdbByType.length) +
+    (activeFilter === "all" || activeFilter === "anime" ? genreFilteredAnime.length : 0);
 
   const combinedItems: CombinedSearchResult[] = useMemo(() => {
     const list: CombinedSearchResult[] = [];
@@ -429,7 +439,7 @@ function SearchPageContent() {
                   setShowAutocomplete(true);
                 }
               }}
-              className="glass-panel w-full rounded-2xl py-3.5 pl-5 pr-36 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
+              className="glass-panel w-full rounded-xl py-3.5 pl-4 pr-[10.5rem] text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
               {inputValue && (
@@ -538,69 +548,34 @@ function SearchPageContent() {
         ) : (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-2">
-              <p className="text-xs font-mono uppercase tracking-wider text-on-surface-variant">
-                Search Results for{" "}
+              <p className="text-xs tracking-wide text-on-surface-variant">
+                Results for{" "}
                 <span className="text-primary font-bold lowercase font-sans">
                   “{queryParam}”
                 </span>
               </p>
-              <p className="text-xs font-mono text-on-surface-variant">
-                Showing {totalResultsCount} results ({results.length} Movies/TV ·{" "}
+              <p className="text-xs text-on-surface-variant">
+                Showing {visibleResultCount} results ({results.length} Movies/TV ·{" "}
                 {animeResults.length} Anime)
               </p>
             </div>
 
-            <div role="group" aria-label="Filter search results" className="flex flex-wrap items-center gap-2 border-b border-border-custom pb-4">
-              <button
-                type="button"
-                onClick={() => setActiveFilter("all")}
-                aria-pressed={activeFilter === "all"}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                  activeFilter === "all"
-                    ? "bg-primary text-primary-contrast shadow-sm"
-                    : "text-on-surface-variant hover:text-on-surface hover:bg-surface border border-transparent"
-                }`}
-              >
-                <Layers className="h-3.5 w-3.5" />
-                <span>All Results</span>
-                <span className="ml-1 rounded px-1.5 py-0.5 font-mono text-[10px] bg-black/20">
-                  {totalResultsCount}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveFilter("movies_tv")}
-                aria-pressed={activeFilter === "movies_tv"}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
-                  activeFilter === "movies_tv"
-                    ? "bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm"
-                    : "border-border-custom text-on-surface-variant hover:text-on-surface hover:bg-surface"
-                }`}
-              >
-                <Film className="h-3.5 w-3.5 text-amber-400" />
-                <span>Movies & TV Shows</span>
-                <span className="ml-1 rounded px-1.5 py-0.5 font-mono text-[10px] bg-black/20">
-                  {results.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveFilter("anime")}
-                aria-pressed={activeFilter === "anime"}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
-                  activeFilter === "anime"
-                    ? "bg-gradient-to-r from-violet-600/30 to-fuchsia-600/30 text-fuchsia-300 border-fuchsia-400/60 shadow-sm"
-                    : "border-border-custom text-on-surface-variant hover:text-on-surface hover:bg-surface"
-                }`}
-              >
-                <Sparkles className="h-3.5 w-3.5 text-fuchsia-400" />
-                <span>Anime Series</span>
-                <span className="ml-1 rounded px-1.5 py-0.5 font-mono text-[10px] bg-black/20">
-                  {animeResults.length}
-                </span>
-              </button>
+            <div role="group" aria-label="Filter search results" className="zoku-media-tabs flex flex-wrap items-center gap-2 pb-2">
+              {([
+                { id: "all", name: "All" },
+                { id: "movie", name: "Movies" },
+                { id: "tv", name: "Series" },
+                { id: "anime", name: "Anime" },
+              ] as const).map((tab) => (
+                <button key={tab.id} type="button"
+                  aria-pressed={activeFilter === tab.id}
+                  data-tv-focusable="true"
+                  onClick={() => { setActiveFilter(tab.id); setSelectedGenre("All genres"); }}
+                  className={`inline-flex min-h-10 items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${activeFilter === tab.id
+                    ? "border-primary bg-primary text-primary-contrast"
+                    : "border-border-custom bg-surface/60 text-on-surface-variant hover:border-primary/50 hover:text-on-surface"}`}
+                >{tab.name}</button>
+              ))}
             </div>
 
             {availableGenres.length > 0 && !loading && (
@@ -634,7 +609,7 @@ function SearchPageContent() {
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
                   <div
                     key={idx}
-                    className="aspect-video rounded-xl bg-surface border border-border-custom animate-pulse"
+                    className="aspect-[2/3] rounded-xl bg-surface border border-border-custom animate-pulse"
                   />
                 ))}
               </div>
@@ -676,10 +651,10 @@ function SearchPageContent() {
                   </div>
                 )}
 
-                {activeFilter === "movies_tv" &&
-                  (genreFilteredTmdb.length > 0 ? (
+                {(activeFilter === "movie" || activeFilter === "tv") &&
+                  (filteredTmdbByType.length > 0 ? (
                     <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                      {genreFilteredTmdb.map((title) => (
+                      {filteredTmdbByType.map((title) => (
                         <div
                           key={title.id}
                           onClickCapture={handlePosterResultClick}
@@ -693,7 +668,7 @@ function SearchPageContent() {
                     <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
                       <Film className="h-10 w-10 text-on-surface-variant" />
                       <p className="text-xs text-on-surface-variant">
-                        No Movies or TV series found for this query.
+                        No matching {activeFilter === "movie" ? "movies" : "series"} found for this query.
                       </p>
                     </div>
                   ))}

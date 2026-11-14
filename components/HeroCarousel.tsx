@@ -245,6 +245,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
 
                 <button
                   onClick={handleWatchlistToggle}
+                  aria-pressed={isInWatchlist}
                   className={`p-2 sm:p-3 rounded-xl border transition-all duration-300 ${
                     isInWatchlist
                       ? "bg-primary/20 border-primary text-primary"
@@ -256,7 +257,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
                   {isInWatchlist ? <Check className="h-4 w-4 sm:h-5 sm:w-5" /> : <Plus className="h-4 w-4 sm:h-5 sm:w-5" />}
                 </button>
 
-                <button
+                {process.env.NEXT_PUBLIC_ZOKU_LAYOUT === "classic" && <button
                   onClick={handleHistoryToggle}
                   className={`flex items-center gap-1.5 rounded-xl border py-2 px-3 sm:py-3 sm:px-4 text-xs font-semibold transition-all duration-300 ${
                     isInHistoryCompleted
@@ -267,7 +268,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
                 >
                   <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
                   <span>{isInHistoryCompleted ? "Watched" : "Mark watched"}</span>
-                </button>
+                </button>}
               </div>
             </motion.div>
           </AnimatePresence>

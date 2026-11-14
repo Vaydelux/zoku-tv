@@ -22,7 +22,7 @@ export function MobileTabBar({ pathname }: { pathname: string | null }) {
   return (
     <nav
       aria-label="Mobile primary navigation"
-      className="zoku-mobile-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border-custom bg-background/95 md:hidden"
+      className="zoku-mobile-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border-custom bg-background/95 lg:hidden"
     >
       <div className="grid grid-cols-5 px-1 pb-[env(safe-area-inset-bottom)]">
         {ZOKU_NAV_ITEMS.map((item) => {

@@ -26,3 +26,12 @@ export function getSearchPageResultStatus({
   if (tmdbFailed || animeFailed) return "partial";
   return "ok";
 }
+
+/** Reference-style media tabs keep Movies and TV Series separate.
+ * Classification uses Zoku's existing provider-qualified media kinds.
+ */
+export type SearchMediaTab = "all" | "movie" | "tv" | "anime";
+
+export function matchesSearchMediaTab(kind: "movie" | "tv" | "anime", selected: SearchMediaTab): boolean {
+  return selected === "all" || selected === kind;
+}
