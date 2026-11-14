@@ -177,7 +177,7 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
   };
 
   return (
-    <div className="app-page-shell text-on-surface pb-16">
+    <div className="zoku-cinematic-detail zoku-cinematic-anime-detail app-page-shell text-on-surface pb-16">
       <Navbar />
 
       <div

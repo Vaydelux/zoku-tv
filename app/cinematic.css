@@ -258,6 +258,57 @@ html[data-zoku-layout="cinematic"][data-tv-mode="true"] .cinematic-poster-action
   }
 }
 
+/* Shared poster-first grids: two real posters per phone row instead of a
+   nearly full-screen 2:3 poster. The classic wide-card layout is unchanged. */
+html[data-zoku-layout="cinematic"] .zoku-poster-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(10px, 1.4vw, 20px);
+  align-items: start;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-poster-grid > div {
+  min-width: 0;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-poster-grid > .animate-pulse {
+  aspect-ratio: 2 / 3;
+}
+
+@media (min-width: 640px) {
+  html[data-zoku-layout="cinematic"] .zoku-poster-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  html[data-zoku-layout="cinematic"] .zoku-poster-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1536px) {
+  html[data-zoku-layout="cinematic"] .zoku-poster-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* One selected state in all 18 Zoku themes, without hardcoded amber/violet
+   labels that become unreadable in the light themes. */
+html[data-zoku-layout="cinematic"] .zoku-cinematic-search [aria-label="Filter search results"] > button {
+  min-height: 44px;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-search [aria-label="Filter search results"] > button[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-contrast);
+  border-color: var(--primary);
+  box-shadow: none;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-search [aria-label="Filter search results"] > button[aria-pressed="true"] svg {
+  color: currentColor;
+}
+
 /* Quiet page compositions: typography and geometry only; existing data,
    search, history, settings and content filters continue to own behavior. */
 html[data-zoku-layout="cinematic"] .zoku-cinematic-search .zoku-search-header {

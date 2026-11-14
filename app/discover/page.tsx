@@ -485,7 +485,7 @@ function TmdbDiscoverContent() {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
                   <div
                     key={idx}
@@ -495,7 +495,7 @@ function TmdbDiscoverContent() {
               </div>
             ) : results.length > 0 ? (
               <div className="space-y-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                   {results.map((title) => (
                     <TitleCard key={title.id} title={title} mediaType={mediaType} fullWidth />
                   ))}

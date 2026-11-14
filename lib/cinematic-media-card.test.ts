@@ -48,3 +48,14 @@ test("missing poster is readable and empty progress is omitted", () => {
   assert.doesNotMatch(html, /data-testid="card-play-progress-bar"/);
   assert.match(html, /Example Movie/);
 });
+
+test("reference-style poster play overlay is a separate accessible action", () => {
+  const html = renderToStaticMarkup(createElement(CinematicMediaCard, {
+    ...card, onPlay() {},
+  }));
+  assert.equal(html.split("</button>").length - 1, 4);
+  assert.match(html, /aria-label="Play Example Movie"/);
+  assert.match(html, /aria-label="Open Example Movie details"/);
+  assert.match(html, /aria-label="Add Example Movie to Watchlist"/);
+  assert.match(html, /aria-label="Mark Example Movie as watched"/);
+});

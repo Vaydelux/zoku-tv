@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Check, CheckCircle2, ImageOff, Plus, Star } from "lucide-react";
+import { Bookmark, BookmarkCheck, CheckCircle2, ImageOff, Play, Star } from "lucide-react";
 
 export interface CinematicMediaCardProps {
   title: string;
@@ -17,6 +17,7 @@ export interface CinematicMediaCardProps {
   progressPercent?: number | null;
   fullWidth?: boolean;
   onOpen: () => void;
+  onPlay?: () => void;
   onToggleWatchlist: () => void;
   onToggleWatched: () => void;
 }
@@ -40,6 +41,7 @@ export function CinematicMediaCard({
   progressPercent,
   fullWidth = false,
   onOpen,
+  onPlay,
   onToggleWatchlist,
   onToggleWatched,
 }: CinematicMediaCardProps) {
@@ -87,7 +89,15 @@ export function CinematicMediaCard({
           <span className="sr-only">Open {title} details</span>
         </button>
 
-        <div className="absolute top-2 right-2 z-20 flex flex-col gap-2">
+        <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5">
+          {onPlay && (
+            <button type="button" onClick={onPlay}
+              aria-label={`Play ${title}`}
+              data-tv-focusable="true"
+              className="cinematic-poster-action flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-contrast shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+              <Play className="h-4 w-4 fill-current" aria-hidden="true" />
+            </button>
+          )}
           <button
             type="button"
             data-tv-focusable="true"
@@ -97,15 +107,17 @@ export function CinematicMediaCard({
             onClick={onToggleWatchlist}
             className={`cinematic-poster-action flex h-11 w-11 items-center justify-center rounded-full border border-white/25 text-white shadow-sm transition-colors ${saved ? "bg-primary border-primary text-primary-contrast" : "bg-black/70 hover:bg-primary hover:text-primary-contrast"}`}
           >
-            {saved ? <Check className="h-4 w-4" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
+            {saved ? <BookmarkCheck className="h-4 w-4" aria-hidden="true" /> : <Bookmark className="h-4 w-4" aria-hidden="true" />}
           </button>
+        </div>
+        <div className="absolute right-2 bottom-2 z-20">
           <button
             type="button"
             data-tv-focusable="true"
             aria-pressed={watched}
             aria-label={watched ? `Mark ${title} as not watched` : `Mark ${title} as watched`}
             onClick={onToggleWatched}
-            className={`cinematic-poster-action flex h-11 w-11 items-center justify-center rounded-full border border-white/25 text-white shadow-sm transition-colors ${watched ? "bg-primary border-primary text-primary-contrast" : "bg-black/70 hover:bg-primary hover:text-primary-contrast"}`}
+            className={`cinematic-poster-action zoku-watched-toggle flex h-11 w-11 items-center justify-center rounded-full border border-white/25 text-white shadow-sm transition-colors ${watched ? "bg-primary border-primary text-primary-contrast" : "bg-black/70 hover:bg-primary hover:text-primary-contrast"}`}
           >
             <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           </button>

@@ -25,6 +25,8 @@ import {
 import { AnimeCard } from "@/components/anime/AnimeCard";
 import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
+import { shouldOfferMoreSearchResults, getSearchPageResultStatus } from "@/lib/search-result-status";
+import { SEARCH_MEDIA_GENRES, matchesSearchGenre, type SearchGenreLabel } from "@/lib/search-media-genre";
 
 type SearchFilterTab = "all" | "movies_tv" | "anime";
 
@@ -115,16 +117,23 @@ function SearchPageContent() {
   const [animeResults, setAnimeResults] = useState<AniListMedia[]>(() =>
     hasMatchingSavedResults && savedInitial ? savedInitial.animeResults : []
   );
+  const [selectedGenre, setSelectedGenre] = useState<SearchGenreLabel>("All genres");
   const [activeFilter, setActiveFilter] = useState<SearchFilterTab>(() =>
     hasMatchingSavedResults && savedInitial ? savedInitial.activeFilter : "all"
   );
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [searchStatus, setSearchStatus] = useState<"ok" | "partial" | "unavailable">("ok");
   const [page, setPage] = useState<number>(() =>
     hasMatchingSavedResults && savedInitial ? savedInitial.page : 1
   );
 
   const activeQuery = urlQueryParam || inputValue.trim();
+
+  useEffect(() => {
+    setSelectedGenre("All genres");
+  }, [urlQueryParam, currentProfile?.id]);
 
   // Automatically focus the search input on mount / back navigation
   useEffect(() => {
@@ -202,6 +211,8 @@ function SearchPageContent() {
       if (!inputValue.trim()) {
         setResults([]);
         setAnimeResults([]);
+        setHasMore(false);
+        setSearchStatus("ok");
       }
       return;
     }
@@ -213,6 +224,10 @@ function SearchPageContent() {
     async function performSearch() {
       if (page === 1) {
         setLoading(true);
+        setResults([]);
+        setAnimeResults([]);
+        setHasMore(false);
+        setSearchStatus("ok");
       } else {
         setLoadingMore(true);
       }
@@ -223,6 +238,16 @@ function SearchPageContent() {
         ]);
 
         if (cancelled) return;
+
+        setSearchStatus(getSearchPageResultStatus({
+          tmdbFailed: tmdbPromise.status === "rejected",
+          animeFailed: animePromise.status === "rejected",
+        }));
+        setHasMore(shouldOfferMoreSearchResults({
+          page,
+          tmdbResultCount: tmdbPromise.status === "fulfilled" ? tmdbPromise.value.length : 0,
+          animeHasNextPage: animePromise.status === "fulfilled" && Boolean(animePromise.value.pageInfo?.hasNextPage),
+        }));
 
         let nextTmdbResults: TMDBTitle[] = [];
         let nextAnimeResults: AniListMedia[] = [];
@@ -262,6 +287,14 @@ function SearchPageContent() {
         }
       } catch (err) {
         console.error("Search failed:", err);
+        if (!cancelled) {
+          setSearchStatus("unavailable");
+          setHasMore(false);
+          if (page === 1) {
+            setResults([]);
+            setAnimeResults([]);
+          }
+        }
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -327,20 +360,28 @@ function SearchPageContent() {
     }
   };
 
+  const genreFilteredTmdb = useMemo(() => results.filter((title) => matchesSearchGenre({ kind: title.media_type === "tv" ? "tv" : "movie", data: title }, selectedGenre)), [results, selectedGenre]);
+  const genreFilteredAnime = useMemo(() => animeResults.filter((anime) => matchesSearchGenre({ kind: "anime", data: anime }, selectedGenre)), [animeResults, selectedGenre]);
+  const availableGenres = useMemo(() => SEARCH_MEDIA_GENRES.filter(({ label }) =>
+    results.some((title) => matchesSearchGenre({ kind: title.media_type === "tv" ? "tv" : "movie", data: title }, label)) ||
+    animeResults.some((anime) => matchesSearchGenre({ kind: "anime", data: anime }, label))
+  ), [results, animeResults]);
+  const visibleResultCount = genreFilteredTmdb.length + genreFilteredAnime.length;
+
   const combinedItems: CombinedSearchResult[] = useMemo(() => {
     const list: CombinedSearchResult[] = [];
-    const maxLen = Math.max(results.length, animeResults.length);
+    const maxLen = Math.max(genreFilteredTmdb.length, genreFilteredAnime.length);
     for (let i = 0; i < maxLen; i++) {
-      if (i < results.length) {
-        const item = results[i];
+      if (i < genreFilteredTmdb.length) {
+        const item = genreFilteredTmdb[i];
         list.push({ kind: (item.media_type as "movie" | "tv") || "movie", data: item });
       }
-      if (i < animeResults.length) {
-        list.push({ kind: "anime", data: animeResults[i] });
+      if (i < genreFilteredAnime.length) {
+        list.push({ kind: "anime", data: genreFilteredAnime[i] });
       }
     }
     return list;
-  }, [results, animeResults]);
+  }, [genreFilteredTmdb, genreFilteredAnime]);
 
   const totalResultsCount = results.length + animeResults.length;
   const queryParam = activeQuery;
@@ -388,7 +429,7 @@ function SearchPageContent() {
                   setShowAutocomplete(true);
                 }
               }}
-              className="glass-panel w-full rounded-2xl py-3.5 pl-5 pr-28 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
+              className="glass-panel w-full rounded-2xl py-3.5 pl-5 pr-36 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
               {inputValue && (
@@ -396,7 +437,7 @@ function SearchPageContent() {
                   type="button"
                   onClick={handleClearSearch}
                   data-testid="search-clear-btn"
-                  className="p-1.5 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface transition-colors"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface transition-colors"
                   title="Clear search"
                   aria-label="Clear search"
                 >
@@ -417,7 +458,8 @@ function SearchPageContent() {
               />
               <button
                 type="submit"
-                className="p-1.5 rounded-xl bg-primary text-primary-contrast hover:bg-opacity-95 transition-all"
+                className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-contrast hover:bg-opacity-95 transition-all"
+                 aria-label="Search titles"
                 title="Search"
               >
                 <Search className="h-4 w-4" />
@@ -460,7 +502,7 @@ function SearchPageContent() {
             <div className="flex items-center justify-between border-b border-border-custom pb-3">
               <span className="text-xs font-mono uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
                 <History className="h-4 w-4 text-primary" />
-                <span>Search Portal History</span>
+                <span>Recent searches</span>
               </span>
               {history.length > 0 && (
                 <button
@@ -468,7 +510,7 @@ function SearchPageContent() {
                   className="text-[10px] text-red-500 hover:underline flex items-center gap-1 font-semibold"
                 >
                   <Trash2 className="h-3 w-3" />
-                  <span>Clear Portal</span>
+                  <span>Clear history</span>
                 </button>
               )}
             </div>
@@ -488,8 +530,8 @@ function SearchPageContent() {
               </div>
             ) : (
               <div className="text-center py-6 text-xs text-on-surface-variant space-y-1">
-                <p className="font-semibold">Your query scanner is vacant.</p>
-                <p className="text-[10px]">Start searching to see history logs here.</p>
+                <p className="font-semibold">No recent searches.</p>
+                <p className="text-[10px]">Your recent searches will appear here.</p>
               </div>
             )}
           </div>
@@ -503,15 +545,16 @@ function SearchPageContent() {
                 </span>
               </p>
               <p className="text-xs font-mono text-on-surface-variant">
-                Total Found: {totalResultsCount} results ({results.length} Movies/TV ·{" "}
+                Showing {totalResultsCount} results ({results.length} Movies/TV ·{" "}
                 {animeResults.length} Anime)
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 border-b border-border-custom pb-4">
+            <div role="group" aria-label="Filter search results" className="flex flex-wrap items-center gap-2 border-b border-border-custom pb-4">
               <button
                 type="button"
                 onClick={() => setActiveFilter("all")}
+                aria-pressed={activeFilter === "all"}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                   activeFilter === "all"
                     ? "bg-primary text-primary-contrast shadow-sm"
@@ -528,6 +571,7 @@ function SearchPageContent() {
               <button
                 type="button"
                 onClick={() => setActiveFilter("movies_tv")}
+                aria-pressed={activeFilter === "movies_tv"}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
                   activeFilter === "movies_tv"
                     ? "bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm"
@@ -544,6 +588,7 @@ function SearchPageContent() {
               <button
                 type="button"
                 onClick={() => setActiveFilter("anime")}
+                aria-pressed={activeFilter === "anime"}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
                   activeFilter === "anime"
                     ? "bg-gradient-to-r from-violet-600/30 to-fuchsia-600/30 text-fuchsia-300 border-fuchsia-400/60 shadow-sm"
@@ -558,8 +603,34 @@ function SearchPageContent() {
               </button>
             </div>
 
+            {availableGenres.length > 0 && !loading && (
+              <div
+                role="group"
+                aria-label="Filter search results by genre"
+                className="zoku-search-genres custom-scrollbar flex items-center gap-2 overflow-x-auto pb-2"
+              >
+                {(["All genres", ...availableGenres.map((entry) => entry.label)] as SearchGenreLabel[]).map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    aria-pressed={selectedGenre === label}
+                    onClick={() => setSelectedGenre(label)}
+                    className={`min-h-10 shrink-0 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${selectedGenre === label ? "border-primary bg-primary text-primary-contrast" : "border-border-custom bg-surface/70 text-on-surface-variant hover:border-primary/50 hover:text-on-surface"}`}
+                  >{label}</button>
+                ))}
+              </div>
+            )}
+
+            {searchStatus !== "ok" && !loading && (
+              <p role="status" className="rounded-xl border border-border-custom bg-surface px-4 py-3 text-sm text-on-surface-variant">
+                {searchStatus === "unavailable"
+                  ? "Search is temporarily unavailable. Please retry your search."
+                  : "Some results may be missing because one catalog is temporarily unavailable."}
+              </p>
+            )}
+
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
                   <div
                     key={idx}
@@ -567,22 +638,24 @@ function SearchPageContent() {
                   />
                 ))}
               </div>
-            ) : totalResultsCount === 0 ? (
+            ) : visibleResultCount === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
                 <Film className="h-12 w-12 text-on-surface-variant" />
                 <div className="space-y-1">
-                  <p className="font-semibold text-sm">No scanner results found.</p>
+                  <p className="font-semibold text-sm">{searchStatus === "unavailable" ? "Search is temporarily unavailable." : "No matching titles found."}</p>
                   <p className="text-xs text-on-surface-variant max-w-xs">
-                    {isKidMode
-                      ? "No Kids Mode family-safe titles matched your query."
-                      : "Please check spelling or search for wider words, genre titles, or franchise creators."}
+                    {searchStatus === "unavailable"
+                       ? "Please retry once the catalogs are available."
+                       : isKidMode
+                         ? "No Kids Mode family-safe titles matched your query."
+                         : "Try a different title, genre, or keyword."}
                   </p>
                 </div>
               </div>
             ) : (
               <div className="space-y-8">
                 {activeFilter === "all" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                  <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                     {combinedItems.map((item, idx) => (
                       <div
                         key={
@@ -604,9 +677,9 @@ function SearchPageContent() {
                 )}
 
                 {activeFilter === "movies_tv" &&
-                  (results.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                      {results.map((title) => (
+                  (genreFilteredTmdb.length > 0 ? (
+                    <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                      {genreFilteredTmdb.map((title) => (
                         <div
                           key={title.id}
                           onClickCapture={handlePosterResultClick}
@@ -626,9 +699,9 @@ function SearchPageContent() {
                   ))}
 
                 {activeFilter === "anime" &&
-                  (animeResults.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                      {animeResults.map((anime) => (
+                  (genreFilteredAnime.length > 0 ? (
+                    <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                      {genreFilteredAnime.map((anime) => (
                         <div
                           key={anime.id}
                           onClickCapture={handlePosterResultClick}
@@ -647,7 +720,7 @@ function SearchPageContent() {
                     </div>
                   ))}
 
-                <div className="flex justify-center pt-4">
+                {hasMore && <div className="flex justify-center pt-4">
                   <button
                     onClick={() => setPage((p) => p + 1)}
                     disabled={loadingMore}
@@ -662,7 +735,7 @@ function SearchPageContent() {
                       <span>Load More Results</span>
                     )}
                   </button>
-                </div>
+                </div>}
               </div>
             )}
           </div>

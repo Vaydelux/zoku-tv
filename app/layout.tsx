@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./cinematic.css";
+import "./cinematic-reference.css";
 import { ClientInitializer } from "@/components/ClientInitializer";
 import { AuthGate } from "@/components/AuthGate";
 import { SiteChrome } from "@/components/SiteChrome";

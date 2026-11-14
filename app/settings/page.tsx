@@ -488,9 +488,9 @@ function SettingsPageContent() {
           </div>
         )}
 
-        <div className="flex flex-col md:flex-row gap-8 items-start pt-2">
+        <div className="zoku-settings-layout flex flex-col md:flex-row gap-8 items-start pt-2">
           {/* Structured Settings Navigation */}
-          <div className="glass-panel w-full md:w-64 flex flex-col gap-1.5 shrink-0 rounded-2xl p-4">
+          <div className="zoku-settings-nav glass-panel w-full md:w-64 flex flex-col gap-1.5 shrink-0 rounded-2xl p-4">
             <p className="px-2 pb-1 text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
               Appearance & Browsing
             </p>
@@ -600,7 +600,7 @@ function SettingsPageContent() {
           </div>
 
           {/* Active Tab Panel */}
-          <div className="glass-panel flex-1 w-full rounded-2xl p-6 sm:p-8 shadow-xl min-h-[420px]">
+          <div className="zoku-settings-content glass-panel flex-1 w-full rounded-2xl p-6 sm:p-8 shadow-xl min-h-[420px]">
             {activeTab === "theme" && (
               <div className="space-y-6">
                 <div className="space-y-1">

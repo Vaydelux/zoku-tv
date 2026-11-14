@@ -438,11 +438,14 @@ function WatchlistPageContent() {
 
             {/* Analytics Section with D3 Visualizations */}
             {items.length > 0 && (
-              <WatchlistAnalyticsSection
+              <details className="zoku-watchlist-insights rounded-xl border border-border-custom/60 bg-surface/50">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">Library insights</summary>
+                <div className="p-4 pt-0"><WatchlistAnalyticsSection
                 items={items}
                 catalogFilteredItems={catalogFilteredItems}
                 catalogMode={catalogMode}
-              />
+              /></div>
+              </details>
             )}
 
             {/* Titles Grid or Empty States */}
@@ -456,7 +459,7 @@ function WatchlistPageContent() {
                     <span>{sortedItems.length} {sortedItems.length === 1 ? "title" : "titles"} found</span>
                   </div>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 pt-2 animate-fade-in">
+                <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 pt-2 animate-fade-in">
                   {sortedItems.map((item) => {
                     const parsedYear = item.release_date
                       ? Number.parseInt(item.release_date.split("-")[0] || "", 10)

@@ -145,6 +145,7 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
         progressPercent={playProgress.hasProgress ? playProgress.progressPercent : null}
         fullWidth={fullWidth}
         onOpen={() => router.push(`/anime/${anime.id}`)}
+        onPlay={anime.episodes && anime.episodes > 0 ? () => router.push(`/watch/anime/${anime.id}/1/1`) : undefined}
         onToggleWatchlist={() => handleWatchlistToggle()}
         onToggleWatched={() => handleHistoryToggle()}
       />
