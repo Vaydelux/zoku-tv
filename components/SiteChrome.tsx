@@ -2,13 +2,15 @@
 
 import { usePathname } from "next/navigation";
 import { AmbientBackground } from "@/components/AmbientBackground";
+import { showZokuMobileNav } from "@/lib/design-navigation";
 import { SiteFooter } from "@/components/SiteFooter";
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const cinematicLayout = process.env.NEXT_PUBLIC_ZOKU_LAYOUT !== "classic";
 
   return (
-    <div className="relative z-[1] flex min-h-full flex-col">
+    <div className={`relative z-[1] flex min-h-full flex-col ${cinematicLayout && showZokuMobileNav(pathname) ? "zoku-has-mobile-nav" : ""}`}>
       <AmbientBackground />
       <div
         key={pathname}

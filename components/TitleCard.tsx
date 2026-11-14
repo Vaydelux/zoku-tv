@@ -7,6 +7,7 @@ import { useWatchlistStore, useWatchHistoryStore } from "@/stores";
 import { getTitleDetails, TMDBTitle } from "@/lib/tmdb";
 import { isReleasedWithinLast30Days } from "@/lib/media-types";
 import { useCardPlayProgress } from "@/lib/card-play-progress";
+import { CinematicMediaCard } from "@/components/CinematicMediaCard";
 
 interface TitleCardProps {
   title: TMDBTitle;
@@ -73,9 +74,9 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
     };
   }, [isHovered, synopsis, resolvedBackdrop, actualMediaType, title.id]);
 
-  const handleWatchlistToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleWatchlistToggle = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
     if (isInWatchlist) {
       removeItem(actualMediaType, title.id);
     } else {
@@ -92,9 +93,9 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
     }
   };
 
-  const handleHistoryToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleHistoryToggle = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
     void toggleCompleted({
       media_type: actualMediaType,
       tmdbId: title.id,
@@ -124,6 +125,29 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
       handleClick();
     }
   };
+
+  if (process.env.NEXT_PUBLIC_ZOKU_LAYOUT !== "classic") {
+    const artwork = title.poster_path || resolvedBackdrop || title.backdrop_path || null;
+    const posterUrl = artwork ? (artwork.startsWith("http") ? artwork : `https://image.tmdb.org/t/p/w500${artwork}`) : null;
+    return (
+      <CinematicMediaCard
+        title={name}
+        imageUrl={posterUrl}
+        year={releaseYear}
+        mediaLabel={actualMediaType === "tv" ? "TV" : "Movie"}
+        rating={rating}
+        overview={synopsis}
+        recent={isRecentRelease}
+        watched={watchedCompleted}
+        saved={isInWatchlist}
+        progressPercent={playProgress.hasProgress ? playProgress.progressPercent : null}
+        fullWidth={fullWidth}
+        onOpen={handleClick}
+        onToggleWatchlist={() => handleWatchlistToggle()}
+        onToggleWatched={() => handleHistoryToggle()}
+      />
+    );
+  }
 
   const widthClasses = fullWidth
     ? "w-full"

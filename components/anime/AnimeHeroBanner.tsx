@@ -25,11 +25,11 @@ export function AnimeHeroBanner({ slides, loading = false }: AnimeHeroBannerProp
 
   return (
     <div
-      className="relative min-h-[clamp(280px,45dvh,540px)] overflow-hidden bg-background bg-cover bg-center"
+      className="zoku-anime-hero relative min-h-[clamp(280px,45dvh,540px)] overflow-hidden bg-background bg-cover bg-center"
       style={{ backgroundImage: banner ? `url(${banner})` : undefined }}
     >
       <div className="hero-media-scrim" aria-hidden />
-      <div className="relative z-10 mx-auto flex h-full min-h-[clamp(280px,45dvh,540px)] w-full items-end px-4 pb-10 pt-14 sm:items-center sm:px-6 sm:pb-12 sm:pt-20 lg:px-8">
+      <div className="zoku-anime-hero-content relative z-10 mx-auto flex h-full min-h-[clamp(280px,45dvh,540px)] w-full items-end px-4 pb-10 pt-14 sm:items-center sm:px-6 sm:pb-12 sm:pt-20 lg:px-8">
         <div className="hero-copy max-w-xl space-y-2.5 sm:space-y-4">
           <p className="text-[10px] font-mono uppercase tracking-widest text-primary">Featured Anime</p>
           <h2 className="text-2xl sm:text-4xl md:text-5xl font-display font-bold text-on-surface leading-tight line-clamp-2">

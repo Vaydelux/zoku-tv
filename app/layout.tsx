@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./cinematic.css";
 import { ClientInitializer } from "@/components/ClientInitializer";
 import { AuthGate } from "@/components/AuthGate";
 import { SiteChrome } from "@/components/SiteChrome";
@@ -60,6 +61,7 @@ export default function RootLayout({
       lang="en"
       className="h-full"
       data-theme="theme-crimson"
+      data-zoku-layout={process.env.NEXT_PUBLIC_ZOKU_LAYOUT === "classic" ? "classic" : "cinematic"}
       suppressHydrationWarning
     >
       <head>

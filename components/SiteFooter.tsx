@@ -13,12 +13,13 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import { isBrandRoute } from "@/lib/auth-routes";
+import { shouldHideZokuFooter } from "@/lib/site-footer-routing";
 import { isCloudFirebaseConfigured } from "@/lib/firebase";
 import { useSessionStore } from "@/stores";
 
 export function SiteFooter() {
   const pathname = usePathname();
+  const cinematicLayout = process.env.NEXT_PUBLIC_ZOKU_LAYOUT !== "classic";
   const currentProfile = useSessionStore((s) => s.currentProfile);
   const [isOnline, setIsOnline] = useState(true);
 
@@ -36,7 +37,7 @@ export function SiteFooter() {
   }, []);
 
   // Hide on player + pre-app brand surfaces (splash/auth/profiles)
-  if (pathname?.startsWith("/watch") || isBrandRoute(pathname)) return null;
+  if (shouldHideZokuFooter(pathname)) return null;
 
   const catalogLabel =
     currentProfile?.catalogMode === "anime"
@@ -45,7 +46,7 @@ export function SiteFooter() {
 
   return (
     <footer
-      className="relative z-10 mt-auto border-t border-white/10 bg-[#05060b]/95 px-4 sm:px-6 lg:px-8 py-8 text-white/70 backdrop-blur-xl transition-colors duration-300"
+      className={`${cinematicLayout ? "zoku-cinematic-footer" : ""} relative z-10 mt-auto border-t border-white/10 bg-[#05060b]/95 px-4 sm:px-6 lg:px-8 py-8 text-white/70 backdrop-blur-xl transition-colors duration-300`}
       data-testid="site-footer"
     >
       <div className="mx-auto w-full space-y-6">
@@ -77,8 +78,8 @@ export function SiteFooter() {
             <Link href="/home" className="hover:text-white transition-colors">
               Home
             </Link>
-            <Link href="/discover" className="hover:text-white transition-colors">
-              Discover
+            <Link href={cinematicLayout ? "/genres" : "/discover"} className="hover:text-white transition-colors">
+              {cinematicLayout ? "Genres" : "Discover"}
             </Link>
             <Link href="/search" className="hover:text-white transition-colors">
               Search
@@ -86,7 +87,7 @@ export function SiteFooter() {
             <Link href="/watchlist" className="hover:text-white transition-colors">
               Watchlist
             </Link>
-            <Link href="/history" className="hover:text-white transition-colors">
+            <Link href="/watchlist?tab=history" className="hover:text-white transition-colors">
               History
             </Link>
             <Link href="/profiles" className="hover:text-white transition-colors">

@@ -243,11 +243,11 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
   };
 
   return (
-    <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
+    <div className="zoku-cinematic-detail app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
       {/* 1. Immersive Spotlight Backdrop */}
-      <div className="relative w-full h-[50dvh] md:h-[65dvh] lg:h-[70dvh] overflow-hidden bg-black">
+      <div className="zoku-detail-backdrop relative w-full h-[50dvh] md:h-[65dvh] lg:h-[70dvh] overflow-hidden bg-black">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url('${backdropUrl}')` }}
@@ -265,7 +265,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
       </div>
 
       {/* 2. Core Profile Grid */}
-      <div className="relative z-10 w-full mx-auto px-4 sm:px-6 lg:px-8 -mt-24 sm:-mt-32 md:-mt-40 lg:-mt-48 space-y-12">
+      <div className="zoku-detail-body relative z-10 w-full mx-auto px-4 sm:px-6 lg:px-8 -mt-24 sm:-mt-32 md:-mt-40 lg:-mt-48 space-y-12">
         <div className="flex flex-col md:flex-row gap-8 items-start">
           <div className="w-48 sm:w-64 aspect-[2/3] rounded-2xl overflow-hidden border-2 border-border-custom shadow-2xl shrink-0 mx-auto md:mx-0">
             <img src={posterUrl} alt={name} className="h-full w-full object-cover" />

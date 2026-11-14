@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, useMemo, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Film,
   ArrowRight,
@@ -41,7 +41,17 @@ import { WatchlistAnalyticsSection } from "@/components/watchlist/WatchlistAnaly
 import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 
 export default function WatchlistPage() {
+  return (
+    <Suspense fallback={<div role="status" className="min-h-[55svh] bg-background px-6 py-20 text-center text-on-surface-variant">Loading your library…</div>}>
+      <WatchlistPageContent />
+    </Suspense>
+  );
+}
+
+function WatchlistPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedTab = searchParams.get("tab");
   const { currentProfile } = useSessionStore();
   const { items, initWatchlist, clearWatchlist } = useWatchlistStore();
   const watchHistoryItems = useWatchHistoryStore((state) => state.items);
@@ -83,13 +93,13 @@ export default function WatchlistPage() {
   useDropdownViewportClamp(isSortOpen, sortMenuRef);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("tab") === "history") {
-        setActiveTab("history");
-      }
-    }
-  }, []);
+    setActiveTab(selectedTab === "history" ? "history" : "watchlist");
+  }, [selectedTab]);
+
+  const selectTab = (tab: "watchlist" | "history") => {
+    setActiveTab(tab);
+    router.replace(tab === "history" ? "/watchlist?tab=history" : "/watchlist", { scroll: false });
+  };
 
   useEffect(() => {
     if (currentProfile) {
@@ -176,7 +186,7 @@ export default function WatchlistPage() {
   };
 
   return (
-    <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
+    <div className="zoku-cinematic-watchlist app-page-shell text-on-surface pb-16 transition-colors duration-300">
       <Navbar />
 
       <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
@@ -205,7 +215,7 @@ export default function WatchlistPage() {
                 role="tab"
                 aria-selected={activeTab === "watchlist"}
                 data-testid="tab-watchlist"
-                onClick={() => setActiveTab("watchlist")}
+                onClick={() => selectTab("watchlist")}
                 className={`inline-flex flex-1 xs:flex-initial items-center justify-center gap-1.5 sm:gap-2 rounded-lg px-3 sm:px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "watchlist"
                     ? "bg-primary text-primary-contrast shadow-sm"
@@ -224,7 +234,7 @@ export default function WatchlistPage() {
                 role="tab"
                 aria-selected={activeTab === "history"}
                 data-testid="tab-watch-history"
-                onClick={() => setActiveTab("history")}
+                onClick={() => selectTab("history")}
                 className={`inline-flex flex-1 xs:flex-initial items-center justify-center gap-1.5 sm:gap-2 rounded-lg px-3 sm:px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "history"
                     ? "bg-primary text-primary-contrast shadow-sm"

@@ -232,7 +232,7 @@ export default function WatchAnimePage({
   );
 
   return (
-    <div className="min-h-screen bg-[#070a10] text-white pt-28 md:pt-20 pb-16">
+    <div className="zoku-cinematic-player min-h-screen bg-[#070a10] text-white pt-28 md:pt-20 pb-16">
       <Navbar />
       <div className="mx-auto max-w-6xl px-3 sm:px-6 lg:px-8">
         {/* Top Header Bar */}

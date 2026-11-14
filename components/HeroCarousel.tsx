@@ -145,7 +145,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
 
   return (
     <section
-      className="relative isolate w-full"
+      className="zoku-hero relative isolate w-full"
       aria-roledescription="carousel"
       aria-label="Featured titles"
       onMouseEnter={() => setIsPaused(true)}
@@ -177,7 +177,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
         <div className="hero-media-scrim" aria-hidden />
       </div>
 
-      <div className="relative z-[1] mx-auto flex w-full min-h-[clamp(320px,50dvh,680px)] flex-col justify-end px-4 pb-12 pt-14 sm:px-6 sm:pb-12 sm:pt-24 lg:px-8 lg:pb-14">
+      <div className="zoku-hero-content relative z-[1] mx-auto flex w-full min-h-[clamp(320px,50dvh,680px)] flex-col justify-end px-4 pb-12 pt-14 sm:px-6 sm:pb-12 sm:pt-24 lg:px-8 lg:pb-14">
         {loading && !current ? (
           <div className="flex w-full max-w-3xl flex-col gap-4 animate-pulse">
             <div className="h-6 w-40 rounded-full bg-surface" />

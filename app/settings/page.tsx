@@ -444,7 +444,7 @@ function SettingsPageContent() {
   }
 
   return (
-    <div className="app-page-shell text-on-surface pb-16 transition-colors duration-300">
+    <div className="zoku-cinematic-settings app-page-shell text-on-surface pb-16 transition-colors duration-300">
       {saving && <LoadingBanner message="Saving your settings..." />}
       <Navbar />
 
@@ -460,7 +460,7 @@ function SettingsPageContent() {
           <div className="space-y-1">
             <h1 className="text-2xl font-display font-bold text-on-surface uppercase tracking-wide flex items-center gap-2">
               <Settings className="h-6 w-6 text-primary" />
-              <span>Portal Settings</span>
+              <span>Settings</span>
             </h1>
             <p className="text-xs text-on-surface-variant">
               Configure appearance, browsing preferences, profiles, playback containment, privacy, and diagnostics.

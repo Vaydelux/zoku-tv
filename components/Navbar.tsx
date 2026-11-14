@@ -23,6 +23,8 @@ import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
 import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 import { usePerfMode } from "@/hooks/usePerfMode";
+import { ZOKU_NAV_ITEMS, activeZokuNavHref } from "@/lib/design-navigation";
+import { MobileTabBar } from "@/components/MobileTabBar";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -117,18 +119,23 @@ export function Navbar() {
     return null;
   }
 
-  const navLinks = [
-    { name: "Home", href: "/home" },
-    { name: "Discover", href: "/discover" },
-    { name: "Watchlist", href: "/watchlist" },
-  ];
+  const cinematicLayout = process.env.NEXT_PUBLIC_ZOKU_LAYOUT !== "classic";
+  const activeNav = activeZokuNavHref(pathname);
+  const navLinks = cinematicLayout
+    ? ZOKU_NAV_ITEMS.map(({ label, href }) => ({ name: label, href }))
+    : [
+        { name: "Home", href: "/home" },
+        { name: "Discover", href: "/discover" },
+        { name: "Watchlist", href: "/watchlist" },
+      ];
 
   const catalogMode = currentProfile?.catalogMode ?? "tmdb";
   const catalogLabel = catalogMode === "anime" ? "Anime" : "Movies & TV";
   const networkStatus = getNavbarNetworkStatus(isOnline);
 
   return (
-    <nav
+    <>
+    <header
       className={`site-nav sticky top-0 z-40 w-full border-b ${networkStatus.navBorderClass} bg-background/90 backdrop-blur-md transition-colors duration-300`}
     >
       <div className="mx-auto w-full px-3 sm:px-6 lg:px-8">
@@ -148,15 +155,16 @@ export function Navbar() {
               </span>
             </Link>
 
-            <div className="hidden md:flex items-center gap-6">
+            <div className={cinematicLayout ? "zoku-primary-nav hidden xl:flex items-center gap-1" : "zoku-primary-nav hidden md:flex items-center gap-6"} role="navigation" aria-label="Primary navigation">
               {navLinks.map((link) => {
-                const isActive = pathname === link.href;
+                const isActive = cinematicLayout ? activeNav === link.href : pathname === link.href;
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`text-sm font-medium transition-colors hover:text-primary ${
-                      isActive ? "text-primary border-b-2 border-primary py-1" : "text-on-surface-variant"
+                    aria-current={isActive ? "page" : undefined}
+                    className={`zoku-nav-link relative rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${
+                      isActive ? "zoku-nav-link-active text-on-surface" : "text-on-surface-variant"
                     }`}
                   >
                     {link.name}
@@ -459,28 +467,21 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Responsive Mobile Navigation Row (< md) */}
-        <div className="flex md:hidden items-center justify-around gap-1 border-t border-border-custom/60 py-1.5">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex-1 rounded-lg py-1.5 text-center text-xs font-semibold transition-all ${
-                  isActive
-                    ? "bg-primary text-primary-contrast shadow-sm"
-                    : "text-on-surface-variant hover:bg-surface-hover hover:text-on-surface"
-                }`}
-              >
-                {link.name}
-              </Link>
-            );
-          })}
-        </div>
+        {!cinematicLayout && (
+            <div className="flex md:hidden items-center justify-around gap-1 border-t border-border-custom/60 py-1.5">
+              {navLinks.map((link) => {
+                const isActive = pathname === link.href;
+                return (
+                  <Link key={link.href} href={link.href}
+                    className={`flex-1 rounded-lg py-1.5 text-center text-xs font-semibold transition-all ${isActive ? "bg-primary text-primary-contrast shadow-sm" : "text-on-surface-variant hover:bg-surface-hover hover:text-on-surface"}`}
+                  >{link.name}</Link>
+                );
+              })}
+            </div>
+        )}
 
         {/* Compact, touch-friendly scrollable rail filter interface on small screens (< md) */}
-        {pathname === "/home" && filterOptions.length > 0 && (
+        {!cinematicLayout && pathname === "/home" && filterOptions.length > 0 && (
           <div
             data-testid="navbar-mobile-rail-filters"
             className="md:hidden custom-scrollbar flex items-center gap-1.5 overflow-x-auto touch-pan-x pt-2 pb-2.5 px-1 border-t border-border-custom/50 scroll-smooth -mx-1"
@@ -506,6 +507,8 @@ export function Navbar() {
           </div>
         )}
       </div>
-    </nav>
+    </header>
+    {cinematicLayout && <MobileTabBar pathname={pathname} />}
+    </>
   );
 }
