@@ -368,7 +368,7 @@ html[data-zoku-layout="cinematic"] .zoku-cinematic-settings .glass-panel {
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   html[data-zoku-layout="cinematic"] .zoku-mobile-tabbar {
     display: none;
   }
