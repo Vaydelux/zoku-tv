@@ -1,5 +1,8 @@
 name: Zoku TV Quality Gates
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main, master]
@@ -20,9 +23,11 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install dependencies
-        # No package-lock.json is tracked yet. npm ci and setup-node npm cache require it.
-        run: npm install --no-audit --no-fund
+      - name: Install frozen dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Audit production dependency vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Run TypeScript & Lint Checks
         run: npm run typecheck
