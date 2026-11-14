@@ -141,16 +141,16 @@ export function CinematicMediaCard({
       <div className="min-w-0 px-0.5 pt-2">
         <h3 className="line-clamp-2 min-h-[2.25rem] text-[13px] font-semibold leading-[1.2rem] text-on-surface sm:text-sm">{title}</h3>
         <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-on-surface-variant">
+          {rating !== "N/A" && <>
+            <span className="inline-flex items-center gap-0.5 font-semibold text-on-surface">
+              <Star className="h-3 w-3 fill-primary text-primary" aria-hidden="true" /> {rating}
+            </span>
+            <span aria-hidden="true">·</span>
+          </>}
           <span>{year}</span>
           <span aria-hidden="true">·</span>
-          <span className="uppercase">{mediaLabel}</span>
+          <span className="truncate">{mediaLabel}</span>
           {episodes ? <><span aria-hidden="true">·</span><span>{episodes} EP</span></> : null}
-          {rating !== "N/A" && <>
-            <span aria-hidden="true">·</span>
-            <span className="inline-flex items-center gap-0.5">
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" /> {rating}
-            </span>
-          </>}
         </div>
       </div>
     </article>
