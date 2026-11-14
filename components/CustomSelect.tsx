@@ -45,22 +45,40 @@ export function CustomSelect({
     options.find((opt) => String(opt.value) === String(value)) ?? null;
   const selectedLabel = selectedOption ? selectedOption.label : placeholder;
 
-  useEffect(() => {
-    if (!open) return;
-
-    const currentIdx = options.findIndex(
+  // Only choose the initial highlight when opening. Re-running this on
+  // every ArrowUp/ArrowDown would reset navigation to the selected language.
+  const handleToggle = () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const selectedIndex = options.findIndex(
       (opt) => String(opt.value) === String(value)
     );
-    setHighlightedIndex(currentIdx >= 0 ? currentIdx : 0);
+    setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    setOpen(true);
+  };
 
-    requestAnimationFrame(() => {
-      const selectedEl = menuRef.current?.querySelector(
-        '[aria-selected="true"]'
-      ) as HTMLElement | null;
-      if (selectedEl && menuRef.current) {
-        selectedEl.scrollIntoView({ block: "nearest" });
-      }
-    });
+  // Scroll the *menu*, not the document. Keep keyboard/TV navigation visible
+  // while preserving the user's current position between key presses.
+  useEffect(() => {
+    if (!open || highlightedIndex < 0) return;
+    const menu = menuRef.current;
+    const active = menu?.querySelector<HTMLElement>(
+      `[data-option-index="${highlightedIndex}"]`
+    );
+    if (!menu || !active) return;
+    const menuBounds = menu.getBoundingClientRect();
+    const activeBounds = active.getBoundingClientRect();
+    if (activeBounds.top < menuBounds.top) {
+      menu.scrollTop -= menuBounds.top - activeBounds.top;
+    } else if (activeBounds.bottom > menuBounds.bottom) {
+      menu.scrollTop += activeBounds.bottom - menuBounds.bottom;
+    }
+  }, [open, highlightedIndex]);
+
+  useEffect(() => {
+    if (!open) return;
 
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
@@ -133,7 +151,7 @@ export function CustomSelect({
         aria-expanded={open}
         aria-controls={listId}
         aria-label={ariaLabel || label || placeholder}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={handleToggle}
         className={`theme-panel flex w-full items-center justify-between gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-xs font-semibold text-on-surface transition-all duration-200 hover:border-primary/70 ${
           open ? "border-primary ring-1 ring-primary/40" : ""
         }`}
@@ -171,6 +189,8 @@ export function CustomSelect({
                 type="button"
                 role="option"
                 aria-selected={isSelected}
+                data-option-index={idx}
+                data-highlighted={isHighlighted}
                 onMouseEnter={() => setHighlightedIndex(idx)}
                 onClick={() => handleSelect(opt.value)}
                 className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors ${
