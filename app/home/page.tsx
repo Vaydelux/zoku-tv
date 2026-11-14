@@ -588,7 +588,7 @@ export default function HomePage() {
                       {[1, 2, 3, 4, 5].map((cardIdx) => (
                         <div
                           key={cardIdx}
-                          className="w-[240px] sm:w-[276px] md:w-[308px] lg:w-[328px] aspect-video rounded-xl bg-surface border border-border-custom animate-pulse shrink-0"
+                          className="aspect-[2/3] w-[31vw] min-w-[112px] max-w-[210px] shrink-0 rounded-xl border border-border-custom bg-surface animate-pulse sm:w-[190px] lg:w-[200px]"
                         />
                       ))}
                     </div>
@@ -598,10 +598,10 @@ export default function HomePage() {
             ) : catalogMode === "anime" ? (
               <div className="space-y-2">
                 {(selectedRailFilter === "all" || selectedRailFilter === "trending") && (
-                  <AnimeRail title="Trending Anime" items={animeTrending} />
+                  <AnimeRail title="Trending now" items={animeTrending} showSortDropdown={false} />
                 )}
                 {(selectedRailFilter === "all" || selectedRailFilter === "popular") && (
-                  <AnimeRail title="Popular Anime" items={animePopular} />
+                  <AnimeRail title="Popular anime" items={animePopular} showSortDropdown={false} />
                 )}
                 {sortedAnimeGenreRails
                   .filter(
@@ -609,16 +609,16 @@ export default function HomePage() {
                       selectedRailFilter === "all" || selectedRailFilter === `genre_${genre}`
                   )
                   .map(({ genre, items }) => (
-                    <AnimeRail key={genre} title={`${genre} Anime`} items={items} />
+                    <AnimeRail key={genre} title={`${genre} anime`} items={items} showSortDropdown={false} />
                   ))}
               </div>
             ) : (
               <div className="space-y-2">
                 {(selectedRailFilter === "all" || selectedRailFilter === "movies") && (
-                  <TitleRail title="Trending Movies" items={trendingMovies} mediaType="movie" />
+                  <TitleRail title="Trending now" items={trendingMovies} mediaType="movie" showSortDropdown={false} />
                 )}
                 {(selectedRailFilter === "all" || selectedRailFilter === "tv") && (
-                  <TitleRail title="Trending TV Shows" items={trendingTV} mediaType="tv" />
+                  <TitleRail title="Trending series" items={trendingTV} mediaType="tv" showSortDropdown={false} />
                 )}
                 {loadingGenreRails ? (
                   <div className="h-32 bg-surface animate-pulse mx-4 rounded-xl" />
@@ -632,7 +632,8 @@ export default function HomePage() {
                     .map(({ genre, titles }) => (
                       <TitleRail
                         key={genre.id}
-                        title={`${genre.name} Masterpieces`}
+                        title={genre.name}
+                         showSortDropdown={false}
                         items={titles}
                         genreId={genre.id}
                       />
