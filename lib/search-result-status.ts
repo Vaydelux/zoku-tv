@@ -1,18 +1,17 @@
-/** Search combines TMDB's filtered list (which exposes no pageInfo in our
- * existing public client) and AniList's explicit pageInfo. Stop offering
- * requests once both catalogs have no more visible results, and bound page
- * counts so an empty or repetitive provider cannot create unbounded traffic.
+/** Only offer another page when at least one catalog's authoritative
+ * pagination metadata says another page exists. Policy filtering can hide
+ * items within a page; visible result count cannot indicate exhaustion.
  */
 export function shouldOfferMoreSearchResults({
   page,
-  tmdbResultCount,
+  tmdbHasNextPage,
   animeHasNextPage,
 }: {
   page: number;
-  tmdbResultCount: number;
+  tmdbHasNextPage: boolean;
   animeHasNextPage: boolean;
 }): boolean {
-  return page >= 1 && page < 100 && (tmdbResultCount > 0 || animeHasNextPage);
+  return page >= 1 && page < 100 && (tmdbHasNextPage || animeHasNextPage);
 }
 
 export function getSearchPageResultStatus({
