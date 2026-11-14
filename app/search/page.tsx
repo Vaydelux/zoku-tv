@@ -27,6 +27,7 @@ import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropd
 import { shouldOfferMoreSearchResults, getSearchPageResultStatus, matchesSearchMediaTab, type SearchMediaTab } from "@/lib/search-result-status";
 import { SEARCH_MEDIA_GENRES, matchesSearchGenre, type SearchGenreLabel } from "@/lib/search-media-genre";
 import { LEGACY_SEARCH_SESSION_KEY, searchQueryStorageKey, searchViewScopeKey, sanitizeSavedSearchQuery, type SavedSearchQuery } from "@/lib/search-session-scope";
+import { sortSearchEntries, type SearchSortMode } from "@/lib/search-result-sort";
 
 type SearchFilterTab = SearchMediaTab;
 
@@ -111,6 +112,7 @@ function SearchPageContent() {
   const [results, setResults] = useState<TMDBTitle[]>([]);
   const [animeResults, setAnimeResults] = useState<AniListMedia[]>([]);
   const [selectedGenre, setSelectedGenre] = useState<SearchGenreLabel>("All genres");
+  const [sortMode, setSortMode] = useState<SearchSortMode>("relevance");
   const [activeFilter, setActiveFilter] = useState<SearchFilterTab>("all");
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -369,6 +371,10 @@ function SearchPageContent() {
     return list;
   }, [genreFilteredTmdb, genreFilteredAnime]);
 
+  const sortedCombinedItems = useMemo(() => sortSearchEntries(combinedItems, sortMode), [combinedItems, sortMode]);
+  const sortedTmdbByType = useMemo(() => sortSearchEntries(filteredTmdbByType.map((data) => ({ kind: data.media_type === "tv" ? "tv" as const : "movie" as const, data })), sortMode).map((entry) => entry.data), [filteredTmdbByType, sortMode]);
+  const sortedAnime = useMemo(() => sortSearchEntries(genreFilteredAnime.map((data) => ({ kind: "anime" as const, data })), sortMode).map((entry) => entry.data), [genreFilteredAnime, sortMode]);
+
   const totalResultsCount = results.length + animeResults.length;
   const queryParam = activeQuery;
 
@@ -523,10 +529,22 @@ function SearchPageContent() {
                   “{queryParam}”
                 </span>
               </p>
-              <p className="text-xs text-on-surface-variant">
-                Showing {visibleResultCount} results ({results.length} Movies/TV ·{" "}
-                {animeResults.length} Anime)
-              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-xs text-on-surface-variant">
+                  Showing {visibleResultCount} results
+                </p>
+                <label htmlFor="zoku-search-sort" className="sr-only">Sort search results</label>
+                <select
+                  id="zoku-search-sort"
+                  value={sortMode}
+                  onChange={(event) => setSortMode(event.target.value as SearchSortMode)}
+                  className="min-h-11 rounded-lg border border-border-custom bg-surface px-3 py-2 text-xs font-medium text-on-surface outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                >
+                  <option value="relevance">Relevance</option>
+                  <option value="rating">Top rated</option>
+                  <option value="newest">Newest</option>
+                </select>
+              </div>
             </div>
 
             <div role="group" aria-label="Filter search results" className="zoku-media-tabs flex flex-wrap items-center gap-2 pb-2">
@@ -600,7 +618,7 @@ function SearchPageContent() {
               <div className="space-y-8">
                 {activeFilter === "all" && (
                   <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                    {combinedItems.map((item, idx) => (
+                    {sortedCombinedItems.map((item, idx) => (
                       <div
                         key={
                           item.kind === "anime"
@@ -623,7 +641,7 @@ function SearchPageContent() {
                 {(activeFilter === "movie" || activeFilter === "tv") &&
                   (filteredTmdbByType.length > 0 ? (
                     <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                      {filteredTmdbByType.map((title) => (
+                      {sortedTmdbByType.map((title) => (
                         <div
                           key={title.id}
                           onClickCapture={handlePosterResultClick}
@@ -645,7 +663,7 @@ function SearchPageContent() {
                 {activeFilter === "anime" &&
                   (genreFilteredAnime.length > 0 ? (
                     <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                      {genreFilteredAnime.map((anime) => (
+                      {sortedAnime.map((anime) => (
                         <div
                           key={anime.id}
                           onClickCapture={handlePosterResultClick}
