@@ -7,14 +7,19 @@ import {
 } from "./search-result-status";
 
 test("pagination stops after both protected providers are exhausted", () => {
-  assert.equal(shouldOfferMoreSearchResults({ page: 1, tmdbResultCount: 0, animeHasNextPage: false }), false);
-  assert.equal(shouldOfferMoreSearchResults({ page: 3, tmdbResultCount: 0, animeHasNextPage: true }), true);
-  assert.equal(shouldOfferMoreSearchResults({ page: 3, tmdbResultCount: 8, animeHasNextPage: false }), true);
+  assert.equal(shouldOfferMoreSearchResults({ page: 1, tmdbHasNextPage: false, animeHasNextPage: false }), false);
+  assert.equal(shouldOfferMoreSearchResults({ page: 3, tmdbHasNextPage: false, animeHasNextPage: true }), true);
+  assert.equal(shouldOfferMoreSearchResults({ page: 3, tmdbHasNextPage: true, animeHasNextPage: false }), true);
+});
+
+test("visible titles do not justify more pages after the provider reports exhaustion", () => {
+  assert.equal(shouldOfferMoreSearchResults({ page: 1, tmdbHasNextPage: false, animeHasNextPage: false }), false);
+  assert.equal(shouldOfferMoreSearchResults({ page: 1, tmdbHasNextPage: true, animeHasNextPage: false }), true);
 });
 
 test("load-more guard caps excessive requests", () => {
-  assert.equal(shouldOfferMoreSearchResults({ page: 100, tmdbResultCount: 20, animeHasNextPage: true }), false);
-  assert.equal(shouldOfferMoreSearchResults({ page: 0, tmdbResultCount: 20, animeHasNextPage: true }), false);
+  assert.equal(shouldOfferMoreSearchResults({ page: 100, tmdbHasNextPage: true, animeHasNextPage: true }), false);
+  assert.equal(shouldOfferMoreSearchResults({ page: 0, tmdbHasNextPage: true, animeHasNextPage: true }), false);
 });
 
 test("search reports errors when providers fail rather than silently showing stale titles", () => {
