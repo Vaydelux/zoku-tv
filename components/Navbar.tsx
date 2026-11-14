@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { 
   Search, 
+  Play,
+  Sun,
+  Moon,
   Tv, 
   LogOut, 
   Settings, 
@@ -23,13 +26,14 @@ import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
 import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 import { usePerfMode } from "@/hooks/usePerfMode";
+import { normalizeAppearance } from "@/lib/themes";
 import { ZOKU_NAV_ITEMS, activeZokuNavHref } from "@/lib/design-navigation";
 import { MobileTabBar } from "@/components/MobileTabBar";
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, profiles, currentProfile, setProfile } = useSessionStore();
+  const { user, profiles, currentProfile, setProfile, updateProfile } = useSessionStore();
   const { activeFilter, filterOptions, setActiveFilter } = useRailFilterStore();
   const { addQuery } = useSearchHistoryStore();
   const { is60FpsActive, togglePerfMode, isAutoDetectedTvOr32Bit } = usePerfMode();
@@ -131,6 +135,11 @@ export function Navbar() {
 
   const catalogMode = currentProfile?.catalogMode ?? "tmdb";
   const catalogLabel = catalogMode === "anime" ? "Anime" : "Movies & TV";
+  const appearance = normalizeAppearance(currentProfile?.appearancePreference);
+  const toggleAppearance = () => {
+    if (!currentProfile) return;
+    void updateProfile(currentProfile.id, { appearancePreference: appearance === "dark" ? "light" : "dark" });
+  };
   const networkStatus = getNavbarNetworkStatus(isOnline);
 
   return (
@@ -143,9 +152,11 @@ export function Navbar() {
           
           {/* Logo & Main Nav */}
           <div className="flex min-w-0 items-center gap-4 lg:gap-8">
-            <Link href="/home" className="flex shrink-0 flex-col gap-0.5 text-on-surface focus:outline-none">
+            <Link href="/home" className="zoku-brand-lockup flex shrink-0 flex-col gap-0.5 text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
               <span className="flex items-center gap-1.5 sm:gap-2">
-                <Tv className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+                {cinematicLayout ? (
+                  <span className="zoku-brand-mark flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast"><Play className="h-4 w-4 fill-current" aria-hidden="true" /></span>
+                ) : <Tv className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />}
                 <span className="font-display text-lg sm:text-xl font-bold tracking-wider text-on-surface">
                   ZOKU<span className="text-primary font-mono text-xs sm:text-sm ml-0.5">TV</span>
                 </span>
@@ -178,7 +189,7 @@ export function Navbar() {
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             
             {/* Subtle Connectivity Status Indicator */}
-            <div className={`relative ${isStatusPopoverOpen ? "z-50" : "z-20"}`} ref={statusRef}>
+            <div className={`zoku-status-control relative ${isStatusPopoverOpen ? "z-50" : "z-20"}`} ref={statusRef}>
               <button
                 type="button"
                 role="status"
@@ -250,7 +261,7 @@ export function Navbar() {
                   ? `60fps Butter Mode Active${isAutoDetectedTvOr32Bit ? " (TV/32-bit Auto-Detected)" : ""} — Click to toggle`
                   : "Enable 60fps Butter Mode (GPU-composited transitions & 32-bit TV optimization)"
               }
-              className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 sm:px-2.5 font-mono text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider transition-[transform,border-color,background-color,color] duration-150 active:scale-95 ${
+              className={`zoku-perf-control inline-flex items-center gap-1 rounded-lg border px-2 py-1 sm:px-2.5 font-mono text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider transition-[transform,border-color,background-color,color] duration-150 active:scale-95 ${
                 is60FpsActive
                   ? "border-primary/60 bg-primary/15 text-primary shadow-sm"
                   : "border-border-custom bg-surface/80 text-on-surface-variant hover:border-primary/45 hover:text-on-surface"
@@ -265,6 +276,11 @@ export function Navbar() {
             </button>
 
             {/* Search Bar with Voice Input & Real-time Autocomplete */}
+            {cinematicLayout ? (
+              <Link href="/search" aria-label="Search titles" data-tv-focusable="true" className="zoku-header-icon inline-flex h-10 w-10 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-hover hover:text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+                <Search className="h-[19px] w-[19px]" aria-hidden="true" />
+              </Link>
+            ) : (
             <form onSubmit={handleSearchSubmit} className={`relative hidden sm:block ${showNavAutocomplete ? "z-50" : "z-20"}`}>
               <input
                 type="text"
@@ -327,9 +343,19 @@ export function Navbar() {
                 }}
               />
             </form>
+            )}
+
+            {cinematicLayout && (
+              <button type="button" onClick={toggleAppearance}
+                aria-label={appearance === "dark" ? "Use light appearance" : "Use dark appearance"}
+                title={appearance === "dark" ? "Use light appearance" : "Use dark appearance"}
+                className="zoku-header-icon inline-flex h-10 w-10 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-hover hover:text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+                {appearance === "dark" ? <Sun className="h-[19px] w-[19px]" /> : <Moon className="h-[19px] w-[19px]" />}
+              </button>
+            )}
 
             {/* Mobile Voice & Search Buttons */}
-            <div className="flex items-center gap-1 sm:hidden">
+            <div className={`items-center gap-1 sm:hidden ${cinematicLayout ? "hidden" : "flex"}`}>
               <VoiceSearchButton
                 size="sm"
                 className="rounded-xl border border-border-custom bg-surface/75"
@@ -351,7 +377,7 @@ export function Navbar() {
 
             {/* Profile Menu Dropdown */}
             {currentProfile && (
-              <div className={`relative ${isDropdownOpen ? "z-50" : "z-20"}`} ref={dropdownRef}>
+              <div className={`zoku-profile-control relative ${isDropdownOpen ? "z-50" : "z-20"}`} ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="theme-panel flex items-center gap-2 rounded-full p-1 pr-2.5 hover:border-primary/60 transition-all duration-300"
@@ -405,6 +431,15 @@ export function Navbar() {
                       </div>
                     )}
 
+                    {cinematicLayout && (
+                      <div className="flex flex-col gap-1 border-b border-border-custom px-2 py-2">
+                        <p className="px-1 text-xs text-on-surface-variant">Network: {networkStatus.label}</p>
+                        <button type="button" onClick={togglePerfMode} aria-pressed={is60FpsActive}
+                          className="flex min-h-10 items-center gap-2 rounded-lg px-2 text-xs text-on-surface hover:bg-surface-hover">
+                          <Zap className="h-4 w-4 text-primary" /> TV performance: {is60FpsActive ? "60 FPS" : "Standard"}
+                        </button>
+                      </div>
+                    )}
                     {/* Action Links */}
                     <div className="py-1.5 space-y-0.5">
                       <Link
