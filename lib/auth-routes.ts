@@ -29,10 +29,22 @@ export function requiresProfile(pathname: string): boolean {
 }
 
 export function sanitizeNextPath(next: string | null | undefined): string | null {
-  if (!next) return null;
-  if (!next.startsWith("/") || next.startsWith("//")) return null;
-  if (isPublicRoute(next.split("?")[0] ?? next)) return null;
-  return next;
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return null;
+  // Browsers normalize backslashes as slashes in special-scheme URLs; a
+  // relative path starting "/\\evil.example" can become an external origin.
+  // Refuse encoded or literal backslashes, controls and encoded initial slashes
+  // before passing next to the Next.js client router.
+  if (/[\\\\\u0000-\u001F\u007F]/.test(next) || /%5c/i.test(next) ||
+      /^\/(?:%2f|%5c)/i.test(next)) return null;
+  try {
+    const base = "https://zoku.internal.invalid";
+    const target = new URL(next, base);
+    if (target.origin !== base || target.username || target.password) return null;
+    if (isPublicRoute(target.pathname)) return null;
+    return next;
+  } catch {
+    return null;
+  }
 }
 
 export function resolvePostLoginPath(

@@ -15,7 +15,7 @@ import {
 import { useSessionStore, useSearchHistoryStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { TitleCard } from "@/components/TitleCard";
-import { searchMulti, TMDBTitle } from "@/lib/tmdb";
+import { searchMultiPage, TMDBTitle } from "@/lib/tmdb";
 import { searchAnime, type AniListMedia } from "@/lib/anilist";
 import {
   filterTmdbForKidsMode,
@@ -217,7 +217,7 @@ function SearchPageContent() {
       }
       try {
         const [tmdbPromise, animePromise] = await Promise.allSettled([
-          searchMulti(trimmed, page),
+          searchMultiPage(trimmed, page),
           searchAnime(trimmed, page, 18),
         ]);
 
@@ -229,7 +229,7 @@ function SearchPageContent() {
         }));
         setHasMore(shouldOfferMoreSearchResults({
           page,
-          tmdbResultCount: tmdbPromise.status === "fulfilled" ? tmdbPromise.value.length : 0,
+          tmdbHasNextPage: tmdbPromise.status === "fulfilled" && tmdbPromise.value.hasNextPage,
           animeHasNextPage: animePromise.status === "fulfilled" && Boolean(animePromise.value.pageInfo?.hasNextPage),
         }));
 
@@ -237,7 +237,7 @@ function SearchPageContent() {
         let nextAnimeResults: AniListMedia[] = [];
 
         if (tmdbPromise.status === "fulfilled") {
-          const filtered = filterTmdbForKidsMode(tmdbPromise.value, isKidMode);
+          const filtered = filterTmdbForKidsMode(tmdbPromise.value.results, isKidMode);
 
           if (page === 1) {
             nextTmdbResults = filtered;
