@@ -415,7 +415,7 @@ function SearchPageContent() {
                   setShowAutocomplete(true);
                 }
               }}
-              className="glass-panel w-full rounded-2xl py-3.5 pl-5 pr-28 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
+              className="glass-panel w-full rounded-2xl py-3.5 pl-5 pr-36 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
               {inputValue && (
@@ -423,7 +423,7 @@ function SearchPageContent() {
                   type="button"
                   onClick={handleClearSearch}
                   data-testid="search-clear-btn"
-                  className="p-1.5 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface transition-colors"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface transition-colors"
                   title="Clear search"
                   aria-label="Clear search"
                 >
@@ -444,7 +444,8 @@ function SearchPageContent() {
               />
               <button
                 type="submit"
-                className="p-1.5 rounded-xl bg-primary text-primary-contrast hover:bg-opacity-95 transition-all"
+                className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-contrast hover:bg-opacity-95 transition-all"
+                 aria-label="Search titles"
                 title="Search"
               >
                 <Search className="h-4 w-4" />
@@ -609,11 +610,13 @@ function SearchPageContent() {
               <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
                 <Film className="h-12 w-12 text-on-surface-variant" />
                 <div className="space-y-1">
-                  <p className="font-semibold text-sm">No matching titles found.</p>
+                  <p className="font-semibold text-sm">{searchStatus === "unavailable" ? "Search is temporarily unavailable." : "No matching titles found."}</p>
                   <p className="text-xs text-on-surface-variant max-w-xs">
-                    {isKidMode
-                      ? "No Kids Mode family-safe titles matched your query."
-                      : "Try a different title, genre, or keyword."}
+                    {searchStatus === "unavailable"
+                       ? "Please retry once the catalogs are available."
+                       : isKidMode
+                         ? "No Kids Mode family-safe titles matched your query."
+                         : "Try a different title, genre, or keyword."}
                   </p>
                 </div>
               </div>
