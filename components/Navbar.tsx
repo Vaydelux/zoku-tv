@@ -166,7 +166,7 @@ export function Navbar() {
               </span>
             </Link>
 
-            <div className={cinematicLayout ? "zoku-primary-nav hidden md:flex items-center gap-1" : "zoku-primary-nav hidden md:flex items-center gap-6"} role="navigation" aria-label="Primary navigation">
+            <div className={cinematicLayout ? "zoku-primary-nav hidden lg:flex items-center gap-1" : "zoku-primary-nav hidden md:flex items-center gap-6"} role="navigation" aria-label="Primary navigation">
               {navLinks.map((link) => {
                 const isActive = cinematicLayout ? activeNav === link.href : pathname === link.href;
                 return (
