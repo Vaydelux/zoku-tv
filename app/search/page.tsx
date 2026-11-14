@@ -26,6 +26,7 @@ import { AnimeCard } from "@/components/anime/AnimeCard";
 import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
 import { shouldOfferMoreSearchResults, getSearchPageResultStatus } from "@/lib/search-result-status";
+import { SEARCH_MEDIA_GENRES, matchesSearchGenre, type SearchGenreLabel } from "@/lib/search-media-genre";
 
 type SearchFilterTab = "all" | "movies_tv" | "anime";
 
@@ -116,6 +117,7 @@ function SearchPageContent() {
   const [animeResults, setAnimeResults] = useState<AniListMedia[]>(() =>
     hasMatchingSavedResults && savedInitial ? savedInitial.animeResults : []
   );
+  const [selectedGenre, setSelectedGenre] = useState<SearchGenreLabel>("All genres");
   const [activeFilter, setActiveFilter] = useState<SearchFilterTab>(() =>
     hasMatchingSavedResults && savedInitial ? savedInitial.activeFilter : "all"
   );
@@ -128,6 +130,10 @@ function SearchPageContent() {
   );
 
   const activeQuery = urlQueryParam || inputValue.trim();
+
+  useEffect(() => {
+    setSelectedGenre("All genres");
+  }, [urlQueryParam, currentProfile?.id]);
 
   // Automatically focus the search input on mount / back navigation
   useEffect(() => {
@@ -354,20 +360,28 @@ function SearchPageContent() {
     }
   };
 
+  const genreFilteredTmdb = useMemo(() => results.filter((title) => matchesSearchGenre({ kind: title.media_type === "tv" ? "tv" : "movie", data: title }, selectedGenre)), [results, selectedGenre]);
+  const genreFilteredAnime = useMemo(() => animeResults.filter((anime) => matchesSearchGenre({ kind: "anime", data: anime }, selectedGenre)), [animeResults, selectedGenre]);
+  const availableGenres = useMemo(() => SEARCH_MEDIA_GENRES.filter(({ label }) =>
+    results.some((title) => matchesSearchGenre({ kind: title.media_type === "tv" ? "tv" : "movie", data: title }, label)) ||
+    animeResults.some((anime) => matchesSearchGenre({ kind: "anime", data: anime }, label))
+  ), [results, animeResults]);
+  const visibleResultCount = genreFilteredTmdb.length + genreFilteredAnime.length;
+
   const combinedItems: CombinedSearchResult[] = useMemo(() => {
     const list: CombinedSearchResult[] = [];
-    const maxLen = Math.max(results.length, animeResults.length);
+    const maxLen = Math.max(genreFilteredTmdb.length, genreFilteredAnime.length);
     for (let i = 0; i < maxLen; i++) {
-      if (i < results.length) {
-        const item = results[i];
+      if (i < genreFilteredTmdb.length) {
+        const item = genreFilteredTmdb[i];
         list.push({ kind: (item.media_type as "movie" | "tv") || "movie", data: item });
       }
-      if (i < animeResults.length) {
-        list.push({ kind: "anime", data: animeResults[i] });
+      if (i < genreFilteredAnime.length) {
+        list.push({ kind: "anime", data: genreFilteredAnime[i] });
       }
     }
     return list;
-  }, [results, animeResults]);
+  }, [genreFilteredTmdb, genreFilteredAnime]);
 
   const totalResultsCount = results.length + animeResults.length;
   const queryParam = activeQuery;
@@ -589,6 +603,24 @@ function SearchPageContent() {
               </button>
             </div>
 
+            {availableGenres.length > 0 && !loading && (
+              <div
+                role="group"
+                aria-label="Filter search results by genre"
+                className="zoku-search-genres custom-scrollbar flex items-center gap-2 overflow-x-auto pb-2"
+              >
+                {(["All genres", ...availableGenres.map((entry) => entry.label)] as SearchGenreLabel[]).map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    aria-pressed={selectedGenre === label}
+                    onClick={() => setSelectedGenre(label)}
+                    className={`min-h-10 shrink-0 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${selectedGenre === label ? "border-primary bg-primary text-primary-contrast" : "border-border-custom bg-surface/70 text-on-surface-variant hover:border-primary/50 hover:text-on-surface"}`}
+                  >{label}</button>
+                ))}
+              </div>
+            )}
+
             {searchStatus !== "ok" && !loading && (
               <p role="status" className="rounded-xl border border-border-custom bg-surface px-4 py-3 text-sm text-on-surface-variant">
                 {searchStatus === "unavailable"
@@ -606,7 +638,7 @@ function SearchPageContent() {
                   />
                 ))}
               </div>
-            ) : totalResultsCount === 0 ? (
+            ) : visibleResultCount === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
                 <Film className="h-12 w-12 text-on-surface-variant" />
                 <div className="space-y-1">
@@ -645,9 +677,9 @@ function SearchPageContent() {
                 )}
 
                 {activeFilter === "movies_tv" &&
-                  (results.length > 0 ? (
+                  (genreFilteredTmdb.length > 0 ? (
                     <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                      {results.map((title) => (
+                      {genreFilteredTmdb.map((title) => (
                         <div
                           key={title.id}
                           onClickCapture={handlePosterResultClick}
@@ -667,9 +699,9 @@ function SearchPageContent() {
                   ))}
 
                 {activeFilter === "anime" &&
-                  (animeResults.length > 0 ? (
+                  (genreFilteredAnime.length > 0 ? (
                     <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                      {animeResults.map((anime) => (
+                      {genreFilteredAnime.map((anime) => (
                         <div
                           key={anime.id}
                           onClickCapture={handlePosterResultClick}
