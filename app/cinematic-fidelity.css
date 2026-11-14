@@ -116,7 +116,7 @@ html[data-zoku-layout="cinematic"] .rail-section .rail-card-slot:hover {
 
 /* Small header-aligned rail controls instead of large overlay arrows over art. */
 @media (min-width: 768px) {
-  html[data-zoku-layout="cinematic"] .rail-section .rail-nav-btn {
+  html[data-zoku-layout="cinematic"] .zoku-home-rails .rail-section:not([aria-label="Watch History"]) .rail-nav-btn {
     top: -48px;
     right: var(--cinematic-gutter);
     left: auto;
@@ -129,18 +129,24 @@ html[data-zoku-layout="cinematic"] .rail-section .rail-card-slot:hover {
     opacity: 1;
     transform: none !important;
   }
-  html[data-zoku-layout="cinematic"] .rail-section .rail-nav-btn[data-testid="rail-nav-left"] {
+  html[data-zoku-layout="cinematic"] .zoku-home-rails .rail-section:not([aria-label="Watch History"]) .rail-nav-btn[data-testid="rail-nav-left"] {
     right: calc(var(--cinematic-gutter) + 42px);
   }
-  html[data-zoku-layout="cinematic"] .rail-section .rail-nav-btn:hover,
-  html[data-zoku-layout="cinematic"] .rail-section .rail-nav-btn:focus-visible {
+  html[data-zoku-layout="cinematic"] .zoku-home-rails .rail-section:not([aria-label="Watch History"]) .rail-nav-btn:hover,
+  html[data-zoku-layout="cinematic"] .zoku-home-rails .rail-section:not([aria-label="Watch History"]) .rail-nav-btn:focus-visible {
     transform: none !important;
     box-shadow: none;
   }
-  html[data-zoku-layout="cinematic"] .rail-section .rail-nav-btn svg {
+  html[data-zoku-layout="cinematic"] .zoku-home-rails .rail-section:not([aria-label="Watch History"]) .rail-nav-btn svg {
     height: 16px;
     width: 16px;
     transform: none;
+  }
+}
+
+@media (min-width: 768px) {
+  html[data-zoku-layout="cinematic"] .zoku-continue-rail .zoku-continue-manage {
+    margin-right: 92px;
   }
 }
 
@@ -256,7 +262,7 @@ html[data-zoku-layout="cinematic"] .cinematic-poster-action {
     max-height: min(68dvh, 620px);
     overflow-y: auto;
   }
-  html[data-zoku-layout="cinematic"] .rail-section .rail-nav-btn {
+  html[data-zoku-layout="cinematic"] .zoku-home-rails .rail-section:not([aria-label="Watch History"]) .rail-nav-btn {
     display: none;
   }
   html[data-zoku-layout="cinematic"] .rail-section > div:first-child {
