@@ -359,7 +359,7 @@ html[data-zoku-layout="cinematic"] .zoku-cinematic-settings .glass-panel {
   box-shadow: none;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   html[data-zoku-layout="cinematic"] .zoku-has-mobile-nav {
     padding-bottom: calc(72px + env(safe-area-inset-bottom));
   }
