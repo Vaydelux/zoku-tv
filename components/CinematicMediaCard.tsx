@@ -89,15 +89,22 @@ export function CinematicMediaCard({
           <span className="sr-only">Open {title} details</span>
         </button>
 
-        <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5">
-          {onPlay && (
-            <button type="button" onClick={onPlay}
+        {/* The reference keeps its primary Play affordance centered over
+            the artwork, with the bookmark as a separate top-right action. */}
+        {onPlay && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+            <button
+              type="button"
+              onClick={onPlay}
               aria-label={`Play ${title}`}
               data-tv-focusable="true"
-              className="cinematic-poster-action flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-contrast shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-              <Play className="h-4 w-4 fill-current" aria-hidden="true" />
+              className="cinematic-poster-action pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-contrast shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <Play className="h-5 w-5 fill-current" aria-hidden="true" />
             </button>
-          )}
+          </div>
+        )}
+        <div className="absolute right-2 top-2 z-20">
           <button
             type="button"
             data-tv-focusable="true"
@@ -123,9 +130,9 @@ export function CinematicMediaCard({
           </button>
         </div>
 
-        <div className="pointer-events-none absolute inset-x-2 bottom-2 z-20 flex items-center gap-1 text-xs font-semibold text-white drop-shadow-sm">
-          {watched ? <span className="rounded bg-black/75 px-2 py-1">Watched</span>
-          : progress !== null && progress > 0 ? <span className="rounded bg-black/75 px-2 py-1">Resume · {progress}%</span>
+        <div className="pointer-events-none absolute bottom-2 left-2 right-14 z-20 flex min-w-0 items-center gap-1 text-xs font-semibold text-white drop-shadow-sm">
+          {watched ? <span className="max-w-full truncate rounded bg-black/75 px-2 py-1">Watched</span>
+          : progress !== null && progress > 0 ? <span className="max-w-full truncate rounded bg-black/75 px-2 py-1">Resume · {progress}%</span>
           : null}
         </div>
 
