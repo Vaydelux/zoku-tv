@@ -198,14 +198,10 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
               transition={{ duration: reducedMotion ? 0 : 0.45, ease: "easeOut" }}
               className="hero-copy flex w-full max-w-3xl flex-col items-start gap-2.5 sm:gap-4"
             >
-              <div className="hero-meta-chip flex flex-wrap items-center gap-2 sm:gap-3 rounded-full px-3 py-1 text-[10px] sm:text-xs md:text-sm font-mono text-on-surface-variant tabular-nums">
-                <span className="text-primary font-bold uppercase">{heroMediaType}</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-border-custom" />
-                <span>{heroYear}</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-border-custom" />
-                <span className="flex items-center gap-1">
-                  <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                  <span className="text-on-surface font-semibold">{heroRating}</span>
+              <div className="hero-meta-chip flex flex-wrap items-center gap-2 text-[11px] text-on-surface-variant">
+                <span className="rounded-full border border-primary/40 bg-primary/15 px-2.5 py-0.5 font-bold text-primary">Featured</span>
+                <span className="rounded-full border border-border-custom/70 bg-surface/60 px-2.5 py-0.5 font-semibold text-on-surface">
+                  {heroMediaType === "tv" ? "Series" : "Movie"}
                 </span>
               </div>
 
@@ -215,6 +211,16 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
               >
                 {heroName}
               </h1>
+
+              <div className="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
+                <span className="flex items-center gap-1 font-semibold text-on-surface">
+                  <Star className="h-4 w-4 fill-primary text-primary" aria-hidden="true" />
+                  {heroRating}
+                </span>
+                {heroYear && <><span aria-hidden="true">·</span><span>{heroYear}</span></>}
+                <span aria-hidden="true">·</span>
+                <span>{heroMediaType === "tv" ? "TV Series" : "Movie"}</span>
+              </div>
 
               <p className="hero-overview text-xs sm:text-sm text-on-surface-variant max-w-2xl line-clamp-2 sm:line-clamp-3 md:line-clamp-4 leading-relaxed">
                 {current.overview}
@@ -226,7 +232,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
                   className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-primary py-2 px-4 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-primary-contrast active:scale-95 transition-all duration-300"
                 >
                   <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current shrink-0" />
-                  <span>{heroMediaType === "tv" ? "Play Show" : "Play Movie"}</span>
+                  <span>Play</span>
                 </button>
 
                 <button
@@ -234,7 +240,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
                   className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-surface hover:bg-surface-hover border border-border-custom py-2 px-4 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-on-surface hover:text-primary active:scale-95 transition-all duration-300"
                 >
                   <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                  <span>More Info</span>
+                  <span>More info</span>
                 </button>
 
                 <button
@@ -260,7 +266,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
                   title={isInHistoryCompleted ? "Completed in Watch History" : "Mark as Watched (Add to Watch History)"}
                 >
                   <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                  <span>{isInHistoryCompleted ? "Watched" : "Mark Watched"}</span>
+                  <span>{isInHistoryCompleted ? "Watched" : "Mark watched"}</span>
                 </button>
               </div>
             </motion.div>
