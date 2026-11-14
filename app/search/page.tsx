@@ -597,7 +597,7 @@ function SearchPageContent() {
             )}
 
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
                   <div
                     key={idx}
@@ -620,7 +620,7 @@ function SearchPageContent() {
             ) : (
               <div className="space-y-8">
                 {activeFilter === "all" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                  <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                     {combinedItems.map((item, idx) => (
                       <div
                         key={
@@ -643,7 +643,7 @@ function SearchPageContent() {
 
                 {activeFilter === "movies_tv" &&
                   (results.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                    <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                       {results.map((title) => (
                         <div
                           key={title.id}
@@ -665,7 +665,7 @@ function SearchPageContent() {
 
                 {activeFilter === "anime" &&
                   (animeResults.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                    <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                       {animeResults.map((anime) => (
                         <div
                           key={anime.id}
