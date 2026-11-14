@@ -245,6 +245,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
 
                 <button
                   onClick={handleWatchlistToggle}
+                  aria-pressed={isInWatchlist}
                   className={`p-2 sm:p-3 rounded-xl border transition-all duration-300 ${
                     isInWatchlist
                       ? "bg-primary/20 border-primary text-primary"
