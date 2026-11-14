@@ -429,7 +429,7 @@ function SearchPageContent() {
                   setShowAutocomplete(true);
                 }
               }}
-              className="glass-panel w-full rounded-2xl py-3.5 pl-5 pr-36 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
+              className="glass-panel w-full rounded-xl py-3.5 pl-4 pr-[10.5rem] text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-300 shadow-xl"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
               {inputValue && (
@@ -538,8 +538,8 @@ function SearchPageContent() {
         ) : (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-2">
-              <p className="text-xs font-mono uppercase tracking-wider text-on-surface-variant">
-                Search Results for{" "}
+              <p className="text-xs tracking-wide text-on-surface-variant">
+                Results for{" "}
                 <span className="text-primary font-bold lowercase font-sans">
                   “{queryParam}”
                 </span>
@@ -634,7 +634,7 @@ function SearchPageContent() {
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
                   <div
                     key={idx}
-                    className="aspect-video rounded-xl bg-surface border border-border-custom animate-pulse"
+                    className="aspect-[2/3] rounded-xl bg-surface border border-border-custom animate-pulse"
                   />
                 ))}
               </div>
