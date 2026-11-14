@@ -53,7 +53,7 @@ export function CinematicMediaCard({
 
   return (
     <article
-      className={`cinematic-poster-card group/card relative min-w-0 shrink-0 ${fullWidth ? "w-full" : "w-[146px] xs:w-[162px] sm:w-[174px] md:w-[188px] lg:w-[198px]"}`}
+      className={`cinematic-poster-card group/card relative min-w-0 shrink-0 ${fullWidth ? "w-full" : "w-[31vw] min-w-[112px] max-w-[210px] sm:w-[190px] lg:w-[200px]"}`}
       aria-label={title}
     >
       <div className="cinematic-poster-art relative aspect-[2/3] overflow-hidden rounded-xl bg-surface border border-border-custom">
