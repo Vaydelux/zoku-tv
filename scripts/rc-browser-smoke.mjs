@@ -256,6 +256,28 @@ async function runBrowserChecks() {
       });
     }
 
+    // Home genre preferences must be saved and survive a full page reload.
+    // The local demo uses the same session-store update path as Firebase mode.
+    await page.goto(new URL("/settings?section=genre-rails", base).href, { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading", { name: "Home Genre Channels Selection" }).waitFor();
+    await page.getByRole("button", { name: "Reset Default" }).click();
+    const selectionCounter = page.getByTestId("genre-selected-count");
+    await page.waitForFunction(() =>
+      document.querySelector('[data-testid="genre-selected-count"]')?.textContent?.includes("2 / 2")
+    );
+    const genreSave = page.getByTestId("save-genre-rails");
+    await genreSave.click();
+    await page.getByText("Preferred genre rails saved to your profile!").waitFor();
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await selectionCounter.waitFor({ timeout: 20_000 });
+    await page.waitForFunction(() =>
+      document.querySelector('[data-testid="genre-selected-count"]')?.textContent?.includes("2 / 2")
+    );
+    assert.match(await selectionCounter.innerText(), /2\s*\/\s*2/, "Genre choices should persist after reloading Settings");
+    assert.equal(await page.getByTestId("save-genre-rails").isDisabled(), true,
+      "Previously saved choices must not remain dirty after reload");
+    evidence.push({ check: "Home genre preference save, reload, and stable state", result: "pass" });
+
     // Verify actual same-origin preference and the UI's password-free switch.
     const toggle = page.getByTestId("adult-content-switch");
     await toggle.waitFor();
