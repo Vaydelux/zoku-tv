@@ -109,8 +109,6 @@ function SettingsPageContent() {
   const [localCatalogMode, setLocalCatalogMode] = useState<CatalogMode>("tmdb");
   const [saving, setSaving] = useState(false);
   const [adultFilterEnabled, setAdultFilterEnabledState] = useState(true);
-  const [adultFilterConfigured, setAdultFilterConfigured] = useState(false);
-  const [adultUnlockPassword, setAdultUnlockPassword] = useState("");
   const [adultFilterBusy, setAdultFilterBusy] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -127,35 +125,25 @@ function SettingsPageContent() {
     let active = true;
     fetch("/api/adult-content", { cache: "no-store" })
       .then((response) => response.json())
-      .then((state: { filterEnabled?: boolean; configured?: boolean }) => {
-        if (active) {
-          setAdultFilterEnabledState(state.filterEnabled !== false);
-          setAdultFilterConfigured(state.configured === true);
-        }
+      .then((state: { filterEnabled?: boolean }) => {
+        if (active) setAdultFilterEnabledState(state.filterEnabled !== false);
       }).catch(() => { if (active) setAdultFilterEnabledState(true); });
     return () => { active = false; };
   }, []);
 
   const handleAdultFilterToggle = async () => {
     if (adultFilterBusy) return;
-    if (adultFilterEnabled && !adultUnlockPassword) {
-      notifyError("Enter the configured password to show mature titles.");
-      return;
-    }
     setAdultFilterBusy(true);
     try {
       const response = await fetch("/api/adult-content", {
         method: adultFilterEnabled ? "POST" : "DELETE",
-        headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: adultFilterEnabled ? JSON.stringify({ password: adultUnlockPassword }) : undefined,
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Unable to update the filter");
       const next = result.filterEnabled !== false;
       setAdultFilterEnabledState(next);
       setAdultFilterEnabled(next);
-      setAdultUnlockPassword("");
       // Catalog and search session caches must not retain titles across preference changes.
       if (typeof window !== "undefined") {
         for (const storage of [sessionStorage, localStorage]) {
@@ -490,7 +478,7 @@ function SettingsPageContent() {
 
         <div className="zoku-settings-layout flex flex-col md:flex-row gap-8 items-start pt-2">
           {/* Structured Settings Navigation */}
-          <div className="zoku-settings-nav glass-panel w-full md:w-64 flex flex-col gap-1.5 shrink-0 rounded-2xl p-4">
+          <nav aria-label="Settings sections" className="zoku-settings-nav glass-panel w-full md:w-64 flex flex-col gap-1.5 shrink-0 rounded-2xl p-4">
             <p className="px-2 pb-1 text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
               Appearance & Browsing
             </p>
@@ -597,7 +585,7 @@ function SettingsPageContent() {
               <Gauge className="h-4 w-4" />
               <span>Performance Diagnostics</span>
             </button>
-          </div>
+          </nav>
 
           {/* Active Tab Panel */}
           <div className="zoku-settings-content glass-panel flex-1 w-full rounded-2xl p-6 sm:p-8 shadow-xl min-h-[420px]">
@@ -1046,34 +1034,28 @@ function SettingsPageContent() {
                       {adultFilterEnabled ? "OFF (FILTER ACTIVE)" : "ON (UNLOCKED)"}
                     </span>
                   </div>
-                  {adultFilterEnabled && (
-                    <div className="space-y-1">
-                      <label htmlFor="adult-filter-password" className="text-xs text-on-surface-variant">
-                        Password to disable filtering
-                      </label>
-                      <input
-                        id="adult-filter-password"
-                        type="password"
-                        autoComplete="off"
-                        value={adultUnlockPassword}
-                        onChange={(event) => setAdultUnlockPassword(event.target.value)}
-                        placeholder={adultFilterConfigured ? "Enter server password" : "Configure ADULT_CONTENT_PASSWORD first"}
-                        className="w-full rounded-xl border border-border-custom bg-background/60 px-3 py-2.5 text-sm text-on-surface outline-none focus:border-primary"
-                      />
-                    </div>
-                  )}
                   <button
                     type="button"
                     onClick={handleAdultFilterToggle}
-                    disabled={adultFilterBusy || (adultFilterEnabled && (!adultFilterConfigured || !adultUnlockPassword))}
+                    disabled={adultFilterBusy}
                     role="switch"
+                    aria-label="Adult Content"
                     aria-checked={!adultFilterEnabled}
-                    className="rounded-xl bg-primary text-primary-contrast px-4 py-2.5 text-xs font-bold disabled:opacity-40"
+                    data-testid="adult-content-switch"
+                    className="inline-flex min-h-11 items-center gap-3 rounded-full border border-border-custom bg-surface px-3 py-2 text-xs font-bold text-on-surface transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-wait disabled:opacity-50"
                   >
-                    {adultFilterBusy ? "Updating…" : adultFilterEnabled ? "Enable Adult Content" : "Disable Adult Content"}
+                    <span
+                      aria-hidden="true"
+                      className={`flex h-6 w-11 shrink-0 items-center rounded-full p-1 transition-colors ${adultFilterEnabled ? "bg-on-surface-variant/40" : "bg-primary"}`}
+                    >
+                      <span
+                        className={`h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${adultFilterEnabled ? "" : "translate-x-5"}`}
+                      />
+                    </span>
+                    <span>{adultFilterBusy ? "Updating…" : adultFilterEnabled ? "Turn Adult Content On" : "Turn Adult Content Off"}</span>
                   </button>
                   <p className="text-[11px] text-on-surface-variant">
-                    Adult content is OFF by default. Turning it ON requires the server password and lasts up to four hours in this browser.
+                    No password required. This browser remembers your preference for up to 30 days; filtering is ON by default in new browsers. Kids Mode is managed separately.
                   </p>
                 </div>
 
