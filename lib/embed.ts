@@ -44,10 +44,6 @@ const CINEZO_PLAYER_PARAMS: Record<string, string> = {
 
 const COMPATIBILITY_ONLY_SERVERS = new Set(["2embed", "superembed", "vidsrc", "vidup", "smashystream"]);
 
-// Self-hosted se_player.php URL — set NEXT_PUBLIC_SUPEREMBED_VIP_URL if hosted elsewhere
-const SUPEREMBED_VIP_PLAYER =
-  process.env.NEXT_PUBLIC_SUPEREMBED_VIP_URL ?? "/se_player.php";
-
 const EMBED_SERVER_INPUTS: EmbedServerInput[] = [
   {
     id: "111movies",
@@ -185,19 +181,6 @@ const EMBED_SERVER_INPUTS: EmbedServerInput[] = [
     docs: "https://www.superembed.stream/",
   },
   {
-    id: "superembed-vip",
-    name: "SuperEmbed VIP",
-    domains: ["getsuperembed.link"],
-    idTypes: ["tmdb", "imdb"],
-    movieTemplate: `${SUPEREMBED_VIP_PLAYER}?video_id={tmdbId}&tmdb=1`,
-    tvTemplate: `${SUPEREMBED_VIP_PLAYER}?video_id={tmdbId}&tmdb=1&s={season}&e={episode}`,
-    docs: "https://www.superembed.stream/",
-    sandboxPolicy: "allow-scripts allow-same-origin allow-forms allow-popups",
-    supportsSandbox: true,
-    allowsPopups: true,
-    isAdHeavy: true,
-  },
-  {
     id: "thisiscinema",
     name: "ThisIsCinema",
     domains: ["thisiscinema.pages.dev"],
@@ -282,20 +265,11 @@ const EMBED_SERVER_INPUTS: EmbedServerInput[] = [
   {
     id: "vidsrc",
     name: "VidSrc",
-    domains: ["vidsrc.to", "vidsrc.su", "vidsrc.vip", "vidsrc.rip", "www.vidsrc.wtf", "vidsrcme.ru", "vidsrc-me.ru", "vidsrc-me.su", "vsembed.ru"],
+    domains: ["vidsrc.to", "vidsrc.su", "vidsrc.rip", "www.vidsrc.wtf", "vidsrcme.ru", "vidsrc-me.ru", "vidsrc-me.su", "vsembed.ru"],
     idTypes: ["tmdb", "imdb"],
     movieTemplate: "https://vidsrc.to/embed/movie/{id}",
     tvTemplate: "https://vidsrc.to/embed/tv/{id}/{season}/{episode}",
     docs: "https://vidsrc.to/",
-  },
-  {
-    id: "vidsrc-xyz",
-    name: "VidSrc Pro",
-    domains: ["vidsrc.xyz", "vidsrc.me"],
-    idTypes: ["tmdb", "imdb"],
-    movieTemplate: "https://vidsrc.xyz/embed/movie/{tmdbId}",
-    tvTemplate: "https://vidsrc.xyz/embed/tv/{tmdbId}/{season}/{episode}",
-    isAdHeavy: true,
   },
   {
     id: "vidsrc-embed",
@@ -381,7 +355,7 @@ const EMBED_SERVER_INPUTS: EmbedServerInput[] = [
   {
     id: "embed-su",
     name: "Embed SU (High Quality)",
-    domains: ["embed.su"],
+    domains: ["embed.filmu.in"],
     idTypes: ["tmdb"],
     movieTemplate: "https://embed.filmu.in/movie/{tmdbId}",
     tvTemplate: "https://embed.filmu.in/tv/{tmdbId}/{season}/{episode}",
