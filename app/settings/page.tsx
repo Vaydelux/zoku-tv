@@ -948,7 +948,7 @@ function SettingsPageContent() {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-border-custom">
-                  <span className="text-[11px] font-mono text-on-surface-variant">
+                  <span data-testid="genre-selected-count" className="text-[11px] font-mono text-on-surface-variant">
                     Selected: <strong className="text-primary">{selectedGenreIds.length}</strong> / {availableGenres.length} Genres (No Limit)
                   </span>
                   <button
