@@ -14,6 +14,25 @@ import {
 } from "./anime-embed";
 
 describe("External Player Embed URLs & Server Catalog (Immutable Contract)", () => {
+  it("omits retired providers and exposes only valid HTTPS templates with declared hostnames", () => {
+    const ids = new Set(EMBED_SERVER_CATALOG.map(s => s.id));
+    assert.equal(ids.has("vidsrc-xyz"), false, "Unresolvable VidSrc Pro endpoint must remain retired");
+    assert.equal(ids.has("superembed-vip"), false, "Non-executable PHP player must remain retired");
+    for (const server of EMBED_SERVER_CATALOG) {
+      for (const template of [server.movieTemplate, server.tvTemplate]) {
+        const url = new URL(template);
+        assert.equal(url.protocol, "https:", server.id + " must use HTTPS");
+        assert.ok(server.domains.includes(url.hostname),
+          server.id + " must declare active template hostname " + url.hostname);
+      }
+    }
+    for (const server of ANIME_EMBED_SERVER_CATALOG) {
+      const url = new URL(server.template);
+      assert.equal(url.protocol, "https:");
+      assert.ok(server.domains.includes(url.hostname), "Anime host mismatch: " + server.id);
+    }
+  });
+
   it("groups TMDB movie/TV servers into new and default categories without losing servers", () => {
     const { newServers, defaultServers } = groupEmbedServers(EMBED_SERVER_CATALOG);
     assert.ok(newServers.length > 0);

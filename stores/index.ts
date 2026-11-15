@@ -23,6 +23,7 @@ import {
   normalizeAppearance,
 } from "@/lib/themes";
 import { canAddProfile, MAX_PROFILES } from "@/lib/profile-limits";
+import { EMBED_SERVER_CATALOG } from "@/lib/embed";
 import {
   COMPLETION_THRESHOLD_PERCENT,
   MAX_CONTINUE_WATCHING_ITEMS,
@@ -235,30 +236,39 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   updateProfile: async (profileId, updates) => {
-    const { user, currentProfile } = get();
-    if (!user) return;
+    const { user } = get();
+    if (!user) throw new Error("Sign in before saving profile preferences.");
     try {
+      const updatedAt = new Date().toISOString();
       const docRef = getDocRef(`users/${user.uid}/profiles`, profileId);
-      await setDocument(docRef, {
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      });
+      // Await the actual write rather than showing a false success if Firestore
+      // rejects it (permission, connectivity, invalid profile document).
+      await setDocument(docRef, { ...updates, updatedAt });
 
-      if (currentProfile && currentProfile.id === profileId) {
-        const updated = { ...currentProfile, ...updates };
-        set({ currentProfile: updated });
-        if (typeof window !== "undefined") {
-          localStorage.setItem(`zoku_active_profile_${user.uid}`, JSON.stringify(updated));
-          if (updates.themePreference !== undefined || updates.appearancePreference !== undefined) {
-            applyTheme(
-              updated.themePreference,
-              normalizeAppearance(updated.appearancePreference ?? DEFAULT_APPEARANCE)
-            );
-          }
+      const { profiles, currentProfile } = get();
+      const updatedProfiles = profiles.map((profile) =>
+        profile.id === profileId ? normalizeProfile({ ...profile, ...updates, updatedAt }) : profile
+      );
+      const updatedCurrent = currentProfile?.id === profileId
+        ? normalizeProfile({ ...currentProfile, ...updates, updatedAt })
+        : currentProfile;
+      set({ profiles: updatedProfiles, currentProfile: updatedCurrent });
+      writeProfilesCache(user.uid, updatedProfiles);
+
+      if (updatedCurrent && currentProfile?.id === profileId && typeof window !== "undefined") {
+        try {
+          localStorage.setItem(`zoku_active_profile_${user.uid}`, JSON.stringify(updatedCurrent));
+        } catch { /* Storage may be blocked; Firestore is the source of truth. */ }
+        if (updates.themePreference !== undefined || updates.appearancePreference !== undefined) {
+          applyTheme(
+            updatedCurrent.themePreference,
+            normalizeAppearance(updatedCurrent.appearancePreference ?? DEFAULT_APPEARANCE)
+          );
         }
       }
     } catch (e) {
       console.error("Failed to update profile", e);
+      throw e;
     }
   },
 
@@ -1371,9 +1381,10 @@ export const useEmbedStore = create<EmbedState>((set, get) => ({
   serverHealth: {},
 
   setServerId: (id) => {
-    set({ selectedServerId: id });
+    const nextId = EMBED_SERVER_CATALOG.some(server => server.id === id) ? id : "vidsrc";
+    set({ selectedServerId: nextId });
     if (typeof window !== "undefined") {
-      localStorage.setItem("zoku_selected_server_id", id);
+      try { localStorage.setItem("zoku_selected_server_id", nextId); } catch { /* private mode */ }
     }
   },
 
@@ -1385,7 +1396,8 @@ export const useEmbedStore = create<EmbedState>((set, get) => ({
     // Also sync back to profile preferences if a profile is active
     const session = useSessionStore.getState();
     if (session.user && session.currentProfile) {
-      session.updateProfile(session.currentProfile.id, { iframeModePreference: mode });
+      void session.updateProfile(session.currentProfile.id, { iframeModePreference: mode })
+        .catch((error) => console.error("Failed to save iframe preference", error));
     }
   },
 
@@ -1403,7 +1415,15 @@ export const useEmbedStore = create<EmbedState>((set, get) => ({
       const savedServer = localStorage.getItem("zoku_selected_server_id");
       const savedMode = localStorage.getItem("zoku_iframe_mode");
       const updates: Partial<EmbedState> = {};
-      if (savedServer) updates.selectedServerId = savedServer;
+      if (savedServer) {
+        if (EMBED_SERVER_CATALOG.some(server => server.id === savedServer)) {
+          updates.selectedServerId = savedServer;
+        } else {
+          // Retired domains must never remain selected after a catalog update.
+          updates.selectedServerId = "vidsrc";
+          localStorage.removeItem("zoku_selected_server_id");
+        }
+      }
       if (savedMode === "Strict" || savedMode === "Compatibility") {
         updates.iframeMode = savedMode;
       }
