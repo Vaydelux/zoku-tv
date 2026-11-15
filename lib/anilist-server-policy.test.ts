@@ -3,7 +3,6 @@ import test from "node:test";
 import { NextRequest } from "next/server";
 import { isRestrictedAniListMedia } from "./anilist-content-policy";
 import { POST } from "../app/api/anilist/route";
-import { createAdultUnlockCookie } from "./server/adult-session";
 
 const safe = (id: number) => ({ id, type: "ANIME", title: { english: `Anime ${id}` }, isAdult: false, genres: ["Comedy"], tags: [] });
 const hentai = { ...safe(80801), isAdult: true, genres: ["Hentai"] };
@@ -21,8 +20,6 @@ test("anime maturity policy catches explicit flags, genre, sexual tags and missi
 
 test("server filters adult anime from pages, studio results and previously saved IDs", async () => {
   const originalFetch = globalThis.fetch;
-  const password = process.env.ADULT_CONTENT_PASSWORD;
-  delete process.env.ADULT_CONTENT_PASSWORD;
   globalThis.fetch = (async (_input: unknown, options: RequestInit) => {
     const payload = JSON.parse(String(options.body || "{}")) as { query: string; variables?: { ids?: number[]; isAdult?: boolean } };
     if (payload.query.includes("media(id_in:")) {
@@ -55,15 +52,11 @@ test("server filters adult anime from pages, studio results and previously saved
     assert.equal(arbitrary.status, 404);
   } finally {
     globalThis.fetch = originalFetch;
-    if (password === undefined) delete process.env.ADULT_CONTENT_PASSWORD;
-    else process.env.ADULT_CONTENT_PASSWORD = password;
   }
 });
 
 test("server prevents restricted anime direct details and filters nested recommendations", async () => {
   const originalFetch = globalThis.fetch;
-  const password = process.env.ADULT_CONTENT_PASSWORD;
-  delete process.env.ADULT_CONTENT_PASSWORD;
   let calls = 0;
   globalThis.fetch = (async (_input: unknown, options: RequestInit) => {
     calls += 1;
@@ -93,15 +86,11 @@ test("server prevents restricted anime direct details and filters nested recomme
     assert.equal(calls, 2);
   } finally {
     globalThis.fetch = originalFetch;
-    if (password === undefined) delete process.env.ADULT_CONTENT_PASSWORD;
-    else process.env.ADULT_CONTENT_PASSWORD = password;
   }
 });
 
-test("signed adult unlock enables browse but a tampered cookie does not", async () => {
-  const oldPassword = process.env.ADULT_CONTENT_PASSWORD;
+test("adult preference opt-in enables browse while an invalid cookie retains filtering", async () => {
   const oldFetch = globalThis.fetch;
-  process.env.ADULT_CONTENT_PASSWORD = "super-secret-password-123";
   const seen: unknown[] = [];
   globalThis.fetch = (async (_input: unknown, options: RequestInit) => {
     const variables = JSON.parse(String(options.body || "{}")).variables;
@@ -114,7 +103,7 @@ test("signed adult unlock enables browse but a tampered cookie does not", async 
     body: JSON.stringify({ operation: "browse", variables: { page: 1 } }),
   });
   try {
-    const unlocked = await POST(request(createAdultUnlockCookie(process.env.ADULT_CONTENT_PASSWORD)));
+    const unlocked = await POST(request("on"));
     assert.equal(unlocked.status, 200);
     assert.deepEqual((await unlocked.json()).data.Page.media.map((item: { id: number }) => item.id), [80801, 100]);
     const tampered = await POST(request("invalid.cookie"));
@@ -124,7 +113,5 @@ test("signed adult unlock enables browse but a tampered cookie does not", async 
     assert.equal((seen[1] as Record<string, unknown>).isAdult, false);
   } finally {
     globalThis.fetch = oldFetch;
-    if (oldPassword === undefined) delete process.env.ADULT_CONTENT_PASSWORD;
-    else process.env.ADULT_CONTENT_PASSWORD = oldPassword;
   }
 });
