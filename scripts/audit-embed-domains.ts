@@ -100,6 +100,7 @@ async function worker() {
     results[index] = await checkHost(host, data);
   }
 }
+async function runAudit() {
 await Promise.all(Array.from({ length: Math.min(8, items.length) }, () => worker()));
 const stats: Record<string, number> = {};
 for (const row of results) stats[row.outcome] = (stats[row.outcome] || 0) + 1;
@@ -124,3 +125,5 @@ for (const item of results) {
   console.log(`AUDIT ${item.outcome.padEnd(22)} ${item.host.padEnd(31)} ${item.httpStatus ?? ""} ${item.ids.join(",")}`);
 }
 console.log("SUMMARY", JSON.stringify({ stats, mismatches, count: results.length }));
+}
+runAudit().catch(error => { console.error(error); process.exitCode = 1; });
