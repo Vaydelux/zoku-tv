@@ -235,30 +235,39 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   updateProfile: async (profileId, updates) => {
-    const { user, currentProfile } = get();
-    if (!user) return;
+    const { user } = get();
+    if (!user) throw new Error("Sign in before saving profile preferences.");
     try {
+      const updatedAt = new Date().toISOString();
       const docRef = getDocRef(`users/${user.uid}/profiles`, profileId);
-      await setDocument(docRef, {
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      });
+      // Await the actual write rather than showing a false success if Firestore
+      // rejects it (permission, connectivity, invalid profile document).
+      await setDocument(docRef, { ...updates, updatedAt });
 
-      if (currentProfile && currentProfile.id === profileId) {
-        const updated = { ...currentProfile, ...updates };
-        set({ currentProfile: updated });
-        if (typeof window !== "undefined") {
-          localStorage.setItem(`zoku_active_profile_${user.uid}`, JSON.stringify(updated));
-          if (updates.themePreference !== undefined || updates.appearancePreference !== undefined) {
-            applyTheme(
-              updated.themePreference,
-              normalizeAppearance(updated.appearancePreference ?? DEFAULT_APPEARANCE)
-            );
-          }
+      const { profiles, currentProfile } = get();
+      const updatedProfiles = profiles.map((profile) =>
+        profile.id === profileId ? normalizeProfile({ ...profile, ...updates, updatedAt }) : profile
+      );
+      const updatedCurrent = currentProfile?.id === profileId
+        ? normalizeProfile({ ...currentProfile, ...updates, updatedAt })
+        : currentProfile;
+      set({ profiles: updatedProfiles, currentProfile: updatedCurrent });
+      writeProfilesCache(user.uid, updatedProfiles);
+
+      if (updatedCurrent && currentProfile?.id === profileId && typeof window !== "undefined") {
+        try {
+          localStorage.setItem(`zoku_active_profile_${user.uid}`, JSON.stringify(updatedCurrent));
+        } catch { /* Storage may be blocked; Firestore is the source of truth. */ }
+        if (updates.themePreference !== undefined || updates.appearancePreference !== undefined) {
+          applyTheme(
+            updatedCurrent.themePreference,
+            normalizeAppearance(updatedCurrent.appearancePreference ?? DEFAULT_APPEARANCE)
+          );
         }
       }
     } catch (e) {
       console.error("Failed to update profile", e);
+      throw e;
     }
   },
 
