@@ -39,6 +39,43 @@ async function checkPolicyGuards() {
   assert.equal(body.filterEnabled, true, "Adult content must default to locked");
   evidence.push({ check: "default adult lock", result: "pass" });
 
+  const optInDenied = await fetch(new URL("/api/adult-content", base), {
+    method: "POST",
+    headers: { Origin: "https://attacker.invalid" },
+    signal: AbortSignal.timeout(10_000),
+  });
+  assert.equal(optInDenied.status, 403, "Cross-origin request must not alter adult setting");
+  const optedIn = await fetch(new URL("/api/adult-content", base), {
+    method: "POST",
+    headers: { Origin: base.origin },
+    signal: AbortSignal.timeout(10_000),
+  });
+  assert.equal(optedIn.status, 200, "Same-origin preference toggle must work without password");
+  assert.equal((await optedIn.json()).filterEnabled, false);
+  const cookieHeader = optedIn.headers.get("set-cookie") || "";
+  assert.match(cookieHeader, /zoku_adult_filter_unlock=on/, "Opt-in cookie must be set");
+  assert.match(cookieHeader.toLowerCase(), /httponly/, "Preference cookie should be HttpOnly");
+  assert.match(cookieHeader.toLowerCase(), /samesite=strict/, "Preference cookie should be same-site strict");
+  const optedState = await fetch(new URL("/api/adult-content", base), {
+    headers: { Cookie: "zoku_adult_filter_unlock=on" },
+    signal: AbortSignal.timeout(10_000),
+  });
+  assert.equal((await optedState.json()).filterEnabled, false, "Server must honor the opt-in cookie");
+  const oldCookie = await fetch(new URL("/api/adult-content", base), {
+    headers: { Cookie: "zoku_adult_filter_unlock=12345.abcdef" },
+    signal: AbortSignal.timeout(10_000),
+  });
+  assert.equal((await oldCookie.json()).filterEnabled, true, "Legacy cookie must fail closed");
+  const optedOut = await fetch(new URL("/api/adult-content", base), {
+    method: "DELETE",
+    headers: { Origin: base.origin, Cookie: "zoku_adult_filter_unlock=on" },
+    signal: AbortSignal.timeout(10_000),
+  });
+  assert.equal(optedOut.status, 200);
+  assert.equal((await optedOut.json()).filterEnabled, true);
+  assert.match(optedOut.headers.get("set-cookie") || "", /Max-Age=0/i, "Disabling must clear cookie");
+  evidence.push({ check: "adult preference opt-in, opt-out, same-origin and default locked", result: "pass" });
+
   await assertApi("/api/tmdb/person/1", {}, 404, "TMDB arbitrary operation blocked");
   await assertApi("/api/tmdb/discover/movie?page=501", {}, 400, "TMDB out-of-range pagination rejected");
   await assertApi("/api/anilist", {
@@ -76,10 +113,6 @@ const anime = {
 const pageInfo = { total: 1, currentPage: 1, lastPage: 1, hasNextPage: false };
 
 async function installIsolatedCatalog(context) {
-  await context.route("**/api/adult-content", (route) => route.fulfill({
-    status: 200, contentType: "application/json",
-    body: JSON.stringify({ filterEnabled: true, configured: false }),
-  }));
   await context.route("**/api/vivamax-ids", (route) => route.fulfill({
     status: 200, contentType: "application/json",
     body: JSON.stringify({ complete: true, refreshedAt: Date.now(), ids: [991111] }),
@@ -192,6 +225,55 @@ async function runBrowserChecks() {
       assert.ok(interactive > 0, "Home " + viewport.label + " has no visible TV-focusable controls");
       evidence.push({ check: "Home " + viewport.label + " focusable controls", result: "pass", count: interactive });
     }
+
+    // Regression: Settings nav must wrap into a proper grid without horizontal
+    // scrollbars or clipped tabs at mobile and desktop sizes.
+    await page.goto(new URL("/settings?section=profiles", base).href, { waitUntil: "domcontentloaded" });
+    await page.getByTestId("settings-adult-content-filter").waitFor({ timeout: 20_000 });
+    for (const viewport of [{ width: 390, height: 844 }, { width: 1150, height: 864 }]) {
+      await page.setViewportSize(viewport);
+      await page.evaluate(() => document.documentElement.setAttribute("data-zoku-layout", "cinematic"));
+      const nav = page.locator(".zoku-settings-nav");
+      const navInfo = await nav.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        const tabs = [...element.querySelectorAll("button")].map((button) => button.getBoundingClientRect());
+        return {
+          display: getComputedStyle(element).display,
+          scrollWidth: element.scrollWidth,
+          width: element.clientWidth,
+          allVisible: tabs.every((rect) => rect.left >= bounds.left - 2 && rect.right <= bounds.right + 2),
+          count: tabs.length,
+        };
+      });
+      assert.equal(navInfo.display, "grid", "Settings sections must be a grid");
+      assert.equal(navInfo.count, 8, "All settings sections must remain accessible");
+      assert.ok(navInfo.scrollWidth <= navInfo.width + 2 && navInfo.allVisible,
+        "Settings nav must not require horizontal scrolling: " + JSON.stringify(navInfo));
+      await assertNoHorizontalOverflow(page, "Settings " + viewport.width);
+      await page.screenshot({
+        path: artifacts + "/settings-profiles-" + viewport.width + ".png",
+        animations: "disabled", fullPage: true,
+      });
+    }
+
+    // Verify actual same-origin preference and the UI's password-free switch.
+    const toggle = page.getByTestId("adult-content-switch");
+    await toggle.waitFor();
+    assert.equal(await toggle.getAttribute("aria-checked"), "false", "New browser starts filtered");
+    assert.equal(await page.locator("#adult-filter-password").count(), 0, "Password input must be removed");
+    await toggle.click();
+    await page.waitForFunction(() =>
+      document.querySelector('[data-testid="adult-content-switch"]')?.getAttribute("aria-checked") === "true"
+    );
+    const optedOnState = await page.evaluate(async () => (await fetch("/api/adult-content", { cache: "no-store" })).json());
+    assert.equal(optedOnState.filterEnabled, false, "Enabling toggle must persist to server preference");
+    await toggle.click();
+    await page.waitForFunction(() =>
+      document.querySelector('[data-testid="adult-content-switch"]')?.getAttribute("aria-checked") === "false"
+    );
+    const optedOffState = await page.evaluate(async () => (await fetch("/api/adult-content", { cache: "no-store" })).json());
+    assert.equal(optedOffState.filterEnabled, true, "Disabling toggle must restore server-side filtering");
+    evidence.push({ check: "Settings nav grid and adult preference round-trip", result: "pass" });
 
     // Regression: Original Language must not snap to the selected first item
     // on every ArrowDown / TV remote navigation event.
