@@ -918,10 +918,8 @@ function SettingsPageContent() {
                     <button
                       type="button"
                       onClick={handleSelectAllGenres}
-                      disabled={
-                        availableGenres.length > 0 &&
-                        selectedGenreIds.length === availableGenres.length
-                      }
+                      disabled={saving || (availableGenres.length > 0 &&
+                        selectedGenreIds.length === availableGenres.length)}
                       data-testid="select-all-genres-btn"
                       className="rounded-xl border border-primary/50 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary hover:text-primary-contrast transition-all disabled:opacity-45"
                     >
@@ -930,6 +928,7 @@ function SettingsPageContent() {
                     <button
                       type="button"
                       onClick={handleResetDefaultGenres}
+                      disabled={saving}
                       data-testid="reset-default-genres-btn"
                       className="rounded-xl border border-border-custom bg-background/50 px-3 py-1.5 text-xs font-semibold text-on-surface-variant hover:border-primary/40 hover:text-on-surface transition-all"
                     >
@@ -947,6 +946,8 @@ function SettingsPageContent() {
                         key={g.id}
                         type="button"
                         onClick={() => handleGenreCheckboxToggle(g.id)}
+                        disabled={saving}
+                        aria-pressed={isChecked}
                         className={`flex items-center justify-between p-3 rounded-lg border text-xs font-semibold text-left transition-all ${
                           isChecked
                             ? "border-primary bg-primary/5 text-primary"
