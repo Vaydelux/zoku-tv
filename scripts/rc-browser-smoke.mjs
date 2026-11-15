@@ -278,6 +278,10 @@ async function runBrowserChecks() {
       "Previously saved choices must not remain dirty after reload");
     evidence.push({ check: "Home genre preference save, reload, and stable state", result: "pass" });
 
+    // Restore the Profiles tab after testing genre preferences.
+    await page.goto(new URL("/settings?section=profiles", base).href, { waitUntil: "domcontentloaded" });
+    await page.getByTestId("settings-adult-content-filter").waitFor();
+
     // Verify actual same-origin preference and the UI's password-free switch.
     const toggle = page.getByTestId("adult-content-switch");
     await toggle.waitFor();
