@@ -1,0 +1,40 @@
+name: Zoku Server Domain Inventory
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/embed.ts"
+      - "lib/anime-embed.ts"
+      - "scripts/audit-embed-domains.ts"
+      - ".github/workflows/server-domain-inventory.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  domain-inventory:
+    name: External host DNS and HTTPS reachability (not playback)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout catalog
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Probe declared providers without requesting media streams
+        run: npx --no-install tsx scripts/audit-embed-domains.ts
+      - name: Upload domain audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zoku-server-domain-audit
+          path: artifacts/server-domain-audit/
+          retention-days: 7
+          if-no-files-found: warn
