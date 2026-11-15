@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { NextRequest } from "next/server";
 import { GET } from "../app/api/tmdb/[...path]/route";
-import { createAdultUnlockCookie } from "./server/adult-session";
 import { parseTmdbScope, sanitizedTmdbQuery } from "./server/tmdb-proxy-policy";
 
 test("TMDB proxy endpoint allowlist rejects arbitrary paths and invalid pagination", () => {
@@ -20,9 +19,7 @@ test("TMDB proxy endpoint allowlist rejects arbitrary paths and invalid paginati
 test("server excludes blocked ID on discovery and rejects direct title and child routes", async () => {
   const oldFetch = globalThis.fetch;
   const oldToken = process.env.TMDB_API_READ_ACCESS_TOKEN;
-  const oldPassword = process.env.ADULT_CONTENT_PASSWORD;
   process.env.TMDB_API_READ_ACCESS_TOKEN = "eyJ.mock.token";
-  delete process.env.ADULT_CONTENT_PASSWORD;
   const accessed: string[] = [];
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = new URL(String(input));
@@ -75,17 +72,13 @@ test("server excludes blocked ID on discovery and rejects direct title and child
     globalThis.fetch = oldFetch;
     if (oldToken === undefined) delete process.env.TMDB_API_READ_ACCESS_TOKEN;
     else process.env.TMDB_API_READ_ACCESS_TOKEN = oldToken;
-    if (oldPassword === undefined) delete process.env.ADULT_CONTENT_PASSWORD;
-    else process.env.ADULT_CONTENT_PASSWORD = oldPassword;
   }
 });
 
-test("server respects signed password unlock cookie but rejects tampering", async () => {
+test("server respects passwordless adult preference cookie for unfiltered catalog", async () => {
   const oldFetch = globalThis.fetch;
   const oldToken = process.env.TMDB_API_READ_ACCESS_TOKEN;
-  const oldPassword = process.env.ADULT_CONTENT_PASSWORD;
   process.env.TMDB_API_READ_ACCESS_TOKEN = "eyJ.mock.token";
-  process.env.ADULT_CONTENT_PASSWORD = "test-secret-password-123";
   const calls: string[] = [];
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = new URL(String(input));
@@ -93,7 +86,7 @@ test("server respects signed password unlock cookie but rejects tampering", asyn
     return Response.json({ results: [{ id: 991111, title: "Blocked by default", adult: false }] });
   }) as typeof fetch;
   try {
-    const unlock = createAdultUnlockCookie(process.env.ADULT_CONTENT_PASSWORD);
+    const unlock = "on";
     const request = new NextRequest("https://zoku.example/api/tmdb/search/multi?query=movie", {
       headers: { cookie: `zoku_adult_filter_unlock=${unlock}` },
     });
@@ -105,7 +98,5 @@ test("server respects signed password unlock cookie but rejects tampering", asyn
     globalThis.fetch = oldFetch;
     if (oldToken === undefined) delete process.env.TMDB_API_READ_ACCESS_TOKEN;
     else process.env.TMDB_API_READ_ACCESS_TOKEN = oldToken;
-    if (oldPassword === undefined) delete process.env.ADULT_CONTENT_PASSWORD;
-    else process.env.ADULT_CONTENT_PASSWORD = oldPassword;
   }
 });
