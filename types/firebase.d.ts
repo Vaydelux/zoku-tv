@@ -103,6 +103,10 @@ declare module "firebase/firestore" {
   export function getDoc<T = any>(
     reference: DocumentReference<T>
   ): Promise<DocumentSnapshot<T>>;
+  /** Always request a network-backed Firestore read; never fall back to cache. */
+  export function getDocFromServer<T = any>(
+    reference: DocumentReference<T>
+  ): Promise<DocumentSnapshot<T>>;
   export function updateDoc<T = any>(
     reference: DocumentReference<T>,
     data: Partial<T> | Record<string, any>
