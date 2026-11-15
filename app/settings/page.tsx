@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Settings,
@@ -105,6 +105,8 @@ function SettingsPageContent() {
   const [localAppearance, setLocalAppearance] = useState<AppearanceMode>(DEFAULT_APPEARANCE);
   const [availableGenres, setAvailableGenres] = useState<TMDBGenre[]>([]);
   const [selectedGenreIds, setSelectedGenreIds] = useState<number[]>([]);
+  const [genrePreferencesDirty, setGenrePreferencesDirty] = useState(false);
+  const editingGenreProfileId = useRef<string | null>(null);
   const [localIframeMode, setLocalIframeMode] = useState<"Strict" | "Compatibility">("Strict");
   const [localCatalogMode, setLocalCatalogMode] = useState<CatalogMode>("tmdb");
   const [saving, setSaving] = useState(false);
@@ -203,7 +205,6 @@ function SettingsPageContent() {
         }, [] as TMDBGenre[]);
 
         setAvailableGenres(combined);
-        setSelectedGenreIds(currentProfile?.homeGenreRailPreferences || [28, 12, 35, 18]);
         setLocalIframeMode(currentProfile?.iframeModePreference || iframeMode || "Strict");
         setLocalCatalogMode(currentProfile?.catalogMode || "tmdb");
         setLocalAppearance(
@@ -219,7 +220,20 @@ function SettingsPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [user, currentProfile, iframeMode]);
+  }, [user, currentProfile?.id, iframeMode]);
+
+  // Keep edits stable across Firestore listener refreshes and unrelated profile
+  // changes. Only a different profile or a clean form may hydrate from cloud.
+  useEffect(() => {
+    if (!currentProfile) return;
+    if (editingGenreProfileId.current !== currentProfile.id) {
+      editingGenreProfileId.current = currentProfile.id;
+      setGenrePreferencesDirty(false);
+      setSelectedGenreIds(currentProfile.homeGenreRailPreferences ?? [28, 12, 35, 18]);
+    } else if (!genrePreferencesDirty) {
+      setSelectedGenreIds(currentProfile.homeGenreRailPreferences ?? [28, 12, 35, 18]);
+    }
+  }, [currentProfile?.id, currentProfile?.homeGenreRailPreferences, genrePreferencesDirty]);
 
   if (!user || !currentProfile) {
     return null;
@@ -296,10 +310,12 @@ function SettingsPageContent() {
       nextGenres.push(genreId);
     }
     setSelectedGenreIds(nextGenres);
+    setGenrePreferencesDirty(true);
   };
 
   const handleSelectAllGenres = () => {
     setSelectedGenreIds(availableGenres.map((g) => g.id));
+    setGenrePreferencesDirty(true);
   };
 
   const handleResetDefaultGenres = () => {
@@ -307,6 +323,7 @@ function SettingsPageContent() {
       availableGenres.some((g) => g.id === id)
     );
     setSelectedGenreIds(defaults.length > 0 ? defaults : availableGenres.slice(0, 6).map((g) => g.id));
+    setGenrePreferencesDirty(true);
   };
 
   const saveGenrePreferences = async () => {
@@ -319,10 +336,11 @@ function SettingsPageContent() {
       await updateProfile(currentProfile.id, {
         homeGenreRailPreferences: selectedGenreIds,
       });
-      notifySuccess("Preferred genre rails saved!");
+      setGenrePreferencesDirty(false);
+      notifySuccess("Preferred genre rails saved to your profile!");
     } catch (err) {
       console.error(err);
-      notifyError("Failed to save genre rails.");
+      notifyError("Could not save genre rails. Check your connection and retry.");
     } finally {
       setSaving(false);
     }
@@ -476,9 +494,9 @@ function SettingsPageContent() {
           </div>
         )}
 
-        <div className="zoku-settings-layout flex flex-col md:flex-row gap-8 items-start pt-2">
+        <div className="zoku-settings-layout flex flex-col gap-6 items-stretch pt-2 min-w-0">
           {/* Structured Settings Navigation */}
-          <nav aria-label="Settings sections" className="zoku-settings-nav glass-panel w-full md:w-64 flex flex-col gap-1.5 shrink-0 rounded-2xl p-4">
+          <nav aria-label="Settings sections" className="zoku-settings-nav glass-panel grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 w-full min-w-0 rounded-2xl p-3 overflow-visible">
             <p className="px-2 pb-1 text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
               Appearance & Browsing
             </p>
@@ -588,7 +606,7 @@ function SettingsPageContent() {
           </nav>
 
           {/* Active Tab Panel */}
-          <div className="zoku-settings-content glass-panel flex-1 w-full rounded-2xl p-6 sm:p-8 shadow-xl min-h-[420px]">
+          <div className="zoku-settings-content glass-panel flex-1 w-full min-w-0 rounded-2xl p-6 sm:p-8 shadow-xl min-h-[420px]">
             {activeTab === "theme" && (
               <div className="space-y-6">
                 <div className="space-y-1">
@@ -935,7 +953,8 @@ function SettingsPageContent() {
                   </span>
                   <button
                     onClick={saveGenrePreferences}
-                    disabled={saving}
+                    disabled={saving || !genrePreferencesDirty}
+                    data-testid="save-genre-rails"
                     className="flex items-center gap-1.5 rounded-xl bg-primary hover:bg-opacity-95 text-primary-contrast py-2.5 px-5 text-xs font-bold transition-all disabled:opacity-50"
                   >
                     <Save className="h-4 w-4" />
