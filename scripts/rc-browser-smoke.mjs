@@ -267,7 +267,7 @@ async function runBrowserChecks() {
     );
     const genreSave = page.getByTestId("save-genre-rails");
     await genreSave.click();
-    await page.getByText("Preferred genre rails saved to your profile!").waitFor();
+    await page.getByText("Genre rail preferences saved in local demo mode (not Firestore).").waitFor();
     await page.reload({ waitUntil: "domcontentloaded" });
     await selectionCounter.waitFor({ timeout: 20_000 });
     await page.waitForFunction(() =>
@@ -276,7 +276,7 @@ async function runBrowserChecks() {
     assert.match(await selectionCounter.innerText(), /2\s*\/\s*2/, "Genre choices should persist after reloading Settings");
     assert.equal(await page.getByTestId("save-genre-rails").isDisabled(), true,
       "Previously saved choices must not remain dirty after reload");
-    evidence.push({ check: "Home genre preference save, reload, and stable state", result: "pass" });
+    evidence.push({ check: "Home genre preference local-demo save, readback, reload, and stable state (not authenticated Firestore)", result: "pass" });
 
     // Restore the Profiles tab after testing genre preferences.
     await page.goto(new URL("/settings?section=profiles", base).href, { waitUntil: "domcontentloaded" });

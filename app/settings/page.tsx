@@ -42,6 +42,8 @@ import { ConfirmDialog } from "@/components/ui/Primitives";
 import { GpuDiagnosticOverlay } from "@/components/GpuDiagnosticOverlay";
 import { PerformanceDiagnosticsPanel } from "@/components/PerformanceDiagnosticsPanel";
 import { getGenres, TMDBGenre } from "@/lib/tmdb";
+import { getDocRef, getDocumentForVerification } from "@/lib/firebase";
+import { genrePreferencesMatch } from "@/lib/genre-preferences";
 import { setAdultFilterEnabled } from "@/lib/adult-content";
 import { getGenreIcon } from "@/lib/genreIcons";
 import {
@@ -327,20 +329,46 @@ function SettingsPageContent() {
   };
 
   const saveGenrePreferences = async () => {
+    if (saving) return;
     if (selectedGenreIds.length === 0) {
       notifyError("Please select at least 1 preferred genre rail.");
       return;
     }
+    // Capture the exact account/profile/selection before asynchronous writes.
+    const uid = user.uid as string;
+    const profileId = currentProfile.id;
+    const expected = [...selectedGenreIds];
     setSaving(true);
+    let writeCompleted = false;
     try {
-      await updateProfile(currentProfile.id, {
-        homeGenreRailPreferences: selectedGenreIds,
+      await updateProfile(profileId, {
+        homeGenreRailPreferences: expected,
       });
+      writeCompleted = true;
+
+      // Firestore getDocFromServer bypasses local cache and optimistic snapshots.
+      // In demo mode the helper reports a local-only save explicitly.
+      const docRef = getDocRef(`users/${uid}/profiles`, profileId);
+      const { snapshot, source } = await getDocumentForVerification(docRef);
+      const stored = snapshot.exists() ? snapshot.data()?.homeGenreRailPreferences : undefined;
+      if (!genrePreferencesMatch(stored, expected)) {
+        throw new Error("Saved genre preferences differ from the profile returned by the server.");
+      }
+      // A profile switch while awaiting verification must never mark another
+      // profile's editable form clean or show a misleading success.
+      if (editingGenreProfileId.current !== profileId ||
+          useSessionStore.getState().user?.uid !== uid) {
+        return;
+      }
       setGenrePreferencesDirty(false);
-      notifySuccess("Preferred genre rails saved to your profile!");
+      notifySuccess(source === "firestore"
+        ? "Genre rail preferences verified in Firestore."
+        : "Genre rail preferences saved in local demo mode (not Firestore).");
     } catch (err) {
-      console.error(err);
-      notifyError("Could not save genre rails. Check your connection and retry.");
+      console.error("Genre preference persistence verification failed", err);
+      notifyError(writeCompleted
+        ? "Save submitted, but cloud verification failed. Check Firestore before retrying."
+        : "Could not save genre rails. Check your connection and retry.");
     } finally {
       setSaving(false);
     }
@@ -890,10 +918,8 @@ function SettingsPageContent() {
                     <button
                       type="button"
                       onClick={handleSelectAllGenres}
-                      disabled={
-                        availableGenres.length > 0 &&
-                        selectedGenreIds.length === availableGenres.length
-                      }
+                      disabled={saving || (availableGenres.length > 0 &&
+                        selectedGenreIds.length === availableGenres.length)}
                       data-testid="select-all-genres-btn"
                       className="rounded-xl border border-primary/50 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary hover:text-primary-contrast transition-all disabled:opacity-45"
                     >
@@ -902,6 +928,7 @@ function SettingsPageContent() {
                     <button
                       type="button"
                       onClick={handleResetDefaultGenres}
+                      disabled={saving}
                       data-testid="reset-default-genres-btn"
                       className="rounded-xl border border-border-custom bg-background/50 px-3 py-1.5 text-xs font-semibold text-on-surface-variant hover:border-primary/40 hover:text-on-surface transition-all"
                     >
@@ -919,6 +946,8 @@ function SettingsPageContent() {
                         key={g.id}
                         type="button"
                         onClick={() => handleGenreCheckboxToggle(g.id)}
+                        disabled={saving}
+                        aria-pressed={isChecked}
                         className={`flex items-center justify-between p-3 rounded-lg border text-xs font-semibold text-left transition-all ${
                           isChecked
                             ? "border-primary bg-primary/5 text-primary"

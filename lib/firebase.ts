@@ -17,6 +17,7 @@ import {
   collection,
   setDoc,
   getDoc,
+  getDocFromServer,
   updateDoc,
   deleteDoc,
   onSnapshot,
@@ -577,6 +578,22 @@ export async function getDocument(docRef: any) {
     data: () => docData,
     id: docRef.path.split("/").pop(),
   };
+}
+
+/**
+ * Read-after-write verification: prefer Firestore's network-backed server read
+ * rather than local snapshots, which may still be cached or optimistic.
+ * Demo mode has no Firebase and is labelled explicitly so it cannot be
+ * mistaken for a confirmed cloud save.
+ */
+export async function getDocumentForVerification(docRef: any): Promise<{
+  snapshot: any;
+  source: "firestore" | "local-demo";
+}> {
+  if (realDb) {
+    return { snapshot: await getDocFromServer(docRef), source: "firestore" };
+  }
+  return { snapshot: await getDocument(docRef), source: "local-demo" };
 }
 
 export async function updateDocument(docRef: any, data: any) {
