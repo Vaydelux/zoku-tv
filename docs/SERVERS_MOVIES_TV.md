@@ -2,7 +2,7 @@
 
 > Source of truth: [`lib/embed.ts`](../lib/embed.ts) (`EMBED_SERVER_CATALOG`). This document describes configured integrations, **not verified server availability, playback success, safety, or licensing**.
 
-**Total configured entries:** 48 (13 `new`, 35 `default`). Each entry defines both a movie and TV-episode URL template. Anime integrations are documented separately in [Anime servers](./SERVERS_ANIME.md).
+**Total configured entries:** 46 (13 `new`, 33 `default`). Each entry defines both a movie and TV-episode URL template. Anime integrations are documented separately in [Anime servers](./SERVERS_ANIME.md).
 
 ## URL construction
 
@@ -30,7 +30,7 @@
 | Viduki (Premium) | `viduki-4` | tmdb, imdb | `viduki.net` | `https://viduki.net/4/movie/{id}` | `https://viduki.net/4/tv/{id}/{season}/{episode}` |
 | Vidy | `vidy` | tmdb | `vidy.st` | `https://vidy.st/movie/{tmdbId}` | `https://vidy.st/tv/{tmdbId}/{season}/{episode}` |
 
-## Default / all-servers group (35)
+## Default / all-servers group (33)
 
 | Server | ID | Accepted IDs (declared) | Configured domains | Movie URL template | TV episode URL template |
 | --- | --- | --- | --- | --- | --- |
@@ -52,7 +52,6 @@
 | ThisIsCinema | `thisiscinema` | tmdb, imdb | `thisiscinema.pages.dev` | `https://thisiscinema.pages.dev/embed/movie/{id}` | `https://thisiscinema.pages.dev/embed/tv/{id}/{season}/{episode}` |
 | VidAPI | `vidapi` | tmdb, imdb | `vidapi.xyz`, `vidapi.ru` | `https://vidapi.xyz/embed/movie/{id}` | `https://vidapi.xyz/embed/tv/{id}/{season}/{episode}` |
 | VidFast | `vidfast` | tmdb, imdb | `vidfast.pro`, `vidfast.xyz`, `vidfast.pm`, `vidfast.net`, `vidfast.me`, `vidfast.io`, `vidfast.in` | `https://vidfast.pro/movie/{id}` | `https://vidfast.pro/tv/{id}/{season}/{episode}` |
-| VidFlix | `vidflix` | tmdb | `vidflix.club` | `https://vidflix.club/movie/{tmdbId}` | `https://vidflix.club/tv/{tmdbId}/{season}/{episode}` |
 | VidJoy | `vidjoy` | tmdb | `vidjoy.pro` | `https://vidjoy.pro/embed/movie/{tmdbId}` | `https://vidjoy.pro/embed/tv/{tmdbId}/{season}/{episode}` |
 | VidKing | `vidking` | tmdb, imdb | `www.vidking.net`, `vidking.net` | `https://www.vidking.net/embed/movie/{id}` | `https://www.vidking.net/embed/tv/{id}/{season}/{episode}` |
 | VidLink | `vidlink` | tmdb | `vidlink.pro` | `https://vidlink.pro/movie/{tmdbId}` | `https://vidlink.pro/tv/{tmdbId}/{season}/{episode}` |
@@ -67,7 +66,6 @@
 | VidCore | `vidcore` | tmdb, imdb | `vidcore.net` | `https://vidcore.net/embed/movie/{id}` | `https://vidcore.net/embed/tv/{id}/{season}/{episode}` |
 | VixSrc | `vixsrc` | tmdb, imdb | `vixsrc.to` | `https://vixsrc.to/movie/{id}` | `https://vixsrc.to/tv/{id}/{season}/{episode}` |
 | VSEmbed | `vsembed` | tmdb | `vsembed.ru` | `https://vsembed.ru/embed/movie?tmdb={tmdbId}` | `https://vsembed.ru/embed/tv?tmdb={tmdbId}&season={season}&episode={episode}` |
-| WatchFreeStreams | `wfs` | tmdb | `embed.wfs.lol`, `wfs.lol` | `https://embed.wfs.lol/embed/movie/{tmdbId}` | `https://embed.wfs.lol/embed/tv/{tmdbId}/{season}/{episode}` |
 | Embed SU (High Quality) | `embed-su` | tmdb | `embed.filmu.in` | `https://embed.filmu.in/movie/{tmdbId}` | `https://embed.filmu.in/tv/{tmdbId}/{season}/{episode}` |
 
 ## Automatically applied default query parameters
@@ -96,7 +94,8 @@ These parameters are appended by `getEmbedUrl` rather than being part of the URL
 - The code marks `2embed`, `superembed`, `vidsrc`, `vidup`, and `smashystream` as compatibility-only (with different iframe sandbox / popup defaults); other entries can also override ad or sandbox flags.
 - `testedOnAndroidTV` is a static configuration flag, not a live device-health result. Only `embed-su` sets it to `true` in the current catalog.
 - Removed inactive `vidsrc-xyz` (active hostname `vidsrc.xyz` failed two DNS lookups), removed obsolete alias `vidsrc.vip`, and removed `superembed-vip` because its default `/se_player.php` requires PHP execution unavailable to the Vercel/Next.js deployment. `embed-su` metadata now matches its actual Filmu host.
-- Remaining providers with HTTP 403, HTTP 404, HTTP 5xx or HTTPS timeout are **not proven broken embeds** by a root-domain probe. Audit details are published by the Zoku Server Domain Inventory workflow.
+- `vidflix` and `wfs` were retired after two distinct external audits consistently returned HTTP 520 or 525 (upstream/server-side failures) at their hosts. This is a conservative availability decision, **not a playback verification**; the entries can be reconsidered if service recovers.
+- Remaining providers with HTTP 403, HTTP 404 or HTTPS timeout are **not proven broken embeds** by a root-domain probe. Audit details are published by the Zoku Server Domain Inventory workflow.
 - Third-party sites can change URLs, content, embed restrictions, advertisements, and availability independently of this repository. Validate ownership, permissions, and provider behavior before using an integration.
 
 ## Maintaining this list
