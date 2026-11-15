@@ -22,9 +22,10 @@ function originAllowed(request: NextRequest): boolean {
   if (!origin || !host) return false;
   try {
     const parsed = new URL(origin);
-    const secure = process.env.NODE_ENV === "production";
+    const loopback = /^(localhost|127\\.0\\.0\\.1|\\[::1\\])(?::\\d+)?$/i.test(host);
+    const allowHttp = process.env.NODE_ENV !== "production" || loopback;
     return parsed.host === host &&
-      (parsed.protocol === "https:" || (!secure && parsed.protocol === "http:")) &&
+      (parsed.protocol === "https:" || (allowHttp && parsed.protocol === "http:")) &&
       !parsed.username && !parsed.password &&
       !parsed.pathname.replace(/\//g, "") && !parsed.search && !parsed.hash;
   } catch {
