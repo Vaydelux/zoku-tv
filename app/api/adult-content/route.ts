@@ -15,7 +15,21 @@ function json(body: object, status = 200): NextResponse {
 /** Changing this browser preference must originate from this exact site. */
 function originAllowed(request: NextRequest): boolean {
   const origin = request.headers.get("origin");
-  return !!origin && origin === request.nextUrl.origin;
+  // Next's internal request.nextUrl.origin can be normalized to localhost
+  // even when the browser requested 127.0.0.1 or a custom Vercel domain.
+  // The Host header is the browser-facing destination and must match Origin.
+  const host = request.headers.get("host");
+  if (!origin || !host) return false;
+  try {
+    const parsed = new URL(origin);
+    const secure = process.env.NODE_ENV === "production";
+    return parsed.host === host &&
+      (parsed.protocol === "https:" || (!secure && parsed.protocol === "http:")) &&
+      !parsed.username && !parsed.password &&
+      !parsed.pathname.replace(/\//g, "") && !parsed.search && !parsed.hash;
+  } catch {
+    return false;
+  }
 }
 
 export async function GET(request: NextRequest) {
