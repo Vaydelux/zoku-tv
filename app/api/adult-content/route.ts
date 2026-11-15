@@ -22,7 +22,7 @@ function originAllowed(request: NextRequest): boolean {
   if (!origin || !host) return false;
   try {
     const parsed = new URL(origin);
-    const loopback = /^(localhost|127\\.0\\.0\\.1|\\[::1\\])(?::\\d+)?$/i.test(host);
+    const loopback = /^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(host);
     const allowHttp = process.env.NODE_ENV !== "production" || loopback;
     return parsed.host === host &&
       (parsed.protocol === "https:" || (allowHttp && parsed.protocol === "http:")) &&
