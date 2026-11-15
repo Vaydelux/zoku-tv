@@ -23,6 +23,7 @@ import {
   normalizeAppearance,
 } from "@/lib/themes";
 import { canAddProfile, MAX_PROFILES } from "@/lib/profile-limits";
+import { EMBED_SERVER_CATALOG } from "@/lib/embed";
 import {
   COMPLETION_THRESHOLD_PERCENT,
   MAX_CONTINUE_WATCHING_ITEMS,
@@ -1380,9 +1381,10 @@ export const useEmbedStore = create<EmbedState>((set, get) => ({
   serverHealth: {},
 
   setServerId: (id) => {
-    set({ selectedServerId: id });
+    const nextId = EMBED_SERVER_CATALOG.some(server => server.id === id) ? id : "vidsrc";
+    set({ selectedServerId: nextId });
     if (typeof window !== "undefined") {
-      localStorage.setItem("zoku_selected_server_id", id);
+      try { localStorage.setItem("zoku_selected_server_id", nextId); } catch { /* private mode */ }
     }
   },
 
@@ -1412,7 +1414,15 @@ export const useEmbedStore = create<EmbedState>((set, get) => ({
       const savedServer = localStorage.getItem("zoku_selected_server_id");
       const savedMode = localStorage.getItem("zoku_iframe_mode");
       const updates: Partial<EmbedState> = {};
-      if (savedServer) updates.selectedServerId = savedServer;
+      if (savedServer) {
+        if (EMBED_SERVER_CATALOG.some(server => server.id === savedServer)) {
+          updates.selectedServerId = savedServer;
+        } else {
+          // Retired domains must never remain selected after a catalog update.
+          updates.selectedServerId = "vidsrc";
+          localStorage.removeItem("zoku_selected_server_id");
+        }
+      }
       if (savedMode === "Strict" || savedMode === "Compatibility") {
         updates.iframeMode = savedMode;
       }
