@@ -81,22 +81,19 @@ A cinematic, multi-profile entertainment discovery and streaming portal built wi
 
 ## Server-enforced TMDB catalog and adult-content policy
 
-**Adult Content is OFF by default** (filtering ON). The catalog, recommendations, movie/TV title details, credits and videos are fetched through `/api/tmdb/[...path]` with a strict route allowlist. Movie and TV detail/child endpoints require server-side eligibility checks. The server reads the signed HttpOnly adult unlock cookie on each request; the client has no authority to override the content policy.
+**Adult Content is OFF by default** (filtering ON). The catalog, recommendations, movie/TV title details, credits and videos are fetched through `/api/tmdb/[...path]` with a strict route allowlist. Movie and TV detail/child endpoints require server-side eligibility checks. The server reads the HttpOnly, SameSite Strict adult-content preference cookie on each request. Filtering stays ON without the explicit same-browser opt-in; this toggle is not authentication, age verification, or a parental lock.
 
 Configure the following in the **server environment** and in Vercel **Production and Preview**:
 
 ```env
 TMDB_API_READ_ACCESS_TOKEN=your-private-v4-read-access-token
-ADULT_CONTENT_PASSWORD=replace-with-a-long-unique-password
-# Optional secret used for signing unlock cookies; 32+ characters
-ADULT_CONTENT_SESSION_SECRET=
 # Optional comma-separated supplemental TMDB movie IDs
 BLOCKED_TMDB_MOVIE_IDS=
 ```
 
 **Remove the legacy `NEXT_PUBLIC_TMDB_API_READ_ACCESS_TOKEN` once the new server-only credential is configured and the application has been deployed.** Because the old credential was published to browser bundles, consider rotating it at TMDB before removing the old Vercel variable. Do not paste tokens or passwords into chats or commit them to the repository.
 
-When `ADULT_CONTENT_PASSWORD` is absent or invalid (fewer than 12 characters), content stays filtered and the adult unlock is unavailable. When configured, Settings permits a temporary four-hour unlock with an HttpOnly, SameSite Strict cookie; the password is verified on the server and basic per-instance brute-force protection is applied. Multiple serverless instances do not share attempt counters; use managed WAF/distributed rate limiting for production abuse resistance.
+No password or adult-content environment variables are required. In Settings → Profiles & Kids Mode, the Adult Content switch changes the same-browser preference. Server filtering is ON by default. Turning it OFF records an HttpOnly, SameSite Strict cookie for up to 30 days; turning it back ON clears the cookie. Changes are accepted only from the same origin and the server reads the preference before serving TMDB/AniList metadata. Anyone using that browser can change the toggle; it is a convenience preference, **not parental protection**. Kids Mode remains separately controlled per profile.
 
 `/api/vivamax-ids` and the server catalog use TMDB `with_companies=149142`, `include_adult=true`, verify all pages, and fail closed on incomplete/expired company ID data. The company list also includes IDs from `BLOCKED_TMDB_MOVIE_IDS`. Server-side discover, trending and search responses remove known restricted movie IDs and adult-flagged records before returning metadata to clients. The browser separately filters saved/previously cached items but this client-only pass is not relied upon for authorization.
 
@@ -118,6 +115,6 @@ This verifies company sync, a blocked direct movie detail, restricted related-ti
 
 AniList is included in the **same Adult Content OFF by default** setting, independent of Kids Mode. Zoku now fetches AniList results from the fixed-operation internal `POST /api/anilist` server endpoint, rather than arbitrary browser GraphQL. The endpoint requests AniList's `Media.isAdult`, `genres` and `tags { name isAdult }` fields; it blocks `isAdult` titles, Hentai and Ecchi genres, and explicit sexual-content tags (including adult-flagged tags, nudity and sexual violence). Missing maturity metadata fails closed. It filters browse/search/studio pages, recommendations and relations, and rejects restricted direct details; the anime watch iframe never mounts until the exact ID passes its server check. Saved watchlist, Continue Watching and history anime IDs are revalidated in batches before they are displayed, without deleting records.
 
-AniList's server API is not an open GraphQL proxy: only `browse`, `studio`, `detail`, and batch `eligibility` operations are accepted. The password-authorized 4-hour unlock affects both TMDB and AniList. Optional server-only `BLOCKED_ANILIST_ANIME_IDS` provides a manually reviewed supplemental denylist. Kids Mode separately restricts additional genres and mature themes.
+AniList's server API is not an open GraphQL proxy: only `browse`, `studio`, `detail`, and batch `eligibility` operations are accepted. The same-browser password-free Adult Content switch affects both TMDB and AniList. Optional server-only `BLOCKED_ANILIST_ANIME_IDS` provides a manually reviewed supplemental denylist. Kids Mode separately restricts additional genres and mature themes.
 
 **Scope decision:** Mature horror and violence are not automatically classified as hentai; they remain under the existing Kids Mode rules unless AniList marks them adult-rated or with restricted sexual tags. AniList metadata can be incomplete, so this filter cannot guarantee that all inappropriate material has been classified. The external streaming provider is not controlled by Zoku.
