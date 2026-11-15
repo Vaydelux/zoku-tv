@@ -1396,7 +1396,8 @@ export const useEmbedStore = create<EmbedState>((set, get) => ({
     // Also sync back to profile preferences if a profile is active
     const session = useSessionStore.getState();
     if (session.user && session.currentProfile) {
-      session.updateProfile(session.currentProfile.id, { iframeModePreference: mode });
+      void session.updateProfile(session.currentProfile.id, { iframeModePreference: mode })
+        .catch((error) => console.error("Failed to save iframe preference", error));
     }
   },
 
