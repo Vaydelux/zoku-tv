@@ -2,7 +2,7 @@
 
 > Source of truth: [`lib/embed.ts`](../lib/embed.ts) (`EMBED_SERVER_CATALOG`). This document describes configured integrations, **not verified server availability, playback success, safety, or licensing**.
 
-**Total configured entries:** 50 (13 `new`, 37 `default`). Each entry defines both a movie and TV-episode URL template. Anime integrations are documented separately in [Anime servers](./SERVERS_ANIME.md).
+**Total configured entries:** 48 (13 `new`, 35 `default`). Each entry defines both a movie and TV-episode URL template. Anime integrations are documented separately in [Anime servers](./SERVERS_ANIME.md).
 
 ## URL construction
 
@@ -30,7 +30,7 @@
 | Viduki (Premium) | `viduki-4` | tmdb, imdb | `viduki.net` | `https://viduki.net/4/movie/{id}` | `https://viduki.net/4/tv/{id}/{season}/{episode}` |
 | Vidy | `vidy` | tmdb | `vidy.st` | `https://vidy.st/movie/{tmdbId}` | `https://vidy.st/tv/{tmdbId}/{season}/{episode}` |
 
-## Default / all-servers group (37)
+## Default / all-servers group (35)
 
 | Server | ID | Accepted IDs (declared) | Configured domains | Movie URL template | TV episode URL template |
 | --- | --- | --- | --- | --- | --- |
@@ -49,7 +49,6 @@
 | SmashyStream | `smashystream` | tmdb, imdb | `player.smashystream.com`, `player.smashy.stream` | `https://player.smashystream.com/movie/{id}` | `https://player.smashystream.com/tv/{id}?s={season}&e={episode}` |
 | StreamVault | `streamvault` | tmdb, imdb | `streamvaultsrc.click` | `https://streamvaultsrc.click/embed/movie/{id}` | `https://streamvaultsrc.click/embed/tv/{id}/{season}/{episode}` |
 | SuperEmbed | `superembed` | tmdb, imdb | `multiembed.mov`, `www.superembed.stream` | `https://multiembed.mov/?video_id={id}&tmdb=1` | `https://multiembed.mov/?video_id={id}&tmdb=1&s={season}&e={episode}` |
-| SuperEmbed VIP | `superembed-vip` | tmdb, imdb | `getsuperembed.link` | `${SUPEREMBED_VIP_PLAYER}?video_id={tmdbId}&tmdb=1` | `${SUPEREMBED_VIP_PLAYER}?video_id={tmdbId}&tmdb=1&s={season}&e={episode}` |
 | ThisIsCinema | `thisiscinema` | tmdb, imdb | `thisiscinema.pages.dev` | `https://thisiscinema.pages.dev/embed/movie/{id}` | `https://thisiscinema.pages.dev/embed/tv/{id}/{season}/{episode}` |
 | VidAPI | `vidapi` | tmdb, imdb | `vidapi.xyz`, `vidapi.ru` | `https://vidapi.xyz/embed/movie/{id}` | `https://vidapi.xyz/embed/tv/{id}/{season}/{episode}` |
 | VidFast | `vidfast` | tmdb, imdb | `vidfast.pro`, `vidfast.xyz`, `vidfast.pm`, `vidfast.net`, `vidfast.me`, `vidfast.io`, `vidfast.in` | `https://vidfast.pro/movie/{id}` | `https://vidfast.pro/tv/{id}/{season}/{episode}` |
@@ -59,8 +58,7 @@
 | VidLink | `vidlink` | tmdb | `vidlink.pro` | `https://vidlink.pro/movie/{tmdbId}` | `https://vidlink.pro/tv/{tmdbId}/{season}/{episode}` |
 | VidPlays | `vidplays` | tmdb | `vidplays.fun` | `https://vidplays.fun/embed/movie/{tmdbId}` | `https://vidplays.fun/embed/tv/{tmdbId}/{season}/{episode}` |
 | VidRock | `vidrock` | tmdb, imdb | `vidrock.ru` | `https://vidrock.ru/movie/{id}` | `https://vidrock.ru/tv/{id}/{season}/{episode}` |
-| VidSrc | `vidsrc` | tmdb, imdb | `vidsrc.to`, `vidsrc.su`, `vidsrc.vip`, `vidsrc.rip`, `www.vidsrc.wtf`, `vidsrcme.ru`, `vidsrc-me.ru`, `vidsrc-me.su`, `vsembed.ru` | `https://vidsrc.to/embed/movie/{id}` | `https://vidsrc.to/embed/tv/{id}/{season}/{episode}` |
-| VidSrc Pro | `vidsrc-xyz` | tmdb, imdb | `vidsrc.xyz`, `vidsrc.me` | `https://vidsrc.xyz/embed/movie/{tmdbId}` | `https://vidsrc.xyz/embed/tv/{tmdbId}/{season}/{episode}` |
+| VidSrc | `vidsrc` | tmdb, imdb | `vidsrc.to`, `vidsrc.su`, `vidsrc.rip`, `www.vidsrc.wtf`, `vidsrcme.ru`, `vidsrc-me.ru`, `vidsrc-me.su`, `vsembed.ru` | `https://vidsrc.to/embed/movie/{id}` | `https://vidsrc.to/embed/tv/{id}/{season}/{episode}` |
 | VidSrc Embed | `vidsrc-embed` | tmdb | `vidsrc-embed.ru` | `https://vidsrc-embed.ru/embed/movie?tmdb={tmdbId}` | `https://vidsrc-embed.ru/embed/tv?tmdb={tmdbId}&season={season}&episode={episode}` |
 | VidSync | `vidsync` | tmdb, imdb | `vidsync.xyz` | `https://vidsync.xyz/embed/movie/{id}` | `https://vidsync.xyz/embed/tv/{id}/{season}/{episode}` |
 | VidUp | `vidup` | tmdb, imdb | `vidup.to` | `https://vidup.to/embed/{id}` | `https://vidup.to/embed/tv/{id}/{season}/{episode}` |
@@ -70,7 +68,7 @@
 | VixSrc | `vixsrc` | tmdb, imdb | `vixsrc.to` | `https://vixsrc.to/movie/{id}` | `https://vixsrc.to/tv/{id}/{season}/{episode}` |
 | VSEmbed | `vsembed` | tmdb | `vsembed.ru` | `https://vsembed.ru/embed/movie?tmdb={tmdbId}` | `https://vsembed.ru/embed/tv?tmdb={tmdbId}&season={season}&episode={episode}` |
 | WatchFreeStreams | `wfs` | tmdb | `embed.wfs.lol`, `wfs.lol` | `https://embed.wfs.lol/embed/movie/{tmdbId}` | `https://embed.wfs.lol/embed/tv/{tmdbId}/{season}/{episode}` |
-| Embed SU (High Quality) | `embed-su` | tmdb | `embed.su` | `https://embed.filmu.in/movie/{tmdbId}` | `https://embed.filmu.in/tv/{tmdbId}/{season}/{episode}` |
+| Embed SU (High Quality) | `embed-su` | tmdb | `embed.filmu.in` | `https://embed.filmu.in/movie/{tmdbId}` | `https://embed.filmu.in/tv/{tmdbId}/{season}/{episode}` |
 
 ## Automatically applied default query parameters
 
@@ -95,10 +93,10 @@ These parameters are appended by `getEmbedUrl` rather than being part of the URL
 
 - `CINEZO_PLAYER_PARAMS` is declared in `lib/embed.ts` and shared by the `cinezo` movie/TV server. See that constant for the full set of player styling and behavior values.
 - The optional resume-position query key `startAt` is added only for `vidfast`, `peachify`, and `primesrc` when `options.startAtSec > 0`.
-- `superembed-vip` uses `SUPEREMBED_VIP_PLAYER`: `NEXT_PUBLIC_SUPEREMBED_VIP_URL` if configured; otherwise the relative path `/se_player.php`. The configured domain list is metadata, not the automatically selected player base URL.
-- The `embed-su` entry declares the domain `embed.su` but its current movie and TV templates use `embed.filmu.in`. This is documented as-is; the two fields do not match.
 - The code marks `2embed`, `superembed`, `vidsrc`, `vidup`, and `smashystream` as compatibility-only (with different iframe sandbox / popup defaults); other entries can also override ad or sandbox flags.
 - `testedOnAndroidTV` is a static configuration flag, not a live device-health result. Only `embed-su` sets it to `true` in the current catalog.
+- Removed inactive `vidsrc-xyz` (active hostname `vidsrc.xyz` failed two DNS lookups), removed obsolete alias `vidsrc.vip`, and removed `superembed-vip` because its default `/se_player.php` requires PHP execution unavailable to the Vercel/Next.js deployment. `embed-su` metadata now matches its actual Filmu host.
+- Remaining providers with HTTP 403, HTTP 404, HTTP 5xx or HTTPS timeout are **not proven broken embeds** by a root-domain probe. Audit details are published by the Zoku Server Domain Inventory workflow.
 - Third-party sites can change URLs, content, embed restrictions, advertisements, and availability independently of this repository. Validate ownership, permissions, and provider behavior before using an integration.
 
 ## Maintaining this list
