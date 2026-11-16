@@ -11,21 +11,24 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Validates any profile fields present in the write (supports merge updates).
-    function validProfileFields() {
-      let data = request.resource.data;
-      return (!('name' in data) || (data.name is string && data.name.size() >= 1 && data.name.size() <= 15))
-        && (!('avatar' in data) || data.avatar is string)
-        && (!('avatarColor' in data) || data.avatarColor is string)
-        && (!('kidMode' in data) || data.kidMode is bool)
-        && (!('themePreference' in data) || data.themePreference is string)
-        && (!('appearancePreference' in data) || data.appearancePreference in ['dark', 'light'])
-        && (!('iframeModePreference' in data) || data.iframeModePreference in ['Strict', 'Compatibility'])
-        && (!('catalogMode' in data) || data.catalogMode in ['tmdb', 'anime'])
-        && (!('homeGenreRailPreferences' in data)
+    // On UPDATE, validate the fields modified by this request, NOT every
+    // historical field still present in request.resource.data. Legacy profiles
+    // may contain values from older application versions (for example a
+    // previous appearance setting); unrelated edits must remain possible.
+    // On CREATE, all supplied fields remain subject to validation.
+    function validProfileFields(data, changedKeys) {
+      return (!changedKeys.hasAny(['name']) || (data.name is string && data.name.size() >= 1 && data.name.size() <= 15))
+        && (!changedKeys.hasAny(['avatar']) || data.avatar is string)
+        && (!changedKeys.hasAny(['avatarColor']) || data.avatarColor is string)
+        && (!changedKeys.hasAny(['kidMode']) || data.kidMode is bool)
+        && (!changedKeys.hasAny(['themePreference']) || data.themePreference is string)
+        && (!changedKeys.hasAny(['appearancePreference']) || data.appearancePreference in ['dark', 'light'])
+        && (!changedKeys.hasAny(['iframeModePreference']) || data.iframeModePreference in ['Strict', 'Compatibility'])
+        && (!changedKeys.hasAny(['catalogMode']) || data.catalogMode in ['tmdb', 'anime'])
+        && (!changedKeys.hasAny(['homeGenreRailPreferences'])
           || (data.homeGenreRailPreferences is list && data.homeGenreRailPreferences.size() <= 50))
-        && (!('createdAt' in data) || data.createdAt is string)
-        && (!('updatedAt' in data) || data.updatedAt is string);
+        && (!changedKeys.hasAny(['createdAt']) || data.createdAt is string)
+        && (!changedKeys.hasAny(['updatedAt']) || data.updatedAt is string);
     }
 
     function validProfileCreate() {
@@ -33,7 +36,13 @@ service cloud.firestore {
       return data.keys().hasAll([
           'name', 'kidMode', 'themePreference', 'iframeModePreference', 'homeGenreRailPreferences'
         ])
-        && validProfileFields();
+        && validProfileFields(data, data.keys());
+    }
+
+    function validProfileUpdate() {
+      let data = request.resource.data;
+      let changedKeys = data.diff(resource.data).affectedKeys();
+      return validProfileFields(data, changedKeys);
     }
 
     function validWatchlistItem() {
@@ -114,7 +123,7 @@ service cloud.firestore {
       match /profiles/{profileId} {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && validProfileCreate();
-        allow update: if isOwner(userId) && validProfileFields();
+        allow update: if isOwner(userId) && validProfileUpdate();
         allow delete: if isOwner(userId);
 
         match /watchlist/{entryKey} {
