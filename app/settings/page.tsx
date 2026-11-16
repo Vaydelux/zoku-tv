@@ -44,6 +44,8 @@ import { PerformanceDiagnosticsPanel } from "@/components/PerformanceDiagnostics
 import { getGenres, TMDBGenre } from "@/lib/tmdb";
 import { getDocRef, getDocumentForVerification } from "@/lib/firebase";
 import { genrePreferencesMatch } from "@/lib/genre-preferences";
+import { describeGenreSaveError } from "@/lib/firebase-save-errors";
+import { isCloudFirebaseActive } from "@/lib/firebase";
 import { setAdultFilterEnabled } from "@/lib/adult-content";
 import { getGenreIcon } from "@/lib/genreIcons";
 import {
@@ -108,6 +110,8 @@ function SettingsPageContent() {
   const [availableGenres, setAvailableGenres] = useState<TMDBGenre[]>([]);
   const [selectedGenreIds, setSelectedGenreIds] = useState<number[]>([]);
   const [genrePreferencesDirty, setGenrePreferencesDirty] = useState(false);
+  const [genreSaveError, setGenreSaveError] = useState<string | null>(null);
+  const [genreSaveStatus, setGenreSaveStatus] = useState<"idle" | "writing" | "verifying">("idle");
   const editingGenreProfileId = useRef<string | null>(null);
   const [localIframeMode, setLocalIframeMode] = useState<"Strict" | "Compatibility">("Strict");
   const [localCatalogMode, setLocalCatalogMode] = useState<CatalogMode>("tmdb");
@@ -231,6 +235,7 @@ function SettingsPageContent() {
     if (editingGenreProfileId.current !== currentProfile.id) {
       editingGenreProfileId.current = currentProfile.id;
       setGenrePreferencesDirty(false);
+      setGenreSaveError(null);
       setSelectedGenreIds(currentProfile.homeGenreRailPreferences ?? [28, 12, 35, 18]);
     } else if (!genrePreferencesDirty) {
       setSelectedGenreIds(currentProfile.homeGenreRailPreferences ?? [28, 12, 35, 18]);
@@ -312,11 +317,13 @@ function SettingsPageContent() {
       nextGenres.push(genreId);
     }
     setSelectedGenreIds(nextGenres);
+    setGenreSaveError(null);
     setGenrePreferencesDirty(true);
   };
 
   const handleSelectAllGenres = () => {
     setSelectedGenreIds(availableGenres.map((g) => g.id));
+    setGenreSaveError(null);
     setGenrePreferencesDirty(true);
   };
 
@@ -325,6 +332,7 @@ function SettingsPageContent() {
       availableGenres.some((g) => g.id === id)
     );
     setSelectedGenreIds(defaults.length > 0 ? defaults : availableGenres.slice(0, 6).map((g) => g.id));
+    setGenreSaveError(null);
     setGenrePreferencesDirty(true);
   };
 
@@ -338,38 +346,37 @@ function SettingsPageContent() {
     const uid = user.uid as string;
     const profileId = currentProfile.id;
     const expected = [...selectedGenreIds];
+    setGenreSaveError(null);
+    setGenreSaveStatus("writing");
     setSaving(true);
-    let writeCompleted = false;
+    let phase: "write" | "verify" = "write";
     try {
-      await updateProfile(profileId, {
-        homeGenreRailPreferences: expected,
-      });
-      writeCompleted = true;
-
-      // Firestore getDocFromServer bypasses local cache and optimistic snapshots.
-      // In demo mode the helper reports a local-only save explicitly.
+      if (isCloudFirebaseActive() && typeof navigator !== "undefined" && !navigator.onLine) {
+        throw Object.assign(new Error("Network offline"), { code: "unavailable" });
+      }
+      await updateProfile(profileId, { homeGenreRailPreferences: expected });
+      phase = "verify";
+      setGenreSaveStatus("verifying");
+      // A successful write is not enough: read the network-backed profile.
       const docRef = getDocRef(`users/${uid}/profiles`, profileId);
       const { snapshot, source } = await getDocumentForVerification(docRef);
       const stored = snapshot.exists() ? snapshot.data()?.homeGenreRailPreferences : undefined;
       if (!genrePreferencesMatch(stored, expected)) {
-        throw new Error("Saved genre preferences differ from the profile returned by the server.");
+        throw Object.assign(new Error("Readback differs"), { code: "verify-mismatch" });
       }
-      // A profile switch while awaiting verification must never mark another
-      // profile's editable form clean or show a misleading success.
       if (editingGenreProfileId.current !== profileId ||
-          useSessionStore.getState().user?.uid !== uid) {
-        return;
-      }
+          useSessionStore.getState().user?.uid !== uid) return;
       setGenrePreferencesDirty(false);
       notifySuccess(source === "firestore"
         ? "Genre rail preferences verified in Firestore."
         : "Genre rail preferences saved in local demo mode (not Firestore).");
     } catch (err) {
       console.error("Genre preference persistence verification failed", err);
-      notifyError(writeCompleted
-        ? "Save submitted, but cloud verification failed. Check Firestore before retrying."
-        : "Could not save genre rails. Check your connection and retry.");
+      const diagnosis = describeGenreSaveError(err, phase);
+      setGenreSaveError(`[${diagnosis.code}] ${diagnosis.message}`);
+      notifyError(phase === "verify" ? "Cloud verification failed. See details below." : "Genre rail save failed. See details below.");
     } finally {
+      setGenreSaveStatus("idle");
       setSaving(false);
     }
   };
@@ -987,9 +994,15 @@ function SettingsPageContent() {
                     className="flex items-center gap-1.5 rounded-xl bg-primary hover:bg-opacity-95 text-primary-contrast py-2.5 px-5 text-xs font-bold transition-all disabled:opacity-50"
                   >
                     <Save className="h-4 w-4" />
-                    <span>Save Rail Preferences</span>
+                    <span>{genreSaveStatus === "writing" ? "Saving to profile…" : genreSaveStatus === "verifying" ? "Verifying in Firestore…" : "Save Rail Preferences"}</span>
                   </button>
                 </div>
+                {genreSaveError && (
+                  <div role="alert" data-testid="genre-save-error" className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs leading-relaxed text-red-200">
+                    <strong className="font-semibold">Genre preference save failed.</strong>
+                    <p className="mt-1">{genreSaveError}</p>
+                  </div>
+                )}
               </div>
             )}
 
