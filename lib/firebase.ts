@@ -337,7 +337,7 @@ export async function runFirestoreHealthCheck(
 
     return {
       state: "rules_ok",
-      message: "Cloud connected. Security rules and indexes are working.",
+      message: "Basic cloud reads and a history write succeeded. Profile preference updates require a separate save check.",
       checkedAt,
       projectId: firebaseProjectId,
     };

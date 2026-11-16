@@ -243,7 +243,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const docRef = getDocRef(`users/${user.uid}/profiles`, profileId);
       // Await the actual write rather than showing a false success if Firestore
       // rejects it (permission, connectivity, invalid profile document).
-      await setDocument(docRef, { ...updates, updatedAt });
+      // This profile must already exist; never silently attempt a partial create.
+      await updateDocument(docRef, { ...updates, updatedAt });
 
       const { profiles, currentProfile } = get();
       const updatedProfiles = profiles.map((profile) =>
@@ -367,6 +368,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         }
 
         const colRef = getCollectionRef(`users/${uid}/profiles`);
+        let liveSnapshotReceived = false;
 
         const ingestSnapshot = (snapshot: any) => {
           if (bootId !== profilesBootGeneration) return;
@@ -386,7 +388,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           .then((snapshot) => {
             if (bootId !== profilesBootGeneration) return;
             window.clearTimeout(bootTimeout);
-            ingestSnapshot(snapshot);
+            // The one-shot fetch may resolve AFTER an onSnapshot update. Do not
+            // replace a newer live profile with a stale one-shot snapshot.
+            if (!liveSnapshotReceived) ingestSnapshot(snapshot);
           })
           .catch((err) => {
             console.error("Failed to prefetch profiles", err);
@@ -398,6 +402,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           });
 
         unsubscribeProfiles = listenToCollection(colRef, (snapshot) => {
+          liveSnapshotReceived = true;
           window.clearTimeout(bootTimeout);
           ingestSnapshot(snapshot);
         });
