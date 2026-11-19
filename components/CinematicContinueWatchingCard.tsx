@@ -1,21 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ImageOff, Play, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ContinueWatchingItem } from "@/lib/continue-watching";
 import { buildWatchUrl, getContinueWatchingItemId } from "@/lib/continue-watching";
 import { useContinueWatchingStore } from "@/stores";
+import { getAnimeDetails } from "@/lib/anilist";
+import { getSeasonDetails } from "@/lib/tmdb";
+import {
+  deriveLatestAiredAnimeEpisode,
+  resolveNewEpisodeRadarForTrackedItem,
+} from "@/lib/discovery-intelligence";
 
 /**
  * Reference-style Continue watching card. Real saved progress, real player URL,
- * and the existing profile-scoped removal store; no requests or new cache.
+ * New Episode Aired radar indicator, and the existing profile-scoped removal store.
  * The resume and remove buttons are siblings, never nested interactive nodes.
  */
 export function CinematicContinueWatchingCard({ item }: { item: ContinueWatchingItem }) {
   const router = useRouter();
   const removeItem = useContinueWatchingStore((state) => state.removeItem);
   const [failedImage, setFailedImage] = useState<string | null>(null);
+  const [newEpBadge, setNewEpBadge] = useState<string | null>(null);
   const rawImage = item.backdrop_path || item.poster_path;
   const imageUrl = rawImage?.startsWith("http")
     ? rawImage
@@ -29,6 +36,44 @@ export function CinematicContinueWatchingCard({ item }: { item: ContinueWatching
     ? `S${item.season} · E${item.episode}`
     : item.media_type === "anime" ? "Anime" : item.media_type === "tv" ? "Series" : "Movie";
 
+  useEffect(() => {
+    let cancelled = false;
+    setNewEpBadge(null);
+    if (!item.episode || (item.media_type !== "anime" && item.media_type !== "tv")) {
+      return;
+    }
+
+    resolveNewEpisodeRadarForTrackedItem({
+      mediaType: item.media_type,
+      tmdbId: item.tmdbId,
+      anilistId: item.anilistId,
+      season: item.season ?? 1,
+      episode: item.episode,
+      fetchAnimeLatest: async (aid) => {
+        const detail = await getAnimeDetails(aid);
+        return detail ? deriveLatestAiredAnimeEpisode(detail) : null;
+      },
+      fetchTvLatest: async (tid, sNum) => {
+        const sDetail = await getSeasonDetails(tid, sNum);
+        const today = new Date().toISOString().slice(0, 10);
+        const airedEps = (sDetail?.episodes ?? []).filter(
+          (ep) => !ep.air_date || ep.air_date <= today
+        );
+        return airedEps.length > 0
+          ? Math.max(...airedEps.map((e) => e.episode_number))
+          : null;
+      },
+    }).then((status) => {
+      if (!cancelled && status.hasNewEpisode) {
+        setNewEpBadge(status.badgeText);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [item.media_type, item.tmdbId, item.anilistId, item.season, item.episode]);
+
   return (
     <article className="zoku-continue-card group relative w-[min(74vw,340px)] shrink-0 sm:w-[340px]">
       <div className="relative aspect-video overflow-hidden rounded-xl border border-border-custom/70 bg-surface">
@@ -39,6 +84,7 @@ export function CinematicContinueWatchingCard({ item }: { item: ContinueWatching
         )}
         {hasImage && (
           <img src={imageUrl!} alt="" loading="lazy" decoding="async" draggable={false}
+            referrerPolicy="no-referrer"
             onError={() => setFailedImage(imageUrl!)}
             className="pointer-events-none absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.025] group-focus-within:scale-[1.025]" />
         )}
@@ -71,7 +117,20 @@ export function CinematicContinueWatchingCard({ item }: { item: ContinueWatching
       <div className="mt-2.5 flex min-w-0 items-start justify-between gap-3 px-0.5">
         <div className="min-w-0">
           <h3 className="truncate text-sm font-semibold text-on-surface">{item.title}</h3>
-          <p className="mt-1 text-xs text-on-surface-variant">{episode}</p>
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-on-surface-variant font-mono tabular-nums">
+            <span>{episode}</span>
+            {newEpBadge && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span
+                  data-testid="new-episode-radar-badge"
+                  className="font-semibold text-emerald-400"
+                >
+                  {newEpBadge}
+                </span>
+              </>
+            )}
+          </p>
         </div>
         <span className="shrink-0 text-xs font-semibold tabular-nums text-primary">{progress}%</span>
       </div>

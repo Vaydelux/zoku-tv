@@ -30,13 +30,17 @@ import { ContinueWatchingRail } from "@/components/ContinueWatchingRail";
 import { WatchHistoryRail } from "@/components/WatchHistoryRail";
 import { RailSortDropdown } from "@/components/RailSortDropdown";
 import { LoadingBanner } from "@/components/LoadingBanner";
-import { TMDBTitle, TMDBGenre } from "@/lib/tmdb";
+import { TMDBTitle, TMDBGenre, getRecommendations } from "@/lib/tmdb";
 import { loadHomeGenreRails, loadHomeTrending } from "@/lib/load-home-content";
 import { filterSavedMediaItems, syncAdultFilterState } from "@/lib/adult-content";
-import { getEligibleSavedAnimeIds } from "@/lib/anilist";
+import { getEligibleSavedAnimeIds, getAnimeDetails } from "@/lib/anilist";
 import { loadAnimeHomeContent } from "@/lib/load-anime-home-content";
 import type { AniListMedia } from "@/lib/anilist";
 import { filterContinueWatchingByCatalog } from "@/lib/continue-watching";
+import {
+  selectBecauseYouWatchedAnchor,
+  filterBecauseYouWatchedRecommendations,
+} from "@/lib/discovery-intelligence";
 import {
   filterWatchHistoryByCatalog,
   getWatchHistoryItemId,
@@ -158,6 +162,69 @@ export default function HomePage() {
       .filter((t) => t.id > 0);
     return filterTmdbForKidsMode(mapped, isKidMode).slice(0, 12);
   }, [catalogWatchlist, catalogMode, isKidMode]);
+
+  const becauseAnchor = useMemo(
+    () => selectBecauseYouWatchedAnchor(filteredHistory, filteredCw, catalogMode),
+    [filteredHistory, filteredCw, catalogMode]
+  );
+
+  const watchedCatalogIdSet = useMemo(() => {
+    const ids = new Set<number>();
+    for (const h of filteredHistory) {
+      const id = h.media_type === "anime" ? Number(h.anilistId ?? 0) : Number(h.tmdbId ?? 0);
+      if (id > 0) ids.add(id);
+    }
+    return ids;
+  }, [filteredHistory]);
+
+  const [becauseTmdbItems, setBecauseTmdbItems] = useState<TMDBTitle[]>([]);
+  const [becauseAnimeItems, setBecauseAnimeItems] = useState<AniListMedia[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setBecauseTmdbItems([]);
+    setBecauseAnimeItems([]);
+
+    if (!becauseAnchor) return;
+
+    const anchor = becauseAnchor;
+
+    async function loadBecauseRecommendations() {
+      try {
+        if (anchor.catalogMode === "anime") {
+          const detail = await getAnimeDetails(anchor.id);
+          if (cancelled || !detail) return;
+          const rawRecs = (detail.recommendations?.nodes ?? [])
+            .map((n) => n.mediaRecommendation)
+            .filter((m): m is AniListMedia => Boolean(m));
+          const safeRecs = filterAnimeForKidsMode(rawRecs, isKidMode);
+          const fresh = filterBecauseYouWatchedRecommendations(
+            safeRecs,
+            anchor.id,
+            watchedCatalogIdSet
+          );
+          if (!cancelled) setBecauseAnimeItems(fresh);
+        } else if (anchor.mediaType === "movie" || anchor.mediaType === "tv") {
+          const rawRecs = await getRecommendations(anchor.mediaType, anchor.id);
+          if (cancelled) return;
+          const safeRecs = filterTmdbForKidsMode(rawRecs, isKidMode);
+          const fresh = filterBecauseYouWatchedRecommendations(
+            safeRecs,
+            anchor.id,
+            watchedCatalogIdSet
+          );
+          if (!cancelled) setBecauseTmdbItems(fresh);
+        }
+      } catch {
+        // Optional personalized recommendation rail
+      }
+    }
+
+    void loadBecauseRecommendations();
+    return () => {
+      cancelled = true;
+    };
+  }, [becauseAnchor, isKidMode, watchedCatalogIdSet]);
 
   // Reset rail filter when switching catalog mode or profile
   useEffect(() => {
@@ -567,6 +634,34 @@ export default function HomePage() {
             {catalogMode === "tmdb" && tmdbWatchlistPreview.length > 0 && selectedRailFilter === "all" && (
               <TitleRail title="From Your Watchlist" items={tmdbWatchlistPreview} />
             )}
+
+            {/* 2b. Personalized "Because You Watched" Discovery Rail */}
+            {selectedRailFilter === "all" &&
+              becauseAnchor &&
+              catalogMode === "anime" &&
+              becauseAnimeItems.length > 0 && (
+                <div data-testid="because-you-watched-rail">
+                  <AnimeRail
+                    title={`Because You Watched ${becauseAnchor.title}`}
+                    items={becauseAnimeItems}
+                    showSortDropdown={false}
+                  />
+                </div>
+              )}
+
+            {selectedRailFilter === "all" &&
+              becauseAnchor &&
+              catalogMode === "tmdb" &&
+              becauseTmdbItems.length > 0 && (
+                <div data-testid="because-you-watched-rail">
+                  <TitleRail
+                    title={`Because You Watched ${becauseAnchor.title}`}
+                    items={becauseTmdbItems}
+                    mediaType={becauseAnchor.mediaType === "tv" ? "tv" : "movie"}
+                    showSortDropdown={false}
+                  />
+                </div>
+              )}
 
             {/* 3. Catalog Rails with Smooth Horizontal Scroll & Edge Fade Effects */}
             {loadingTrending ? (

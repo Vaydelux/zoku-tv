@@ -43,6 +43,11 @@ import {
   classifyTmdbTitle,
   filterTmdbForKidsMode,
 } from "@/lib/kids-mode";
+import {
+  resolveAnimeBridgeForTmdb,
+  type CatalogBridgeMatch,
+} from "@/lib/catalog-bridge";
+import { CatalogBridgeBanner } from "@/components/CatalogBridgeBanner";
 
 interface TitlePageProps {
   params: Promise<{ type: string; id: string }>;
@@ -78,6 +83,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
   const [loadingSeason, setLoadingSeason] = useState(false);
   const [trailerModalOpen, setTrailerModalOpen] = useState(false);
   const [trailerInitialIndex, setTrailerInitialIndex] = useState(0);
+  const [bridgeMatch, setBridgeMatch] = useState<CatalogBridgeMatch | null>(null);
 
   useDocumentTitle(details ? details.title || details.name || "Title" : "Title Details");
 
@@ -91,6 +97,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
       setEligibilityError(false);
       setDetails(null);
       setCollection(null);
+      setBridgeMatch(null);
       try {
         const bundle = await getFullTitleDetails(mediaType, titleId);
         if (cancelled) return;
@@ -98,6 +105,14 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
         setDetails(bundle.details);
         setCast(bundle.cast.slice(0, 12));
         setTrailers(bundle.videos);
+
+        resolveAnimeBridgeForTmdb(bundle.details as any, mediaType, isKidMode)
+          .then((matched) => {
+            if (!cancelled) setBridgeMatch(matched);
+          })
+          .catch(() => {
+            // Optional cross-catalog enrichment
+          });
 
         // Merge recommendations first, then similar, deduplicated
         const mergedMap = new Map<number, TMDBTitle>();
@@ -432,6 +447,12 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
 
               <CollectionPickerButton mediaType={mediaType} id={details.id} />
             </div>
+
+            {bridgeMatch && (
+              <div className="pt-2">
+                <CatalogBridgeBanner match={bridgeMatch} />
+              </div>
+            )}
           </div>
         </div>
 

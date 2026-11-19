@@ -6,8 +6,12 @@ import { Play, Star, X } from "lucide-react";
 import type { ContinueWatchingItem } from "@/lib/continue-watching";
 import { buildWatchUrl, getContinueWatchingItemId } from "@/lib/continue-watching";
 import { useContinueWatchingStore } from "@/stores";
-import { getTitleDetails } from "@/lib/tmdb";
+import { getTitleDetails, getSeasonDetails } from "@/lib/tmdb";
 import { getAnimeDetails } from "@/lib/anilist";
+import {
+  deriveLatestAiredAnimeEpisode,
+  resolveNewEpisodeRadarForTrackedItem,
+} from "@/lib/discovery-intelligence";
 
 interface ContinueWatchingCardProps {
   item: ContinueWatchingItem;
@@ -18,6 +22,7 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
   const removeItem = useContinueWatchingStore((state) => state.removeItem);
   const [imageLoading, setImageLoading] = useState(true);
   const [hovered, setHovered] = useState(false);
+  const [newEpBadge, setNewEpBadge] = useState<string | null>(null);
   const [overview, setOverview] = useState(item.overview?.trim() || "");
   const [resolvedBackdrop, setResolvedBackdrop] = useState<string | null>(
     item.backdrop_path ?? null
@@ -68,6 +73,44 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
     item.anilistId,
     item.media_type,
   ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setNewEpBadge(null);
+    if (!item.episode || (item.media_type !== "anime" && item.media_type !== "tv")) {
+      return;
+    }
+
+    resolveNewEpisodeRadarForTrackedItem({
+      mediaType: item.media_type,
+      tmdbId: item.tmdbId,
+      anilistId: item.anilistId,
+      season: item.season ?? 1,
+      episode: item.episode,
+      fetchAnimeLatest: async (aid) => {
+        const detail = await getAnimeDetails(aid);
+        return detail ? deriveLatestAiredAnimeEpisode(detail) : null;
+      },
+      fetchTvLatest: async (tid, sNum) => {
+        const sDetail = await getSeasonDetails(tid, sNum);
+        const today = new Date().toISOString().slice(0, 10);
+        const airedEps = (sDetail?.episodes ?? []).filter(
+          (ep) => !ep.air_date || ep.air_date <= today
+        );
+        return airedEps.length > 0
+          ? Math.max(...airedEps.map((e) => e.episode_number))
+          : null;
+      },
+    }).then((status) => {
+      if (!cancelled && status.hasNewEpisode) {
+        setNewEpBadge(status.badgeText);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [item.media_type, item.tmdbId, item.anilistId, item.season, item.episode]);
 
   useEffect(() => {
     if (!hovered || (overview && rating != null && resolvedBackdrop)) return;
@@ -147,6 +190,7 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
         alt={item.title}
         decoding="async"
         draggable={false}
+        referrerPolicy="no-referrer"
         onLoad={() => setImageLoading(false)}
         className={`h-full w-full object-cover transition-[transform,opacity] duration-300 ease-out will-change-transform group-hover/card:scale-105 group-focus-within/card:scale-105 ${
           imageLoading ? "scale-95 opacity-0" : "scale-100 opacity-100"
@@ -158,6 +202,14 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-3 pb-3 pt-10 sm:px-3.5 sm:pb-3.5 transition-opacity duration-250 group-hover/card:opacity-0 group-focus-within/card:opacity-0">
         <div className="flex items-center gap-1.5 font-mono text-[10px] text-white/70 tabular-nums">
           <span className="font-semibold uppercase text-primary">{episodeLabel}</span>
+          {newEpBadge && (
+            <>
+              <span>·</span>
+              <span data-testid="new-episode-radar-badge" className="font-semibold text-emerald-400">
+                {newEpBadge}
+              </span>
+            </>
+          )}
           {progress > 0 && (
             <>
               <span>·</span>

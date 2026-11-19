@@ -150,3 +150,196 @@ export function getPreviousEpisode(
   }
   return null;
 }
+
+export type FranchiseTrack = "main" | "side";
+export type FranchiseWatchStatus = "completed" | "in_progress" | "unwatched";
+
+export interface FranchiseProgressSnapshot {
+  status: FranchiseWatchStatus;
+  lastEpisode?: number | null;
+  progressPercent?: number | null;
+}
+
+export interface FranchiseTimelineNode {
+  anilistId: number;
+  title: string;
+  format: string;
+  relationType: string;
+  relationLabel: string;
+  track: FranchiseTrack;
+  orderIndex: number;
+  year: number | null;
+  episodes: number | null;
+  poster: string | null;
+  isCurrent: boolean;
+  watchStatus: FranchiseWatchStatus;
+  lastWatchedEpisode: number | null;
+  progressPercent: number;
+}
+
+export interface FranchiseTimeline {
+  mainStoryline: FranchiseTimelineNode[];
+  sideStoriesAndMovies: FranchiseTimelineNode[];
+  totalEntries: number;
+  completedEntries: number;
+}
+
+const MAIN_RELATIONS = new Set(["PREQUEL", "SEQUEL", "PARENT"]);
+const SIDE_FORMATS = new Set(["MOVIE", "OVA", "SPECIAL", "MUSIC"]);
+const ALL_TIMELINE_RELATIONS = new Set([
+  "PREQUEL",
+  "SEQUEL",
+  "PARENT",
+  "SIDE_STORY",
+  "ALTERNATIVE",
+  "SPIN_OFF",
+  "SUMMARY",
+  "FULL_STORY",
+]);
+
+function formatRelationLabel(relationType: string, isCurrent: boolean): string {
+  if (isCurrent) return "Current Entry";
+  switch (relationType.toUpperCase()) {
+    case "PREQUEL":
+      return "Prequel";
+    case "SEQUEL":
+      return "Sequel";
+    case "PARENT":
+      return "Main Story";
+    case "SIDE_STORY":
+      return "Side Story";
+    case "ALTERNATIVE":
+      return "Alternative";
+    case "SPIN_OFF":
+      return "Spin-Off";
+    case "SUMMARY":
+      return "Recap / Summary";
+    case "FULL_STORY":
+      return "Full Story";
+    default:
+      return "Related";
+  }
+}
+
+export function classifyFranchiseTrack(
+  relationType: string,
+  format: string | null | undefined,
+  isCurrent: boolean
+): FranchiseTrack {
+  const normRel = (relationType || "").toUpperCase();
+  const normFmt = (format || "TV").toUpperCase();
+
+  if (isCurrent) {
+    return SIDE_FORMATS.has(normFmt) ? "side" : "main";
+  }
+
+  if (SIDE_FORMATS.has(normFmt)) {
+    return "side";
+  }
+
+  if (MAIN_RELATIONS.has(normRel)) {
+    return "main";
+  }
+
+  return "side";
+}
+
+export function buildFranchiseTimeline(
+  detail: AniListMediaDetail,
+  progressLookup?: (anilistId: number) => FranchiseProgressSnapshot | null | undefined,
+  isKidSafeLookup?: (media: AniListMedia) => boolean
+): FranchiseTimeline {
+  const entriesMap = new Map<
+    number,
+    { media: AniListMedia; relationType: string; isCurrent: boolean }
+  >();
+
+  entriesMap.set(detail.id, {
+    media: detail,
+    relationType: "CURRENT",
+    isCurrent: true,
+  });
+
+  for (const edge of detail.relations?.edges ?? []) {
+    const node = edge?.node;
+    if (!node || (node.type && node.type !== "ANIME")) continue;
+    const rel = (edge.relationType || "").toUpperCase();
+    if (!ALL_TIMELINE_RELATIONS.has(rel)) continue;
+    if (isKidSafeLookup && !isKidSafeLookup(node)) continue;
+    if (!entriesMap.has(node.id)) {
+      entriesMap.set(node.id, {
+        media: node,
+        relationType: rel,
+        isCurrent: false,
+      });
+    }
+  }
+
+  const sortedRaw = Array.from(entriesMap.values()).sort((a, b) => {
+    const tsDiff = mediaStartTimestamp(a.media) - mediaStartTimestamp(b.media);
+    if (tsDiff !== 0) return tsDiff;
+    return a.media.id - b.media.id;
+  });
+
+  const mainStoryline: FranchiseTimelineNode[] = [];
+  const sideStoriesAndMovies: FranchiseTimelineNode[] = [];
+  let completedEntries = 0;
+
+  for (const item of sortedRaw) {
+    const { media, relationType, isCurrent } = item;
+    const track = classifyFranchiseTrack(relationType, media.format, isCurrent);
+    const snap = progressLookup ? progressLookup(media.id) : null;
+    const watchStatus: FranchiseWatchStatus = snap?.status ?? "unwatched";
+    if (watchStatus === "completed") {
+      completedEntries += 1;
+    }
+
+    const year = media.startDate?.year ?? media.seasonYear ?? null;
+    const node: FranchiseTimelineNode = {
+      anilistId: media.id,
+      title: media.title.english || media.title.romaji || media.title.native || "Untitled",
+      format: (media.format || "TV").replace(/_/g, " "),
+      relationType,
+      relationLabel: formatRelationLabel(relationType, isCurrent),
+      track,
+      orderIndex: track === "main" ? mainStoryline.length + 1 : sideStoriesAndMovies.length + 1,
+      year: typeof year === "number" && year > 1900 ? year : null,
+      episodes: media.episodes ?? null,
+      poster: media.coverImage?.large ?? media.coverImage?.extraLarge ?? null,
+      isCurrent,
+      watchStatus,
+      lastWatchedEpisode: snap?.lastEpisode ?? null,
+      progressPercent: Math.max(0, Math.min(100, Math.round(snap?.progressPercent ?? 0))),
+    };
+
+    if (track === "main") {
+      mainStoryline.push(node);
+    } else {
+      sideStoriesAndMovies.push(node);
+    }
+  }
+
+  // If the current entry is a movie and mainStoryline ended up empty while sideStories has multiple movies,
+  // promote them to mainStoryline so the user sees a primary numbered timeline.
+  if (mainStoryline.length === 0 && sideStoriesAndMovies.length > 0) {
+    const promoted = sideStoriesAndMovies.map((item, idx) => ({
+      ...item,
+      track: "main" as const,
+      orderIndex: idx + 1,
+    }));
+    return {
+      mainStoryline: promoted,
+      sideStoriesAndMovies: [],
+      totalEntries: promoted.length,
+      completedEntries,
+    };
+  }
+
+  return {
+    mainStoryline,
+    sideStoriesAndMovies,
+    totalEntries: mainStoryline.length + sideStoriesAndMovies.length,
+    completedEntries,
+  };
+}
+

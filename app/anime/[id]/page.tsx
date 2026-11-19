@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useMemo, useState, use } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Play, Plus, Check, Star, ArrowLeft, MonitorPlay, Shield, Film, Clock, Users } from "lucide-react";
-import { useSessionStore, useWatchlistStore, useEpisodeProgressStore } from "@/stores";
+import { useSessionStore, useWatchlistStore, useEpisodeProgressStore, useWatchHistoryStore } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { CustomSelect } from "@/components/CustomSelect";
 import { AnimeRail } from "@/components/anime/AnimeRail";
+import { FranchiseTimelineSection } from "@/components/anime/FranchiseTimelineSection";
+import { CatalogBridgeBanner } from "@/components/CatalogBridgeBanner";
 import { EpisodeThumbnailWithProgress } from "@/components/EpisodeThumbnailWithProgress";
 import { CollectionPickerButton } from "@/components/watchlist/CollectionPickerButton";
 import { formatCountdown } from "@/components/anime/AnimeAiringSchedule";
@@ -27,7 +29,16 @@ import {
   classifyAnimeMedia,
   filterAnimeForKidsMode,
 } from "@/lib/kids-mode";
-import { buildAnimeSeasons, type AnimeSeason } from "@/lib/anilist-seasons";
+import {
+  buildAnimeSeasons,
+  buildFranchiseTimeline,
+  type AnimeSeason,
+  type FranchiseTimelineNode,
+} from "@/lib/anilist-seasons";
+import {
+  resolveTmdbBridgeForAnime,
+  type CatalogBridgeMatch,
+} from "@/lib/catalog-bridge";
 
 interface AnimeDetailPageProps {
   params: Promise<{ id: string }>;
@@ -47,6 +58,8 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
   const { currentProfile } = useSessionStore();
   const { addItem, removeItem, hasItem } = useWatchlistStore();
   const { getProgress } = useEpisodeProgressStore();
+  const episodeProgressRecords = useEpisodeProgressStore((state) => state.records);
+  const watchHistoryItems = useWatchHistoryStore((state) => state.items);
   const isKidMode = Boolean(currentProfile?.kidMode);
 
   const [details, setDetails] = useState<Awaited<ReturnType<typeof getAnimeDetails>>>(null);
@@ -55,6 +68,7 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
   const [loading, setLoading] = useState(true);
   const [recommendations, setRecommendations] = useState<AniListMedia[]>([]);
   const [trailerOpen, setTrailerOpen] = useState(false);
+  const [bridgeMatch, setBridgeMatch] = useState<CatalogBridgeMatch | null>(null);
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
 
   useDocumentTitle(details ? getAnimeDisplayTitle(details) : "Anime Details");
@@ -74,18 +88,28 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
       setDetails(null);
       setRecommendations([]);
       setSeasons([]);
+      setBridgeMatch(null);
       try {
         const data = await getAnimeDetails(anilistId);
         if (cancelled) return;
         setDetails(data);
         if (data) {
           const built = buildAnimeSeasons(data);
+          const matchingSeason = built.find((s) => s.anilistId === anilistId);
           setSeasons(built);
-          setSelectedSeason(built[0]?.seasonNumber ?? 1);
+          setSelectedSeason(matchingSeason?.seasonNumber ?? built[0]?.seasonNumber ?? 1);
           const rawRecs = (data.recommendations?.nodes ?? [])
             .map((n) => n.mediaRecommendation)
             .filter((m): m is AniListMedia => Boolean(m));
           setRecommendations(filterAnimeForKidsMode(rawRecs, isKidMode));
+
+          resolveTmdbBridgeForAnime(data, isKidMode)
+            .then((matched) => {
+              if (!cancelled) setBridgeMatch(matched);
+            })
+            .catch(() => {
+              // Optional cross-catalog bridge enrichment
+            });
         }
       } catch (err) {
         console.error("Failed to load anime details", err);
@@ -100,6 +124,59 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
       cancelled = true;
     };
   }, [currentProfile, anilistId, isKidMode]);
+
+  const franchiseTimeline = useMemo(() => {
+    if (!details) return null;
+    return buildFranchiseTimeline(
+      details,
+      (entryAnilistId) => {
+        const hist = watchHistoryItems.find(
+          (h) => h.media_type === "anime" && Number(h.anilistId) === entryAnilistId
+        );
+        if (hist?.completed || (hist?.progress_percent ?? 0) >= 90) {
+          return {
+            status: "completed",
+            lastEpisode: hist?.episode ?? null,
+            progressPercent: 100,
+          };
+        }
+
+        const epRecords = Object.values(episodeProgressRecords || {}).filter(
+          (r) => r && r.media_type === "anime" && Number(r.anilistId) === entryAnilistId
+        );
+        if (epRecords.length > 0) {
+          const highestEp = Math.max(...epRecords.map((r) => r.episode || 1));
+          const latestRec =
+            epRecords.find((r) => r.episode === highestEp) ?? epRecords[0];
+          return {
+            status: "in_progress",
+            lastEpisode: highestEp,
+            progressPercent: latestRec?.progress_percent ?? hist?.progress_percent ?? 25,
+          };
+        }
+
+        if (hist && (hist.progress_percent ?? 0) > 0) {
+          return {
+            status: "in_progress",
+            lastEpisode: hist.episode ?? 1,
+            progressPercent: hist.progress_percent ?? 15,
+          };
+        }
+
+        return { status: "unwatched" };
+      },
+      (media) => !isKidMode || classifyAnimeMedia(media).kidsSafe
+    );
+  }, [details, watchHistoryItems, episodeProgressRecords, isKidMode]);
+
+  const handleSelectFranchiseNode = (node: FranchiseTimelineNode) => {
+    const matchingSeason = seasons.find((s) => s.anilistId === node.anilistId);
+    if (node.isCurrent && matchingSeason) {
+      setSelectedSeason(matchingSeason.seasonNumber);
+      return;
+    }
+    router.push(`/anime/${node.anilistId}`);
+  };
 
   if (loading) {
     return (
@@ -334,11 +411,24 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
 
               <CollectionPickerButton mediaType="anime" id={anilistId} />
             </div>
+
+            {bridgeMatch && (
+              <div className="pt-2">
+                <CatalogBridgeBanner match={bridgeMatch} />
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+        {franchiseTimeline && franchiseTimeline.totalEntries > 1 && (
+          <FranchiseTimelineSection
+            timeline={franchiseTimeline}
+            onSelectEntry={handleSelectFranchiseNode}
+          />
+        )}
+
         {seasons.length > 1 && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">
