@@ -29,11 +29,12 @@ import {
   useCommandPaletteStore,
   logout,
 } from "@/stores";
+import { BrandMark } from "@/components/BrandMark";
 import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
 import { getNavbarNetworkStatus } from "@/lib/network-status";
 import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
-import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
+import { FloatingMenu } from "@/components/ui/FloatingMenu";
 import { usePerfMode } from "@/hooks/usePerfMode";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { normalizeAppearance } from "@/lib/themes";
@@ -52,45 +53,14 @@ export function Navbar() {
   const isOnline = useOnlineStatus();
   const [searchQuery, setSearchQuery] = useState("");
   const [showNavAutocomplete, setShowNavAutocomplete] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const profileMenuRef = useRef<HTMLDivElement>(null);
-  const statusRef = useRef<HTMLDivElement>(null);
-  const statusPopoverRef = useRef<HTMLDivElement>(null);
-
-  useDropdownViewportClamp(isDropdownOpen, profileMenuRef);
-  useDropdownViewportClamp(isStatusPopoverOpen, statusPopoverRef);
+  const profileTriggerRef = useRef<HTMLButtonElement>(null);
+  const statusTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (isOnline) {
       setIsStatusPopoverOpen(false);
     }
   }, [isOnline]);
-
-  // Close dropdowns on click outside or Escape
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent | TouchEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-      if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
-        setIsStatusPopoverOpen(false);
-      }
-    }
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsDropdownOpen(false);
-        setIsStatusPopoverOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,17 +117,12 @@ export function Navbar() {
           
           {/* Logo & Main Nav */}
           <div className="flex min-w-0 items-center gap-4 lg:gap-8">
-            <Link href="/home" className="zoku-brand-lockup flex shrink-0 items-center gap-2 text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-              {cinematicLayout ? (
-                <span className="zoku-brand-mark flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast">
-                  <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" aria-hidden="true" />
-                </span>
-              ) : (
-                <Tv className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
-              )}
-              <span className="font-display text-lg sm:text-xl font-bold tracking-wider text-on-surface leading-none">
-                ZOKU<span className="text-primary font-mono text-xs sm:text-sm ml-0.5">TV</span>
-              </span>
+            <Link
+              href="/home"
+              aria-label="Zoku TV Home"
+              className="zoku-brand-lockup inline-flex shrink-0 items-center rounded-lg py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <BrandMark size="md" />
             </Link>
 
             <div className={cinematicLayout ? "zoku-primary-nav hidden lg:flex items-center gap-1" : "zoku-primary-nav hidden md:flex items-center gap-6"} role="navigation" aria-label="Primary navigation">
@@ -184,8 +149,9 @@ export function Navbar() {
             
             {/* Connectivity Indicator: show inline only when offline in cinematic layout, or always in classic */}
             {(!cinematicLayout || networkStatus.isOffline) && (
-            <div className={`zoku-status-control relative ${isStatusPopoverOpen ? "z-50" : "z-20"}`} ref={statusRef}>
+            <div className="zoku-status-control shrink-0">
               <button
+                ref={statusTriggerRef}
                 type="button"
                 role="status"
                 aria-live="polite"
@@ -194,7 +160,7 @@ export function Navbar() {
                 data-testid="navbar-connection-indicator"
                 data-connection-state={networkStatus.state}
                 onClick={() => setIsStatusPopoverOpen((prev) => !prev)}
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 sm:px-2.5 font-mono text-[9px] sm:text-[10px] font-medium uppercase tracking-wider transition-all duration-300 ${networkStatus.badgeToneClass}`}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 sm:px-2.5 font-mono text-[9px] sm:text-[10px] font-medium uppercase tracking-wider transition-all duration-200 ${networkStatus.badgeToneClass}`}
               >
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span
@@ -204,7 +170,7 @@ export function Navbar() {
                   />
                   <span
                     data-testid="navbar-connection-dot"
-                    className={`relative inline-flex h-2 w-2 rounded-full transition-colors duration-300 ${networkStatus.dotColorClass}`}
+                    className={`relative inline-flex h-2 w-2 rounded-full transition-colors duration-200 ${networkStatus.dotColorClass}`}
                   />
                 </span>
                 {networkStatus.isOffline ? (
@@ -216,28 +182,30 @@ export function Navbar() {
                 <span className="sm:hidden">{networkStatus.shortLabel}</span>
               </button>
 
-              {isStatusPopoverOpen && (
-                <div
-                  ref={statusPopoverRef}
-                  role="dialog"
-                  aria-label="Connection state details"
-                  className="glass-panel absolute left-0 sm:left-auto sm:right-0 mt-2 w-64 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-border-custom bg-surface/95 p-3.5 shadow-2xl backdrop-blur-2xl z-50 animate-scale-up"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`h-2 w-2 rounded-full ${networkStatus.dotColorClass}`}
-                    />
-                    <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-on-surface">
-                      {networkStatus.isOffline
-                        ? "Offline-Only State Active"
-                        : "Online & Synchronized"}
-                    </p>
-                  </div>
-                  <p className="mt-1.5 text-xs leading-relaxed text-on-surface-variant">
-                    {networkStatus.description}
+              <FloatingMenu
+                open={isStatusPopoverOpen}
+                anchorRef={statusTriggerRef}
+                onClose={() => setIsStatusPopoverOpen(false)}
+                role="dialog"
+                ariaLabel="Connection state details"
+                align="right"
+                minWidth={256}
+                maxWidth={280}
+                preferredMaxHeight={220}
+                className="p-3.5"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${networkStatus.dotColorClass}`} />
+                  <p className="text-xs font-semibold text-on-surface">
+                    {networkStatus.isOffline
+                      ? "Offline-Only State Active"
+                      : "Online & Synchronized"}
                   </p>
                 </div>
-              )}
+                <p className="mt-1.5 text-xs leading-relaxed text-on-surface-variant">
+                  {networkStatus.description}
+                </p>
+              </FloatingMenu>
             </div>
             )}
 
@@ -375,173 +343,204 @@ export function Navbar() {
 
             {/* Profile Menu Dropdown */}
             {currentProfile && (
-              <div className={`zoku-profile-control relative ${isDropdownOpen ? "z-50" : "z-20"}`} ref={dropdownRef}>
+              <div className="zoku-profile-control shrink-0">
                 <button
+                  ref={profileTriggerRef}
                   type="button"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  onClick={() => setIsDropdownOpen((prev) => !prev)}
                   aria-label={`Profile menu for ${currentProfile.name}`}
                   aria-controls="zoku-profile-popover"
                   aria-expanded={isDropdownOpen}
                   data-tv-focusable="true"
-                  className="theme-panel flex items-center gap-2 rounded-full p-1 pr-2.5 hover:border-primary/60 transition-all duration-300"
+                  className={`zoku-dropdown-trigger inline-flex h-10 items-center gap-2 rounded-full border p-1 pr-2.5 transition-colors ${
+                    isDropdownOpen
+                      ? "border-primary bg-surface ring-1 ring-primary/35"
+                      : "border-border-custom bg-surface hover:border-primary/60 hover:bg-surface-hover"
+                  }`}
                 >
                   <ProfileAvatarDisplay
                     avatar={currentProfile.avatar}
                     avatarColor={currentProfile.avatarColor}
                     name={currentProfile.name}
                     size="sm"
-                    className="!h-8 !w-8 !rounded-full border-2 border-primary"
+                    className="!h-7 !w-7 !rounded-full"
                   />
-                  <span className="hidden md:inline text-xs font-semibold max-w-[100px] truncate">
+                  <span className="hidden md:inline text-xs font-semibold text-on-surface max-w-[96px] truncate">
                     {currentProfile.name}
                   </span>
-                  <ChevronDown className={`h-3.5 w-3.5 text-primary transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 text-on-surface-variant transition-transform duration-200 ${
+                      isDropdownOpen ? "rotate-180 text-primary" : ""
+                    }`}
+                    aria-hidden="true"
+                  />
                 </button>
 
-                {isDropdownOpen && (
-                  <div
-                    ref={profileMenuRef}
-                    id="zoku-profile-popover"
-                    className="glass-panel absolute right-0 mt-2 w-60 max-w-[calc(100vw-1.5rem)] max-h-[calc(100dvh-4.75rem)] overflow-y-auto rounded-2xl border border-border-custom bg-surface/95 p-2 shadow-2xl backdrop-blur-2xl animate-scale-up z-50"
-                  >
-                    <div className="px-3 py-2.5 border-b border-border-custom">
-                      <p className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">Active Profile</p>
-                      <p className="text-sm font-bold text-on-surface truncate mt-0.5">{currentProfile.name}</p>
-                      <p className="text-[10px] font-mono text-primary mt-0.5">{catalogLabel} catalog</p>
+                <FloatingMenu
+                  open={isDropdownOpen}
+                  anchorRef={profileTriggerRef}
+                  onClose={() => setIsDropdownOpen(false)}
+                  id="zoku-profile-popover"
+                  role="menu"
+                  ariaLabel={`Profile menu for ${currentProfile.name}`}
+                  align="right"
+                  minWidth={244}
+                  maxWidth={268}
+                  preferredMaxHeight={520}
+                  className="p-2"
+                >
+                  <div className="px-2.5 py-2 border-b border-border-custom/70">
+                    <p className="text-[11px] font-medium text-on-surface-variant">Active profile</p>
+                    <p className="text-sm font-bold text-on-surface truncate mt-0.5">{currentProfile.name}</p>
+                    <p className="text-[11px] font-medium text-primary mt-0.5">{catalogLabel} catalog</p>
+                  </div>
+
+                  {/* Profiles Selection */}
+                  {profiles.length > 1 && (
+                    <div className="py-1.5 border-b border-border-custom/70 space-y-0.5">
+                      <p className="px-2.5 py-1 text-[11px] font-medium text-on-surface-variant">Switch profile</p>
+                      {profiles
+                        .filter((p) => p.id !== currentProfile.id)
+                        .map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            role="menuitem"
+                            onClick={() => handleProfileSwitch(p)}
+                            className="zoku-menu-item flex min-h-[38px] w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-on-surface hover:bg-surface-hover transition-colors"
+                          >
+                            <ProfileAvatarDisplay
+                              avatar={p.avatar}
+                              avatarColor={p.avatarColor}
+                              name={p.name}
+                              size="sm"
+                              className="!h-6 !w-6 !rounded-full"
+                            />
+                            <span className="truncate">{p.name}</span>
+                          </button>
+                        ))}
                     </div>
+                  )}
 
-                    {/* Profiles Selection */}
-                    {profiles.length > 1 && (
-                      <div className="py-1.5 border-b border-border-custom">
-                        <p className="px-3 py-1 text-[10px] uppercase font-mono tracking-wider text-on-surface-variant">Switch Profile</p>
-                        {profiles
-                          .filter((p) => p.id !== currentProfile.id)
-                          .map((p) => (
-                            <button
-                              key={p.id}
-                              onClick={() => handleProfileSwitch(p)}
-                              className="w-full flex items-center gap-3 px-3 py-1.5 text-xs text-left text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
-                            >
-                              <ProfileAvatarDisplay
-                                avatar={p.avatar}
-                                avatarColor={p.avatarColor}
-                                name={p.name}
-                                size="sm"
-                                className="!h-6 !w-6 !rounded-full"
-                              />
-                              <span className="truncate font-medium">{p.name}</span>
-                            </button>
-                          ))}
-                      </div>
-                    )}
-
-                    {cinematicLayout && (
-                      <div className="flex flex-col gap-1 border-b border-border-custom px-2 py-2">
-                        <button
-                          type="button"
-                          onClick={togglePerfMode}
-                          data-testid="navbar-perf-mode-toggle"
-                          aria-pressed={is60FpsActive}
-                          className="flex min-h-10 items-center justify-between gap-2 rounded-lg px-2 text-xs text-on-surface hover:bg-surface-hover"
-                        >
-                          <span className="inline-flex items-center gap-2">
-                            <Zap className="h-4 w-4 text-primary" /> TV 60fps Mode
-                          </span>
-                          <span className="font-mono text-[10px] text-primary">
-                            {is60FpsActive ? "ON" : "OFF"}
-                          </span>
-                        </button>
-                      </div>
-                    )}
-                    {/* Action Links */}
-                    <div className="py-1.5 space-y-0.5">
+                  {cinematicLayout && (
+                    <div className="py-1.5 border-b border-border-custom/70">
                       <button
                         type="button"
-                        data-testid="navbar-quick-jump-btn"
-                        onClick={() => {
-                          setIsDropdownOpen(false);
-                          useCommandPaletteStore.getState().setOpen(true);
-                        }}
-                        className="w-full flex items-center justify-between gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
+                        role="menuitem"
+                        onClick={togglePerfMode}
+                        data-testid="navbar-perf-mode-toggle"
+                        aria-pressed={is60FpsActive}
+                        className="zoku-menu-item flex min-h-[38px] w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover transition-colors"
                       >
                         <span className="inline-flex items-center gap-2.5">
-                          <Command className="h-4 w-4 text-primary/80" />
-                          <span>Quick Jump</span>
+                          <Zap className="h-4 w-4 text-primary" aria-hidden="true" />
+                          <span>TV 60fps Mode</span>
                         </span>
-                        <kbd className="rounded border border-border-custom bg-background px-1.5 py-0.5 font-mono text-[10px] text-on-surface-variant">
-                          Ctrl+K
-                        </kbd>
+                        <span className="font-mono text-[11px] font-semibold text-primary">
+                          {is60FpsActive ? "ON" : "OFF"}
+                        </span>
                       </button>
-                      <Link
-                        href="/profiles"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
-                      >
-                        <User className="h-4 w-4 text-primary/80" />
-                        <span>Manage Profiles</span>
-                      </Link>
-                      <Link
-                        href="/settings?section=catalog"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
-                      >
-                        <Clapperboard className="h-4 w-4 text-primary/80" />
-                        <span>Switch Catalog</span>
-                      </Link>
-                      <Link
-                        href="/settings?section=servers"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
-                      >
-                        <Server className="h-4 w-4 text-primary/80" />
-                        <span>Playback Servers</span>
-                      </Link>
-                      <Link
-                        href="/settings"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
-                      >
-                        <Settings className="h-4 w-4 text-primary/80" />
-                        <span>Settings</span>
-                      </Link>
-                      <Link
-                        href="/watchlist"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
-                      >
-                        <Heart className="h-4 w-4 text-primary/80" />
-                        <span>My Watchlist</span>
-                      </Link>
-                      <Link
-                        href="/watchlist?tab=collections"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
-                      >
-                        <FolderHeart className="h-4 w-4 text-primary/80" />
-                        <span>Collections &amp; Backup</span>
-                      </Link>
-                      <Link
-                        href="/watchlist?tab=history"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
-                      >
-                        <Clapperboard className="h-4 w-4 text-primary/80" />
-                        <span>Watch History</span>
-                      </Link>
                     </div>
+                  )}
 
-                    {/* Sign Out */}
-                    <div className="border-t border-border-custom pt-1.5 mt-1">
-                      <button
-                        onClick={handleSignOut}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-left text-red-400 hover:bg-red-500/15 rounded-xl transition-colors"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
+                  {/* Action Links */}
+                  <div className="py-1.5 space-y-0.5">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      data-testid="navbar-quick-jump-btn"
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        useCommandPaletteStore.getState().setOpen(true);
+                      }}
+                      className="zoku-menu-item flex min-h-[38px] w-full items-center justify-between gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover transition-colors"
+                    >
+                      <span className="inline-flex items-center gap-2.5">
+                        <Command className="h-4 w-4 text-primary/85" aria-hidden="true" />
+                        <span>Quick Jump</span>
+                      </span>
+                      <kbd className="rounded border border-border-custom bg-background px-1.5 py-0.5 font-mono text-[10px] text-on-surface-variant">
+                        Ctrl+K
+                      </kbd>
+                    </button>
+                    <Link
+                      href="/profiles"
+                      role="menuitem"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="zoku-menu-item flex min-h-[38px] items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover transition-colors"
+                    >
+                      <User className="h-4 w-4 text-primary/85" aria-hidden="true" />
+                      <span>Manage Profiles</span>
+                    </Link>
+                    <Link
+                      href="/settings?section=catalog"
+                      role="menuitem"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="zoku-menu-item flex min-h-[38px] items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover transition-colors"
+                    >
+                      <Clapperboard className="h-4 w-4 text-primary/85" aria-hidden="true" />
+                      <span>Switch Catalog</span>
+                    </Link>
+                    <Link
+                      href="/settings?section=servers"
+                      role="menuitem"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="zoku-menu-item flex min-h-[38px] items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover transition-colors"
+                    >
+                      <Server className="h-4 w-4 text-primary/85" aria-hidden="true" />
+                      <span>Playback Servers</span>
+                    </Link>
+                    <Link
+                      href="/settings"
+                      role="menuitem"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="zoku-menu-item flex min-h-[38px] items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover transition-colors"
+                    >
+                      <Settings className="h-4 w-4 text-primary/85" aria-hidden="true" />
+                      <span>Settings</span>
+                    </Link>
+                    <Link
+                      href="/watchlist"
+                      role="menuitem"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="zoku-menu-item flex min-h-[38px] items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover transition-colors"
+                    >
+                      <Heart className="h-4 w-4 text-primary/85" aria-hidden="true" />
+                      <span>My Watchlist</span>
+                    </Link>
+                    <Link
+                      href="/watchlist?tab=collections"
+                      role="menuitem"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="zoku-menu-item flex min-h-[38px] items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover transition-colors"
+                    >
+                      <FolderHeart className="h-4 w-4 text-primary/85" aria-hidden="true" />
+                      <span>Collections &amp; Backup</span>
+                    </Link>
+                    <Link
+                      href="/watchlist?tab=history"
+                      role="menuitem"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="zoku-menu-item flex min-h-[38px] items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover transition-colors"
+                    >
+                      <Clapperboard className="h-4 w-4 text-primary/85" aria-hidden="true" />
+                      <span>Watch History</span>
+                    </Link>
                   </div>
-                )}
+
+                  {/* Sign Out */}
+                  <div className="border-t border-border-custom/70 pt-1.5 mt-1">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleSignOut}
+                      className="zoku-menu-item flex min-h-[38px] w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-red-500 hover:bg-red-500/15 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" aria-hidden="true" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </FloatingMenu>
               </div>
             )}
 

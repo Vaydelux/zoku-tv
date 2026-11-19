@@ -32,32 +32,9 @@ html[data-zoku-layout="cinematic"] .site-nav > div {
 }
 
 html[data-zoku-layout="cinematic"] .zoku-brand-lockup {
-  flex-direction: row;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-}
-
-html[data-zoku-layout="cinematic"] .zoku-brand-lockup > span {
-  gap: 0;
-}
-
-html[data-zoku-layout="cinematic"] .zoku-brand-lockup .zoku-brand-mark {
-  border-radius: 11px;
-}
-
-html[data-zoku-layout="cinematic"] .zoku-brand-lockup .font-display {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-}
-
-html[data-zoku-layout="cinematic"] .zoku-brand-lockup .font-mono {
-  font-size: 12px;
-  letter-spacing: 0;
-}
-
-html[data-zoku-layout="cinematic"] .zoku-brand-lockup > span:nth-child(2) {
-  display: none;
+  flex-shrink: 0;
 }
 
 html[data-zoku-layout="cinematic"] .site-nav .zoku-primary-nav {
@@ -73,7 +50,7 @@ html[data-zoku-layout="cinematic"] .site-nav .zoku-nav-link {
 }
 
 html[data-zoku-layout="cinematic"] .site-nav .zoku-nav-link::after {
-  bottom: -14px;
+  bottom: 0;
   right: 14px;
   left: 14px;
 }
@@ -81,23 +58,6 @@ html[data-zoku-layout="cinematic"] .site-nav .zoku-nav-link::after {
 html[data-zoku-layout="cinematic"] .site-nav .zoku-status-control,
 html[data-zoku-layout="cinematic"] .site-nav .zoku-perf-control {
   display: none;
-}
-
-html[data-zoku-layout="cinematic"] .site-nav .zoku-profile-control > button:first-child {
-  padding: 3px;
-  background: var(--surface);
-  border: 1px solid var(--border-color);
-  gap: 0;
-  box-shadow: none;
-}
-
-html[data-zoku-layout="cinematic"] .site-nav .zoku-profile-control > button:first-child > span,
-html[data-zoku-layout="cinematic"] .site-nav .zoku-profile-control > button:first-child > svg {
-  display: none;
-}
-
-html[data-zoku-layout="cinematic"] .site-nav .zoku-profile-control > button:first-child [class*="rounded-full"] {
-  border-color: transparent;
 }
 
 /* Artwork fills the viewport, and scrims protect legibility. No gradient

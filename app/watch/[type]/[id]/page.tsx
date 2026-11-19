@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useMemo, use } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -32,6 +32,7 @@ import { Navbar } from "@/components/Navbar";
 import { useWatchProgress } from "@/hooks/useWatchProgress";
 import { ResumePrompt } from "@/components/watch/ResumePrompt";
 import { ServerSelect } from "@/components/watch/ServerSelect";
+import { FloatingMenu } from "@/components/ui/FloatingMenu";
 import { WatchShortcutsPopover } from "@/components/watch/AutoNextOverlay";
 import { isTmdbAllowedInKidsMode } from "@/lib/kids-mode";
 import {
@@ -68,6 +69,7 @@ export default function WatchMoviePage({
   const [iframeReady, setIframeReady] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const toolsTriggerRef = useRef<HTMLButtonElement>(null);
 
   const serverConfig = useDynamicServerStore((s) => s.config);
   const activeServers = useMemo(
@@ -322,7 +324,7 @@ export default function WatchMoviePage({
             </div>
           </div>
 
-          <div className={`relative flex items-center gap-2 shrink-0 ${showToolsPanel ? "z-50" : "z-20"}`}>
+          <div className="relative flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setShowShortcutsHelp((prev) => !prev)}
@@ -341,6 +343,7 @@ export default function WatchMoviePage({
             </button>
 
             <button
+              ref={toolsTriggerRef}
               type="button"
               onClick={() => setShowToolsPanel((prev) => !prev)}
               aria-expanded={showToolsPanel}
@@ -355,48 +358,57 @@ export default function WatchMoviePage({
               <SlidersHorizontal className="h-4 w-4" />
             </button>
 
-            {showToolsPanel && (
-              <div className="glass-panel absolute right-0 top-11 sm:top-12 z-50 w-[min(19rem,calc(100vw-1.5rem))] rounded-2xl border border-border-custom bg-surface/95 p-4 shadow-2xl backdrop-blur-2xl animate-scale-up">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
-                    Container Controls
-                  </span>
-                  <span className="text-[11px] text-white/45">
-                    Provider: {currentServerObj.name}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIframeMode(
-                      iframeMode === "Strict" ? "Compatibility" : "Strict"
-                    );
-                    setIframeReady(false);
-                  }}
-                  className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-medium border transition-colors ${
-                    useSandbox
-                      ? "bg-green-500/15 text-green-300 border-green-500/30"
-                      : "bg-white/[0.04] text-white/80 border-white/10 hover:bg-white/[0.08]"
-                  }`}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    {useSandbox ? (
-                      <Shield className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <ShieldOff className="w-4 h-4 text-white/50" />
-                    )}
-                    Iframe Mode: {iframeMode}
-                  </span>
-                  <span className="font-mono text-[11px]">
-                    {useSandbox ? "SANDBOX" : "COMPAT"}
-                  </span>
-                </button>
-                <p className="mt-2.5 text-[11px] leading-relaxed text-white/50">
-                  Streams are hosted by external third-party providers. If a server displays a blank screen, buffer loop, or blocked frame, use{" "}
-                  <strong className="text-white/80">Retry</strong> or switch to another server.
-                </p>
+            <FloatingMenu
+              open={showToolsPanel}
+              anchorRef={toolsTriggerRef}
+              onClose={() => setShowToolsPanel(false)}
+              role="dialog"
+              ariaLabel="Container controls"
+              align="right"
+              minWidth={280}
+              maxWidth={320}
+              preferredMaxHeight={320}
+              className="p-4 space-y-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-on-surface">
+                  Container Controls
+                </span>
+                <span className="text-[11px] text-on-surface-variant truncate">
+                  {currentServerObj.name}
+                </span>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => {
+                  setIframeMode(
+                    iframeMode === "Strict" ? "Compatibility" : "Strict"
+                  );
+                  setIframeReady(false);
+                }}
+                className={`zoku-menu-item w-full min-h-[40px] flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium border transition-colors ${
+                  useSandbox
+                    ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/35"
+                    : "bg-background/60 text-on-surface border-border-custom hover:bg-surface-hover"
+                }`}
+              >
+                <span className="inline-flex items-center gap-2">
+                  {useSandbox ? (
+                    <Shield className="w-4 h-4 text-emerald-500 shrink-0" />
+                  ) : (
+                    <ShieldOff className="w-4 h-4 text-on-surface-variant shrink-0" />
+                  )}
+                  Iframe Mode: {iframeMode}
+                </span>
+                <span className="font-mono text-[11px] font-semibold">
+                  {useSandbox ? "SANDBOX" : "COMPAT"}
+                </span>
+              </button>
+              <p className="text-[11px] leading-relaxed text-on-surface-variant">
+                Streams are hosted by external third-party providers. If a server displays a blank screen or blocked frame, use{" "}
+                <strong className="text-on-surface">Retry</strong> or switch servers.
+              </p>
+            </FloatingMenu>
           </div>
         </header>
 

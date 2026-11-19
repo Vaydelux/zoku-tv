@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle, Home, RotateCcw, Server } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 
 export default function AppError({
   error,
@@ -18,8 +19,13 @@ export default function AppError({
   return (
     <div className="min-h-screen bg-background text-on-surface flex items-center justify-center px-4 py-16">
       <div className="w-full max-w-lg rounded-2xl border border-border-custom bg-surface p-6 sm:p-8 text-center space-y-5 shadow-xl">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary">
-          <AlertTriangle className="h-6 w-6" aria-hidden="true" />
+        <div className="flex flex-col items-center gap-3">
+          <Link href="/home" aria-label="Zoku TV Home">
+            <BrandMark size="sm" />
+          </Link>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15 text-primary">
+            <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+          </div>
         </div>
         <div className="space-y-2">
           <h1 className="font-display text-2xl font-bold tracking-tight text-on-surface text-balance">

@@ -400,8 +400,8 @@ export function AnimeDiscoverContent() {
               />
 
               <div className="space-y-1.5">
-                <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
-                  <Building2 className="h-3.5 w-3.5 text-primary" />
+                <div className="flex items-center gap-1.5 text-xs font-medium text-on-surface-variant">
+                  <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
                   <span>Animation Studio</span>
                 </div>
                 <CustomSelect
@@ -416,8 +416,8 @@ export function AnimeDiscoverContent() {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
-                  <BookOpen className="h-3.5 w-3.5 text-primary" />
+                <div className="flex items-center gap-1.5 text-xs font-medium text-on-surface-variant">
+                  <BookOpen className="h-3.5 w-3.5 text-primary shrink-0" />
                   <span>Source Material</span>
                 </div>
                 <CustomSelect
@@ -432,8 +432,8 @@ export function AnimeDiscoverContent() {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
-                  <Tv className="h-3.5 w-3.5 text-primary" />
+                <div className="flex items-center gap-1.5 text-xs font-medium text-on-surface-variant">
+                  <Tv className="h-3.5 w-3.5 text-primary shrink-0" />
                   <span>Format</span>
                 </div>
                 <CustomSelect
@@ -447,7 +447,7 @@ export function AnimeDiscoverContent() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-2.5 items-end">
                 <CustomSelect
                   label="Season"
                   value={localSeason}
@@ -460,8 +460,8 @@ export function AnimeDiscoverContent() {
                 />
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant flex items-center gap-1">
-                    <Calendar className="h-3 w-3 text-primary" />
+                  <label className="text-xs font-medium text-on-surface-variant flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
                     <span>Year</span>
                   </label>
                   <input
@@ -478,7 +478,7 @@ export function AnimeDiscoverContent() {
                     }}
                     placeholder="e.g. 2025"
                     data-testid="anime-discover-year-input"
-                    className="w-full rounded-xl border border-border-custom bg-background px-3 py-2 text-xs text-on-surface focus:outline-none focus:border-primary"
+                    className="h-10 w-full rounded-xl border border-border-custom bg-surface px-3 text-xs text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:border-primary transition-colors"
                   />
                 </div>
               </div>

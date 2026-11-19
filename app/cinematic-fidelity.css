@@ -25,10 +25,7 @@ html[data-zoku-layout="cinematic"] .site-nav .zoku-nav-link {
   white-space: nowrap;
 }
 
-html[data-zoku-layout="cinematic"] .zoku-brand-lockup .font-display {
-  font-size: 15px;
-  letter-spacing: -0.025em;
-}
+/* BrandMark owns its canonical typography across desktop, tablet, and mobile */
 
 /* The reference hero directly meets the first rail — no intermediate toolbar
    or card overlapping the image. Filters are an accessible icon at hero edge. */
@@ -227,9 +224,6 @@ html[data-zoku-layout="cinematic"] .cinematic-poster-action {
 }
 
 @media (max-width: 767px) {
-  html[data-zoku-layout="cinematic"] .zoku-brand-lockup .font-display {
-    display: none;
-  }
   html[data-zoku-layout="cinematic"] .site-nav > div {
     padding-inline: 16px;
   }
@@ -412,12 +406,7 @@ html[data-zoku-layout="cinematic"] .zoku-cinematic-search .zoku-media-tabs > but
   min-height: 40px;
 }
 
-html[data-zoku-layout="cinematic"] .zoku-cinematic-search #zoku-search-sort {
-  background: var(--surface);
-  color: var(--on-surface);
-  border: 1px solid var(--border-color);
-  box-shadow: none;
-}
+/* Search sort uses unified CustomSelect portal */
 
 @media (max-width: 639px) {
   html[data-zoku-layout="cinematic"] .zoku-cinematic-search .zoku-search-header {

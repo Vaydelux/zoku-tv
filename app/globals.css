@@ -84,7 +84,7 @@ html, body {
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Dedicated GPU-composited atmospheric background layer (avoids background-attachment:fixed CPU repaints on 32-bit TV WebViews) */
@@ -219,202 +219,51 @@ body::before {
   background-image: var(--button-gradient);
 }
 
-/* Tokenized custom select & watch server picker */
+/* Unified Zoku floating menus, dropdown triggers, and option rows */
+@keyframes zoku-menu-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.zoku-floating-menu {
+  background-color: color-mix(in srgb, var(--surface) 98%, var(--background));
+  border-color: color-mix(in srgb, var(--border-color) 90%, transparent);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45), 0 4px 14px rgba(0, 0, 0, 0.24);
+  overscroll-behavior: contain;
+  isolation: isolate;
+  animation: zoku-menu-enter 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.appearance-light .zoku-floating-menu {
+  background-color: var(--surface);
+  border-color: color-mix(in srgb, var(--on-surface) 14%, transparent);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14), 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.zoku-dropdown-trigger,
+.zoku-menu-item {
+  box-shadow: none;
+}
+
+.zoku-dropdown-trigger:hover,
+.zoku-menu-item:hover {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
 .zoku-server-select {
   position: relative;
-  z-index: 20;
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.zoku-server-select.is-open {
-  z-index: 60;
-}
-
-.zoku-server-select__eyebrow {
-  flex-shrink: 0;
-  padding-inline: 0.25rem;
-  font-family: var(--font-mono), monospace;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--on-surface-variant);
-}
-
-.zoku-server-select__trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
-  min-width: 7.25rem;
-  height: 2.5rem;
-  width: 100%;
   max-width: 100%;
-  padding: 0.45rem 0.85rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border-color);
-  background-color: color-mix(in srgb, var(--surface) 86%, transparent);
-  background-image: var(--surface-gradient);
-  color: var(--on-surface);
-  backdrop-filter: blur(16px);
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.zoku-server-select__trigger:hover {
-  border-color: color-mix(in srgb, var(--primary) 60%, var(--border-color));
-  background-color: var(--surface-hover);
-}
-
-.zoku-server-select.is-open .zoku-server-select__trigger {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent), var(--shadow-glow);
-}
-
-.zoku-server-select__value {
-  flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-align: left;
-  color: var(--on-surface);
-}
-
-.zoku-server-select__icon {
-  width: 0.875rem;
-  height: 0.875rem;
-  flex-shrink: 0;
-  color: var(--primary);
-  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-  transform: rotate(0deg);
-}
-
-.zoku-server-select.is-open .zoku-server-select__icon {
-  transform: rotate(180deg);
-}
-
-.zoku-server-select__picker {
-  position: absolute;
-  top: calc(100% + 0.45rem);
-  left: 0;
-  right: auto;
-  z-index: 60;
-  width: clamp(13.5rem, 78vw, 17rem);
-  max-width: calc(100vw - 2rem);
-  max-height: min(55dvh, 20rem);
-  overflow-x: hidden;
-  overflow-y: auto;
-  border-radius: 0.9rem;
-  border: 1px solid var(--border-color);
-  background-color: color-mix(in srgb, var(--surface) 97%, var(--background));
-  background-image: var(--surface-gradient);
-  backdrop-filter: blur(24px);
-  box-shadow: var(--shadow-elevated);
-  animation: scale-up 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--primary) 45%, transparent) transparent;
-}
-
-.zoku-server-select--right .zoku-server-select__picker {
-  left: auto;
-  right: 0;
-}
-
-.zoku-server-select__group + .zoku-server-select__group {
-  border-top: 1px solid var(--border-color);
-}
-
-.zoku-server-select__group-label {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 0.55rem 0.9rem 0.35rem;
-  font-family: var(--font-mono), monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--on-surface-variant);
-  background-color: color-mix(in srgb, var(--surface) 97%, var(--background));
-  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 65%, transparent);
-}
-
-.zoku-server-select__option {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.65rem 0.9rem;
-  border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 45%, transparent);
-  background: transparent;
-  color: var(--on-surface);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.zoku-server-select__group .zoku-server-select__option:last-child {
-  border-bottom: 0;
-}
-
-.zoku-server-select__option:hover,
-.zoku-server-select__option:focus-visible {
-  background-color: color-mix(in srgb, var(--primary) 18%, var(--surface-hover));
-  color: var(--on-surface);
-  outline: none;
-}
-
-.zoku-server-select__option.is-selected {
-  background-color: var(--primary);
-  background-image: var(--button-gradient);
-  color: var(--primary-contrast);
-  font-weight: 700;
-}
-
-.zoku-server-select__option-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: inherit;
-}
-
-.zoku-server-select__checkmark {
-  width: 0.875rem;
-  height: 0.875rem;
-  flex-shrink: 0;
-  opacity: 0.95;
-}
-
-@media (max-width: 480px) {
-  .zoku-server-select__trigger {
-    min-width: 6.5rem;
-    padding: 0.4rem 0.7rem;
-  }
-
-  .zoku-server-select__picker {
-    left: 0;
-    right: auto;
-    width: min(86vw, 15.5rem);
-    max-width: calc(100vw - 1.5rem);
-  }
 }
 
 /* Global buttons & interactive controls: pointer cursor + hover elevation */
@@ -437,8 +286,8 @@ label[for],
 [role="status"],
 .poster-card,
 .rail-nav-btn,
-.zoku-server-select__trigger,
-.zoku-server-select__option {
+.zoku-dropdown-trigger,
+.zoku-menu-item {
   cursor: pointer !important;
   transition:
     box-shadow 0.22s ease,
@@ -460,21 +309,19 @@ a[href] *,
   cursor: pointer !important;
 }
 
-button:hover:not(:disabled),
-input[type="button"]:hover:not(:disabled),
-input[type="submit"]:hover:not(:disabled),
-input[type="reset"]:hover:not(:disabled),
-[role="button"]:hover:not([aria-disabled="true"]) {
+/* Scope primary glow strictly to primary CTA buttons so dropdowns, menu rows, and utility icons stay clean */
+button.bg-primary:hover:not(:disabled),
+a.bg-primary:hover,
+input[type="submit"].bg-primary:hover:not(:disabled) {
   box-shadow: var(--shadow-glow);
 }
 
-.appearance-light button:hover:not(:disabled),
-.appearance-light input[type="button"]:hover:not(:disabled),
-.appearance-light input[type="submit"]:hover:not(:disabled),
-.appearance-light input[type="reset"]:hover:not(:disabled),
-.appearance-light [role="button"]:hover:not([aria-disabled="true"]) {
-  box-shadow: var(--shadow-glow);
-  transform: translateY(-1px);
+button[role="option"]:hover,
+button[role="menuitem"]:hover,
+button[role="tab"]:hover,
+.zoku-header-icon:hover {
+  box-shadow: none;
+  transform: none;
 }
 
 /* Poster / title cards — brand-tinted depth + GPU layer promotion */
@@ -740,12 +587,7 @@ input[type="reset"]:disabled,
   pointer-events: none;
 }
 
-/* Default Font Stack Variables & Standardized Keyboard / 10-Foot TV Focus Ring System */
-:root {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
+/* Standardized Keyboard / 10-Foot TV Focus Ring System (font variables come from Next.js layout.tsx) */
 
 a:focus-visible,
 button:focus-visible,
@@ -758,16 +600,28 @@ html[data-tv-mode="true"] button:focus,
 html[data-tv-mode="true"] input:focus,
 html[data-tv-mode="true"] select:focus,
 html[data-tv-mode="true"] [tabindex]:focus {
-  outline: 2.5px solid var(--primary);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 26%, transparent), var(--shadow-glow);
 }
 
-[data-tv-focusable="true"]:focus-visible,
-html[data-tv-mode="true"] [data-tv-focusable="true"]:focus {
+.zoku-dropdown-trigger:focus-visible,
+.zoku-menu-item:focus-visible,
+.site-nav button:focus-visible,
+.site-nav a:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.poster-card[data-tv-focusable="true"]:focus-visible,
+.rail-card-slot [data-tv-focusable="true"]:focus-visible,
+.zoku-genre-tile[data-tv-focusable="true"]:focus-visible,
+html[data-tv-mode="true"] .poster-card[data-tv-focusable="true"]:focus,
+html[data-tv-mode="true"] .rail-card-slot [data-tv-focusable="true"]:focus {
   outline: 3px solid var(--primary);
   outline-offset: 3px;
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 34%, transparent), var(--shadow-glow);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 30%, transparent), var(--shadow-glow);
   transform: translate3d(0, -4px, 0) scale(1.03);
   z-index: 25;
 }

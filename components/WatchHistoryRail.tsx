@@ -17,7 +17,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { WatchHistoryCard } from "@/components/WatchHistoryCard";
 import { RailNavButton } from "@/components/RailNavButton";
 import { useSmoothRailScroll } from "@/hooks/useSmoothRailScroll";
-import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
+import { FloatingMenu } from "@/components/ui/FloatingMenu";
 import {
   filterWatchHistoryByStatus,
   filterWatchHistoryByType,
@@ -67,16 +67,13 @@ export function WatchHistoryRail({
   const [sortBy, setSortBy] = useState<WatchHistorySortOption>("most_recent");
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [highlightedSortIdx, setHighlightedSortIdx] = useState(0);
-  const sortRootRef = useRef<HTMLDivElement>(null);
-  const sortMenuRef = useRef<HTMLDivElement>(null);
+  const sortTriggerRef = useRef<HTMLButtonElement>(null);
   const sortListboxId = useId();
   const [refreshingCache, setRefreshingCache] = useState(false);
   const [cacheRefreshed, setCacheRefreshed] = useState(false);
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const [clearingHistory, setClearingHistory] = useState(false);
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
-
-  useDropdownViewportClamp(isSortOpen, sortMenuRef);
 
   const selectedSortOption =
     WATCH_HISTORY_SORT_OPTIONS.find((opt) => opt.id === sortBy) ??
@@ -133,22 +130,17 @@ export function WatchHistoryRail({
 
   useEffect(() => {
     if (!isSortOpen) return;
-
     const currentIdx = WATCH_HISTORY_SORT_OPTIONS.findIndex(
       (opt) => opt.id === sortBy
     );
     setHighlightedSortIdx(currentIdx >= 0 ? currentIdx : 0);
+  }, [isSortOpen, sortBy]);
 
-    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-      if (!sortRootRef.current?.contains(event.target as Node)) {
-        setIsSortOpen(false);
-      }
-    };
+  useEffect(() => {
+    if (!isSortOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsSortOpen(false);
-      } else if (event.key === "ArrowDown") {
+      if (event.key === "ArrowDown") {
         event.preventDefault();
         setHighlightedSortIdx(
           (prev) => (prev + 1) % WATCH_HISTORY_SORT_OPTIONS.length
@@ -160,26 +152,29 @@ export function WatchHistoryRail({
             (prev - 1 + WATCH_HISTORY_SORT_OPTIONS.length) %
             WATCH_HISTORY_SORT_OPTIONS.length
         );
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        setHighlightedSortIdx(0);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        setHighlightedSortIdx(WATCH_HISTORY_SORT_OPTIONS.length - 1);
       } else if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         const target = WATCH_HISTORY_SORT_OPTIONS[highlightedSortIdx];
         if (target) {
           setSortBy(target.id);
           setIsSortOpen(false);
+          sortTriggerRef.current?.focus();
           rowRef.current?.scrollTo({ left: 0, behavior: "smooth" });
         }
       }
     };
 
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("touchstart", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("touchstart", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isSortOpen, sortBy, highlightedSortIdx, rowRef]);
+  }, [isSortOpen, highlightedSortIdx, rowRef]);
 
   const showTemporaryNotice = (message: string) => {
     setStatusNotice(message);
@@ -351,94 +346,99 @@ export function WatchHistoryRail({
           </div>
 
           {/* Watch History Sorting Dropdown ('Most Recent', 'Oldest', 'Completion Status') */}
-          <div
-            ref={sortRootRef}
-            className={`relative shrink-0 ${isSortOpen ? "z-50" : "z-20"}`}
-          >
+          <div className="shrink-0">
             <button
+              ref={sortTriggerRef}
               type="button"
               data-testid="watch-history-sort-dropdown"
               aria-haspopup="listbox"
               aria-expanded={isSortOpen}
               aria-controls={sortListboxId}
               aria-label="Sort watch history"
+              data-tv-focusable="true"
               onClick={() => setIsSortOpen((prev) => !prev)}
-              className={`theme-panel inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${
+              className={`zoku-dropdown-trigger inline-flex h-9 items-center gap-1.5 rounded-xl border px-2.5 text-xs font-medium transition-colors whitespace-nowrap ${
                 isSortOpen
-                  ? "border-primary ring-1 ring-primary/40 text-on-surface"
-                  : "border-border-custom bg-surface text-on-surface hover:border-primary/60 hover:text-primary"
+                  ? "border-primary bg-surface text-on-surface ring-1 ring-primary/35"
+                  : "border-border-custom bg-surface text-on-surface hover:border-primary/60 hover:bg-surface-hover"
               }`}
             >
-              <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-primary" />
-              <span className="hidden xs:inline font-mono text-[10px] uppercase tracking-wider text-on-surface-variant">
-                Sort:
-              </span>
+              <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+              <span className="hidden sm:inline text-on-surface-variant">Sort:</span>
               <span className="truncate font-semibold text-on-surface">
                 {selectedSortOption.label}
               </span>
               <ChevronDown
-                className={`h-3.5 w-3.5 shrink-0 text-primary transition-transform duration-200 ${
-                  isSortOpen ? "rotate-180" : ""
+                className={`h-3.5 w-3.5 shrink-0 text-on-surface-variant transition-transform duration-200 ${
+                  isSortOpen ? "rotate-180 text-primary" : ""
                 }`}
+                aria-hidden="true"
               />
             </button>
 
-            {isSortOpen && (
-              <div
-                ref={sortMenuRef}
-                id={sortListboxId}
-                role="listbox"
-                aria-label="Sort watch history"
-                className="glass-panel absolute right-0 top-[calc(100%+0.4rem)] w-48 max-w-[calc(100vw-1.5rem)] rounded-xl border border-border-custom bg-surface/95 p-1.5 shadow-2xl backdrop-blur-2xl z-50 animate-scale-up"
-              >
-                {WATCH_HISTORY_SORT_OPTIONS.map((option, idx) => {
-                  const isSelected = option.id === sortBy;
-                  const isHighlighted = idx === highlightedSortIdx;
-                  const iconClass = `h-3.5 w-3.5 shrink-0 ${
-                    isSelected ? "text-primary-contrast" : "text-primary"
-                  }`;
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      data-testid={`watch-history-sort-option-${option.id}`}
-                      onMouseEnter={() => setHighlightedSortIdx(idx)}
-                      onClick={() => {
-                        setSortBy(option.id);
-                        setIsSortOpen(false);
-                        rowRef.current?.scrollTo({
-                          left: 0,
-                          behavior: "smooth",
-                        });
-                      }}
-                      className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors cursor-pointer ${
-                        isSelected
-                          ? "bg-primary text-primary-contrast font-semibold"
-                          : isHighlighted
-                          ? "bg-surface-hover text-on-surface"
-                          : "text-on-surface-variant hover:bg-surface-hover hover:text-on-surface"
-                      }`}
-                    >
-                      <span className="flex items-center gap-2 min-w-0">
-                        {option.id === "most_recent" && (
-                          <Clock className={iconClass} />
-                        )}
-                        {option.id === "oldest" && (
-                          <Calendar className={iconClass} />
-                        )}
-                        {option.id === "completion_status" && (
-                          <CheckCircle2 className={iconClass} />
-                        )}
-                        <span className="truncate">{option.label}</span>
-                      </span>
-                      {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            <FloatingMenu
+              open={isSortOpen}
+              anchorRef={sortTriggerRef}
+              onClose={() => setIsSortOpen(false)}
+              id={sortListboxId}
+              role="listbox"
+              ariaLabel="Sort watch history"
+              align="right"
+              minWidth={204}
+              maxWidth={240}
+              preferredMaxHeight={240}
+              className="p-1.5 space-y-0.5"
+            >
+              {WATCH_HISTORY_SORT_OPTIONS.map((option, idx) => {
+                const isSelected = option.id === sortBy;
+                const isHighlighted = idx === highlightedSortIdx;
+                const iconClass = `h-3.5 w-3.5 shrink-0 ${
+                  isSelected ? "text-primary" : "text-on-surface-variant"
+                }`;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    data-testid={`watch-history-sort-option-${option.id}`}
+                    onMouseEnter={() => setHighlightedSortIdx(idx)}
+                    onClick={() => {
+                      setSortBy(option.id);
+                      setIsSortOpen(false);
+                      sortTriggerRef.current?.focus();
+                      rowRef.current?.scrollTo({
+                        left: 0,
+                        behavior: "smooth",
+                      });
+                    }}
+                    className={`zoku-menu-item flex min-h-[38px] w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
+                      isSelected
+                        ? "bg-primary/15 text-primary font-semibold"
+                        : isHighlighted
+                        ? "bg-surface-hover text-on-surface font-medium"
+                        : "text-on-surface/90 hover:bg-surface-hover hover:text-on-surface font-medium"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      {option.id === "most_recent" && (
+                        <Clock className={iconClass} aria-hidden="true" />
+                      )}
+                      {option.id === "oldest" && (
+                        <Calendar className={iconClass} aria-hidden="true" />
+                      )}
+                      {option.id === "completion_status" && (
+                        <CheckCircle2 className={iconClass} aria-hidden="true" />
+                      )}
+                      <span className="truncate">{option.label}</span>
+                    </span>
+                    {isSelected && (
+                      <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+                    )}
+                  </button>
+                );
+              })}
+            </FloatingMenu>
           </div>
 
           {/* Direct Clear Cache button to refresh local cache for recently watched items without leaving Home */}

@@ -85,6 +85,7 @@ export default function RootLayout({
       lang="en"
       className={`h-full ${fontDisplay.variable} ${fontSans.variable} ${fontMono.variable}`}
       data-theme="theme-crimson"
+      data-scroll-behavior="smooth"
       data-zoku-layout={process.env.NEXT_PUBLIC_ZOKU_LAYOUT === "classic" ? "classic" : "cinematic"}
       suppressHydrationWarning
     >

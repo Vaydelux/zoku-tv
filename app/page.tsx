@@ -1,17 +1,19 @@
 "use client";
 
-import { Tv } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
+import { BrandShell } from "@/components/BrandShell";
 
 /** Root route — AuthGate handles redirect to /login, /profiles, or /home. */
 export default function RootPage() {
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-background text-on-surface">
-      <div className="flex flex-col items-center gap-4 animate-pulse">
-        <Tv className="h-12 w-12 text-primary" />
-        <span className="font-display text-xl font-bold tracking-wider">
-          ZOKU<span className="text-primary font-mono text-sm ml-0.5">TV</span>
-        </span>
+    <BrandShell>
+      <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center gap-4 px-4">
+        <BrandMark size="lg" pulse />
+        <div
+          className="h-5 w-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+          aria-hidden="true"
+        />
       </div>
-    </div>
+    </BrandShell>
   );
 }

@@ -40,6 +40,8 @@ import { Navbar } from "@/components/Navbar";
 import { useWatchProgress } from "@/hooks/useWatchProgress";
 import { ResumePrompt } from "@/components/watch/ResumePrompt";
 import { ServerSelect } from "@/components/watch/ServerSelect";
+import { CustomSelect } from "@/components/CustomSelect";
+import { FloatingMenu } from "@/components/ui/FloatingMenu";
 import { AutoNextOverlay, WatchShortcutsPopover } from "@/components/watch/AutoNextOverlay";
 import { isTmdbAllowedInKidsMode } from "@/lib/kids-mode";
 import {
@@ -89,6 +91,7 @@ export default function WatchTvPage({
   const [autoNextEnabled, setAutoNextEnabled] = useState(true);
   const [showAutoNext, setShowAutoNext] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const toolsTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setAutoNextEnabled(readAutoNextEnabled());
@@ -427,7 +430,7 @@ export default function WatchTvPage({
             </div>
           </div>
 
-          <div className={`relative flex items-center gap-2 shrink-0 ${showToolsPanel ? "z-50" : "z-20"}`}>
+          <div className="relative flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setShowShortcutsHelp((prev) => !prev)}
@@ -446,6 +449,7 @@ export default function WatchTvPage({
             </button>
 
             <button
+              ref={toolsTriggerRef}
               type="button"
               onClick={() => setShowToolsPanel((prev) => !prev)}
               aria-expanded={showToolsPanel}
@@ -460,66 +464,75 @@ export default function WatchTvPage({
               <SlidersHorizontal className="h-4 w-4" />
             </button>
 
-            {showToolsPanel && (
-              <div className="glass-panel absolute right-0 top-11 sm:top-12 z-50 w-[min(19rem,calc(100vw-1.5rem))] rounded-2xl border border-border-custom bg-surface/95 p-4 shadow-2xl backdrop-blur-2xl animate-scale-up space-y-2.5">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
-                    Container Controls
-                  </span>
-                  <span className="text-[11px] text-white/45">
-                    Provider: {currentServerObj.name}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIframeMode(
-                      iframeMode === "Strict" ? "Compatibility" : "Strict"
-                    );
-                    setIframeReady(false);
-                  }}
-                  className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-medium border transition-colors ${
-                    useSandbox
-                      ? "bg-green-500/15 text-green-300 border-green-500/30"
-                      : "bg-white/[0.04] text-white/80 border-white/10 hover:bg-white/[0.08]"
-                  }`}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    {useSandbox ? (
-                      <Shield className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <ShieldOff className="w-4 h-4 text-white/50" />
-                    )}
-                    Iframe Mode: {iframeMode}
-                  </span>
-                  <span className="font-mono text-[11px]">
-                    {useSandbox ? "SANDBOX" : "COMPAT"}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleToggleAutoNext}
-                  data-testid="toggle-auto-next-btn"
-                  className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-medium border transition-colors ${
-                    autoNextEnabled
-                      ? "bg-primary/15 text-primary border-primary/40"
-                      : "bg-white/[0.04] text-white/80 border-white/10 hover:bg-white/[0.08]"
-                  }`}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <FastForward className="w-4 h-4" />
-                    Auto-Next Episode
-                  </span>
-                  <span className="font-mono text-[11px]">
-                    {autoNextEnabled ? "ON" : "OFF"}
-                  </span>
-                </button>
-                <p className="text-[11px] leading-relaxed text-white/50">
-                  Streams are hosted by external third-party providers. Press{" "}
-                  <strong className="text-white/80">?</strong> for keyboard shortcuts or switch servers if a frame fails to load.
-                </p>
+            <FloatingMenu
+              open={showToolsPanel}
+              anchorRef={toolsTriggerRef}
+              onClose={() => setShowToolsPanel(false)}
+              role="dialog"
+              ariaLabel="Container controls"
+              align="right"
+              minWidth={280}
+              maxWidth={320}
+              preferredMaxHeight={340}
+              className="p-4 space-y-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-on-surface">
+                  Container Controls
+                </span>
+                <span className="text-[11px] text-on-surface-variant truncate">
+                  {currentServerObj.name}
+                </span>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => {
+                  setIframeMode(
+                    iframeMode === "Strict" ? "Compatibility" : "Strict"
+                  );
+                  setIframeReady(false);
+                }}
+                className={`zoku-menu-item w-full min-h-[40px] flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium border transition-colors ${
+                  useSandbox
+                    ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/35"
+                    : "bg-background/60 text-on-surface border-border-custom hover:bg-surface-hover"
+                }`}
+              >
+                <span className="inline-flex items-center gap-2">
+                  {useSandbox ? (
+                    <Shield className="w-4 h-4 text-emerald-500 shrink-0" />
+                  ) : (
+                    <ShieldOff className="w-4 h-4 text-on-surface-variant shrink-0" />
+                  )}
+                  Iframe Mode: {iframeMode}
+                </span>
+                <span className="font-mono text-[11px] font-semibold">
+                  {useSandbox ? "SANDBOX" : "COMPAT"}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={handleToggleAutoNext}
+                data-testid="toggle-auto-next-btn"
+                className={`zoku-menu-item w-full min-h-[40px] flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium border transition-colors ${
+                  autoNextEnabled
+                    ? "bg-primary/15 text-primary border-primary/40"
+                    : "bg-background/60 text-on-surface border-border-custom hover:bg-surface-hover"
+                }`}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <FastForward className="w-4 h-4 shrink-0" />
+                  Auto-Next Episode
+                </span>
+                <span className="font-mono text-[11px] font-semibold">
+                  {autoNextEnabled ? "ON" : "OFF"}
+                </span>
+              </button>
+              <p className="text-[11px] leading-relaxed text-on-surface-variant">
+                Streams are hosted by external third-party providers. Press{" "}
+                <strong className="text-on-surface">?</strong> for keyboard shortcuts or switch servers if a frame fails to load.
+              </p>
+            </FloatingMenu>
           </div>
         </header>
 
@@ -679,25 +692,17 @@ export default function WatchTvPage({
             </h2>
 
             {validSeasons.length > 0 ? (
-              <label className="inline-flex items-center gap-2 text-xs text-white/75">
-                <span className="sr-only">Select season</span>
-                <select
-                  value={seasonNum}
-                  onChange={(e) => handleSeasonSwitch(Number(e.target.value))}
-                  aria-label="Select season"
-                  className="rounded-xl border border-white/10 bg-[#141923] px-3.5 py-2 text-xs font-semibold text-white focus:border-primary focus:outline-none"
-                >
-                  {validSeasons.map((s) => (
-                    <option
-                      key={s.id}
-                      value={s.season_number}
-                      className="bg-[#0e131d] text-white"
-                    >
-                      Season {s.season_number}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <CustomSelect
+                value={seasonNum}
+                onChange={(val) => handleSeasonSwitch(Number(val))}
+                ariaLabel="Select season"
+                align="right"
+                className="w-36"
+                options={validSeasons.map((s) => ({
+                  value: s.season_number,
+                  label: `Season ${s.season_number}`,
+                }))}
+              />
             ) : (
               <span className="text-xs font-semibold text-white/60">
                 Season {seasonNum}

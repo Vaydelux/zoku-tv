@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
+import { FloatingMenu } from "@/components/ui/FloatingMenu";
 
 export interface CustomSelectOption {
   value: string | number;
@@ -35,19 +35,17 @@ export function CustomSelect({
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const listId = useId();
-
-  useDropdownViewportClamp(open, menuRef);
+  const triggerId = useId();
 
   const selectedOption =
     options.find((opt) => String(opt.value) === String(value)) ?? null;
   const selectedLabel = selectedOption ? selectedOption.label : placeholder;
 
-  // Only choose the initial highlight when opening. Re-running this on
-  // every ArrowUp/ArrowDown would reset navigation to the selected language.
   const handleToggle = () => {
+    if (options.length === 0) return;
     if (open) {
       setOpen(false);
       return;
@@ -59,8 +57,7 @@ export function CustomSelect({
     setOpen(true);
   };
 
-  // Scroll the *menu*, not the document. Keep keyboard/TV navigation visible
-  // while preserving the user's current position between key presses.
+  // Scroll only inside the floating menu — never scrolls the outer document
   useEffect(() => {
     if (!open || highlightedIndex < 0) return;
     const menu = menuRef.current;
@@ -71,156 +68,144 @@ export function CustomSelect({
     const menuBounds = menu.getBoundingClientRect();
     const activeBounds = active.getBoundingClientRect();
     if (activeBounds.top < menuBounds.top) {
-      menu.scrollTop -= menuBounds.top - activeBounds.top;
+      menu.scrollTop -= menuBounds.top - activeBounds.top + 6;
     } else if (activeBounds.bottom > menuBounds.bottom) {
-      menu.scrollTop += activeBounds.bottom - menuBounds.bottom;
+      menu.scrollTop += activeBounds.bottom - menuBounds.bottom + 6;
     }
   }, [open, highlightedIndex]);
 
   useEffect(() => {
-    if (!open) return;
-
-    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
+    if (!open || options.length === 0) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      } else if (event.key === "ArrowDown") {
+      if (event.key === "ArrowDown") {
         event.preventDefault();
-        setHighlightedIndex((prev) =>
-          options.length > 0 ? (prev + 1) % options.length : 0
-        );
+        setHighlightedIndex((prev) => (prev + 1) % options.length);
       } else if (event.key === "ArrowUp") {
         event.preventDefault();
-        setHighlightedIndex((prev) =>
-          options.length > 0
-            ? (prev - 1 + options.length) % options.length
-            : 0
-        );
-      } else if (event.key === "Enter" && highlightedIndex >= 0) {
+        setHighlightedIndex((prev) => (prev - 1 + options.length) % options.length);
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        setHighlightedIndex(0);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        setHighlightedIndex(options.length - 1);
+      } else if ((event.key === "Enter" || event.key === " ") && highlightedIndex >= 0) {
         event.preventDefault();
         const opt = options[highlightedIndex];
         if (opt) {
           onChange(String(opt.value));
           setOpen(false);
+          triggerRef.current?.focus();
         }
       }
     };
 
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("touchstart", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("touchstart", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, options, value, highlightedIndex, onChange]);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, options, highlightedIndex, onChange]);
 
   const handleSelect = (nextValue: string | number) => {
     onChange(String(nextValue));
     setOpen(false);
+    triggerRef.current?.focus();
   };
 
-  const menuAlignmentClass =
-    align === "right"
-      ? "left-0 sm:left-auto sm:right-0 w-full sm:w-64 min-w-[min(13rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)]"
-      : align === "left"
-        ? "left-0 w-full sm:w-64 min-w-[min(13rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)]"
-        : "left-0 right-0 w-full min-w-[min(12rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)]";
-
   return (
-    <div
-      ref={rootRef}
-      className={`relative min-w-0 ${open ? "z-50" : "z-10"} ${className}`}
-    >
+    <div className={`min-w-0 ${className}`}>
       {label && (
-        <label className="mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+        <label
+          htmlFor={triggerId}
+          className="mb-1.5 block text-xs font-medium text-on-surface-variant"
+        >
           {label}
         </label>
       )}
 
       <button
+        id={triggerId}
+        ref={triggerRef}
         type="button"
+        disabled={options.length === 0}
         data-testid={testId}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
         aria-label={ariaLabel || label || placeholder}
+        data-tv-focusable="true"
         onClick={handleToggle}
-        className={`theme-panel flex w-full items-center justify-between gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-xs font-semibold text-on-surface transition-all duration-200 hover:border-primary/70 ${
-          open ? "border-primary ring-1 ring-primary/40" : ""
+        className={`zoku-dropdown-trigger flex h-10 w-full items-center justify-between gap-2.5 rounded-xl border px-3 text-left text-xs font-semibold text-on-surface transition-colors ${
+          open
+            ? "border-primary bg-surface ring-1 ring-primary/35"
+            : "border-border-custom bg-surface hover:border-primary/60 hover:bg-surface-hover"
         }`}
       >
         <span className="truncate">{selectedLabel}</span>
         <span className="flex shrink-0 items-center gap-1.5">
           {selectedOption?.badge && (
-            <span className="rounded-md border border-border-custom bg-background/60 px-1.5 py-0.5 font-mono text-[10px] text-primary">
+            <span className="font-mono text-[10px] text-on-surface-variant tabular-nums">
               {selectedOption.badge}
             </span>
           )}
           <ChevronDown
-            className={`h-4 w-4 text-primary transition-transform duration-200 ${
-              open ? "rotate-180" : ""
+            className={`h-4 w-4 text-on-surface-variant transition-transform duration-200 ${
+              open ? "rotate-180 text-primary" : ""
             }`}
-            aria-hidden
+            aria-hidden="true"
           />
         </span>
       </button>
 
-      {open && (
-        <div
-          ref={menuRef}
-          id={listId}
-          role="listbox"
-          aria-label={ariaLabel || label || placeholder}
-          className={`glass-panel absolute top-[calc(100%+0.45rem)] z-50 max-h-[min(56dvh,19rem)] overflow-x-hidden overflow-y-auto rounded-2xl border border-border-custom bg-surface/95 p-1.5 shadow-2xl backdrop-blur-2xl animate-scale-up ${menuAlignmentClass}`}
-        >
-          {options.map((opt, idx) => {
-            const isSelected = String(opt.value) === String(value);
-            const isHighlighted = idx === highlightedIndex;
-            return (
-              <button
-                key={String(opt.value)}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                data-option-index={idx}
-                data-highlighted={isHighlighted}
-                onMouseEnter={() => setHighlightedIndex(idx)}
-                onClick={() => handleSelect(opt.value)}
-                className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors ${
-                  isSelected
-                    ? "bg-primary text-primary-contrast font-semibold shadow-sm"
-                    : isHighlighted
-                      ? "bg-surface-hover text-on-surface"
-                      : "text-on-surface hover:bg-surface-hover hover:text-primary"
-                }`}
-              >
-                <span className="truncate">{opt.label}</span>
-                <span className="flex shrink-0 items-center gap-1.5">
-                  {opt.badge && (
-                    <span
-                      className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
-                        isSelected
-                          ? "bg-black/25 text-primary-contrast"
-                          : "bg-background/60 text-on-surface-variant"
-                      }`}
-                    >
-                      {opt.badge}
-                    </span>
-                  )}
-                  {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <FloatingMenu
+        open={open}
+        anchorRef={triggerRef}
+        menuRef={menuRef}
+        onClose={() => setOpen(false)}
+        id={listId}
+        role="listbox"
+        ariaLabel={ariaLabel || label || placeholder}
+        align={align}
+        minWidth={196}
+        maxWidth={320}
+        preferredMaxHeight={304}
+        className="p-1.5 space-y-0.5"
+      >
+        {options.map((opt, idx) => {
+          const isSelected = String(opt.value) === String(value);
+          const isHighlighted = idx === highlightedIndex;
+          return (
+            <button
+              key={String(opt.value)}
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              data-option-index={idx}
+              data-highlighted={isHighlighted}
+              onMouseEnter={() => setHighlightedIndex(idx)}
+              onClick={() => handleSelect(opt.value)}
+              className={`zoku-menu-item flex min-h-[38px] w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
+                isSelected
+                  ? "bg-primary/15 text-primary font-semibold"
+                  : isHighlighted
+                    ? "bg-surface-hover text-on-surface font-medium"
+                    : "text-on-surface/90 hover:bg-surface-hover hover:text-on-surface font-medium"
+              }`}
+            >
+              <span className="truncate">{opt.label}</span>
+              <span className="flex shrink-0 items-center gap-1.5">
+                {opt.badge && (
+                  <span className="font-mono text-[10px] text-on-surface-variant tabular-nums">
+                    {opt.badge}
+                  </span>
+                )}
+                {isSelected && (
+                  <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </FloatingMenu>
     </div>
   );
 }

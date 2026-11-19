@@ -44,7 +44,7 @@ import {
   getWatchHistoryItemId,
   type WatchHistoryItem,
 } from "@/lib/watch-history";
-import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
+import { FloatingMenu } from "@/components/ui/FloatingMenu";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const WatchlistAnalyticsSection = dynamic(
@@ -130,11 +130,46 @@ function WatchlistPageContent() {
   const [sortBy, setSortBy] = useState<WatchlistSortOption>("recently_added");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSortOpen, setIsSortOpen] = useState(false);
-  const sortDropdownRef = useRef<HTMLDivElement>(null);
-  const sortMenuRef = useRef<HTMLDivElement>(null);
+  const [highlightedSortIdx, setHighlightedSortIdx] = useState(0);
+  const sortTriggerRef = useRef<HTMLButtonElement>(null);
   const catalogMode = currentProfile?.catalogMode ?? "tmdb";
 
-  useDropdownViewportClamp(isSortOpen, sortMenuRef);
+  useEffect(() => {
+    if (!isSortOpen) return;
+    const currentIdx = WATCHLIST_SORT_OPTIONS.findIndex((opt) => opt.id === sortBy);
+    setHighlightedSortIdx(currentIdx >= 0 ? currentIdx : 0);
+  }, [isSortOpen, sortBy]);
+
+  useEffect(() => {
+    if (!isSortOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setHighlightedSortIdx((prev) => (prev + 1) % WATCHLIST_SORT_OPTIONS.length);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setHighlightedSortIdx(
+          (prev) => (prev - 1 + WATCHLIST_SORT_OPTIONS.length) % WATCHLIST_SORT_OPTIONS.length
+        );
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        setHighlightedSortIdx(0);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        setHighlightedSortIdx(WATCHLIST_SORT_OPTIONS.length - 1);
+      } else if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        const target = WATCHLIST_SORT_OPTIONS[highlightedSortIdx];
+        if (target) {
+          setSortBy(target.id);
+          setIsSortOpen(false);
+          sortTriggerRef.current?.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isSortOpen, highlightedSortIdx]);
 
   useEffect(() => {
     if (selectedTab === "history") {
@@ -161,31 +196,6 @@ function WatchlistPageContent() {
     setFeedbackNotice(message);
     window.setTimeout(() => setFeedbackNotice(null), 3500);
   };
-
-  // Close sorting dropdown on click outside or Escape
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent | TouchEvent) {
-      if (
-        sortDropdownRef.current &&
-        !sortDropdownRef.current.contains(e.target as Node)
-      ) {
-        setIsSortOpen(false);
-      }
-    }
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setIsSortOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
 
   const catalogFilteredItems = useMemo(
     () =>
@@ -365,75 +375,92 @@ function WatchlistPageContent() {
           <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
             {/* Sorting Dropdown (Watchlist tab) */}
             {activeTab === "watchlist" && catalogFilteredItems.length > 0 && (
-              <div
-                className={`relative ${isSortOpen ? "z-50" : "z-20"}`}
-                ref={sortDropdownRef}
-              >
+              <div className="shrink-0">
                 <button
+                  ref={sortTriggerRef}
                   type="button"
                   onClick={() => setIsSortOpen((prev) => !prev)}
                   aria-haspopup="listbox"
                   aria-expanded={isSortOpen}
                   data-testid="watchlist-sort-dropdown-trigger"
-                  className={`theme-panel inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-semibold text-on-surface hover:border-primary/60 hover:text-primary transition-all duration-300 ${
-                    isSortOpen ? "border-primary ring-1 ring-primary/40" : "border-border-custom"
+                  data-tv-focusable="true"
+                  className={`zoku-dropdown-trigger inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-xs font-semibold text-on-surface transition-colors whitespace-nowrap ${
+                    isSortOpen
+                      ? "border-primary bg-surface ring-1 ring-primary/35"
+                      : "border-border-custom bg-surface hover:border-primary/60 hover:bg-surface-hover"
                   }`}
                 >
-                  <ArrowDownAZ className="h-4 w-4 shrink-0 text-primary" />
-                  <span className="text-on-surface-variant hidden xs:inline">Sort:</span>
-                  <span className="font-bold text-on-surface truncate">
+                  <ArrowDownAZ className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                  <span className="text-on-surface-variant hidden sm:inline">Sort:</span>
+                  <span className="font-semibold text-on-surface truncate">
                     {WATCHLIST_SORT_OPTIONS.find((opt) => opt.id === sortBy)?.label}
                   </span>
                   <ChevronDown
-                    className={`h-3.5 w-3.5 shrink-0 text-primary transition-transform duration-200 ${
-                      isSortOpen ? "rotate-180" : ""
+                    className={`h-3.5 w-3.5 shrink-0 text-on-surface-variant transition-transform duration-200 ${
+                      isSortOpen ? "rotate-180 text-primary" : ""
                     }`}
+                    aria-hidden="true"
                   />
                 </button>
 
-                {isSortOpen && (
-                  <div
-                    ref={sortMenuRef}
-                    role="listbox"
-                    aria-label="Sort watchlist titles"
-                    className="glass-panel absolute left-0 right-auto top-[calc(100%+0.45rem)] w-56 max-w-[calc(100vw-1.5rem)] rounded-2xl p-1.5 shadow-2xl z-50 animate-scale-up border border-border-custom bg-surface/95 backdrop-blur-2xl"
-                  >
-                    <div className="px-3 py-1.5 border-b border-border-custom/60 mb-1">
-                      <p className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
-                        Organize Titles
-                      </p>
-                    </div>
-                    {WATCHLIST_SORT_OPTIONS.map((option) => {
-                      const active = sortBy === option.id;
-                      return (
-                        <button
-                          key={option.id}
-                          type="button"
-                          role="option"
-                          aria-selected={active}
-                          data-testid={`watchlist-sort-${option.id}`}
-                          onClick={() => {
-                            setSortBy(option.id);
-                            setIsSortOpen(false);
-                          }}
-                          className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-left text-xs font-semibold transition-all ${
-                            active
-                              ? "bg-primary text-primary-contrast shadow-sm"
-                              : "text-on-surface hover:bg-surface-hover hover:text-primary"
-                          }`}
-                        >
-                          <span className="flex items-center gap-2 min-w-0">
-                            {option.id === "recently_added" && <Clock className="h-3.5 w-3.5 shrink-0" />}
-                            {option.id === "alphabetical" && <ArrowDownAZ className="h-3.5 w-3.5 shrink-0" />}
-                            {option.id === "release_date" && <Calendar className="h-3.5 w-3.5 shrink-0" />}
-                            <span className="truncate">{option.label}</span>
-                          </span>
-                          {active && <Check className="h-3.5 w-3.5 shrink-0 text-primary-contrast" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                <FloatingMenu
+                  open={isSortOpen}
+                  anchorRef={sortTriggerRef}
+                  onClose={() => setIsSortOpen(false)}
+                  role="listbox"
+                  ariaLabel="Sort watchlist titles"
+                  align="right"
+                  minWidth={216}
+                  maxWidth={256}
+                  preferredMaxHeight={260}
+                  className="p-1.5 space-y-0.5"
+                >
+                  <p className="px-2.5 pb-1 pt-1 text-[11px] font-medium text-on-surface-variant">
+                    Organize titles
+                  </p>
+                  {WATCHLIST_SORT_OPTIONS.map((option, idx) => {
+                    const active = sortBy === option.id;
+                    const highlighted = idx === highlightedSortIdx;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        data-testid={`watchlist-sort-${option.id}`}
+                        onMouseEnter={() => setHighlightedSortIdx(idx)}
+                        onClick={() => {
+                          setSortBy(option.id);
+                          setIsSortOpen(false);
+                          sortTriggerRef.current?.focus();
+                        }}
+                        className={`zoku-menu-item flex min-h-[38px] w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
+                          active
+                            ? "bg-primary/15 text-primary font-semibold"
+                            : highlighted
+                              ? "bg-surface-hover text-on-surface font-medium"
+                              : "text-on-surface/90 hover:bg-surface-hover hover:text-on-surface font-medium"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          {option.id === "recently_added" && (
+                            <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          )}
+                          {option.id === "alphabetical" && (
+                            <ArrowDownAZ className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          )}
+                          {option.id === "release_date" && (
+                            <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          )}
+                          <span className="truncate">{option.label}</span>
+                        </span>
+                        {active && (
+                          <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </FloatingMenu>
               </div>
             )}
 

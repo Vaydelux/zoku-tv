@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Tv,
   Database,
   ExternalLink,
   HardDrive,
@@ -16,6 +15,7 @@ import { shouldHideZokuFooter } from "@/lib/site-footer-routing";
 import { isCloudFirebaseConfigured } from "@/lib/firebase";
 import { useSessionStore } from "@/stores";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { BrandMark } from "@/components/BrandMark";
 
 export function SiteFooter() {
   const pathname = usePathname();
@@ -38,14 +38,12 @@ export function SiteFooter() {
         data-testid="site-footer"
       >
         <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast">
-              <Tv className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <strong className="block text-sm font-semibold text-on-surface">Zoku TV</strong>
-              <span className="block truncate text-[11px]">Movies, TV and anime discovery</span>
-            </div>
+          <div className="flex min-w-0 flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+            <Link href="/home" className="inline-flex w-fit items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded-md">
+              <BrandMark size="sm" />
+            </Link>
+            <span className="hidden sm:inline text-border-custom" aria-hidden="true">·</span>
+            <span className="truncate text-xs text-on-surface-variant">Movies, TV and anime discovery</span>
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
             <span>Metadata by TMDB &amp; AniList</span>
@@ -82,12 +80,12 @@ export function SiteFooter() {
           {/* Column 1: Brand & Honest Purpose */}
           <div className="md:col-span-5 space-y-2.5">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 border border-primary/35 text-primary">
-                <Tv className="h-4 w-4" />
-              </div>
-              <span className="font-display text-sm font-bold tracking-wide text-white">
-                ZOKU TV
-              </span>
+              <Link
+                href="/home"
+                className="inline-flex items-center rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              >
+                <BrandMark size="sm" className="text-white" />
+              </Link>
               <span className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] text-white/60">
                 Open Web Client
               </span>

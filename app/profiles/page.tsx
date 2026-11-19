@@ -45,8 +45,9 @@ export default function ProfilesPage() {
     <Suspense
       fallback={
         <BrandShell>
-          <div className="flex min-h-[100dvh] items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-5 px-4">
+            <BrandMark size="lg" pulse />
+            <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         </BrandShell>
       }
@@ -281,7 +282,7 @@ function ProfilesPageContent() {
           </p>
 
           <div
-            className={`grid w-full max-w-3xl grid-cols-2 justify-items-center gap-5 sm:grid-cols-3 sm:gap-6 md:grid-cols-4 md:gap-8 ${
+            className={`flex w-full max-w-3xl flex-wrap items-start justify-center gap-6 sm:gap-8 md:gap-10 ${
               isBusy ? "pointer-events-none opacity-60" : ""
             }`}
           >
@@ -443,7 +444,7 @@ function ProfilesPageContent() {
               </h2>
 
               {formError && (
-                <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-400 animate-fade-in">
+                <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-500/25 bg-red-500/10 p-3 text-xs font-medium text-red-500 animate-fade-in">
                   <span>{formError}</span>
                 </div>
               )}
@@ -490,12 +491,12 @@ function ProfilesPageContent() {
                   </label>
                 </div>
 
-                <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:gap-4">
+                <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 md:-mx-8 -mb-4 sm:-mb-6 md:-mb-8 flex flex-col-reverse gap-3 border-t border-border-custom bg-surface/95 px-4 py-3.5 backdrop-blur-md sm:flex-row sm:gap-4 sm:px-6 md:px-8">
                   <button
                     type="button"
                     onClick={closeModal}
                     disabled={isSubmitting}
-                    className="flex-1 rounded-xl border border-border-custom py-2.5 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-hover disabled:opacity-50 sm:text-sm"
+                    className="flex-1 min-h-[44px] rounded-xl border border-border-custom py-2.5 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-hover disabled:opacity-50 sm:text-sm"
                   >
                     Cancel
                   </button>
@@ -504,7 +505,7 @@ function ProfilesPageContent() {
                     loading={isSubmitting}
                     loadingText={isCreating ? "Launching portal..." : "Saving settings..."}
                     disabled={isCreating && !canAddProfile(profiles.length)}
-                    className="flex-1 rounded-xl bg-primary py-2.5 text-xs font-semibold text-white transition-colors hover:bg-opacity-90 sm:text-sm"
+                    className="flex-1 min-h-[44px] rounded-xl bg-primary py-2.5 text-xs font-semibold text-white transition-colors hover:bg-opacity-90 sm:text-sm"
                   >
                     {isCreating ? "Launch Portal" : "Save Settings"}
                   </LoadingButton>

@@ -28,6 +28,7 @@ import { shouldOfferMoreSearchResults, getSearchPageResultStatus, matchesSearchM
 import { SEARCH_MEDIA_GENRES, matchesSearchGenre, type SearchGenreLabel } from "@/lib/search-media-genre";
 import { LEGACY_SEARCH_SESSION_KEY, searchQueryStorageKey, searchViewScopeKey, sanitizeSavedSearchQuery, type SavedSearchQuery } from "@/lib/search-session-scope";
 import { sortSearchEntries, type SearchSortMode } from "@/lib/search-result-sort";
+import { CustomSelect } from "@/components/CustomSelect";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 type SearchFilterTab = SearchMediaTab;
@@ -536,17 +537,19 @@ function SearchPageContent() {
                 <p className="text-xs text-on-surface-variant">
                   Showing {visibleResultCount} results
                 </p>
-                <label htmlFor="zoku-search-sort" className="sr-only">Sort search results</label>
-                <select
-                  id="zoku-search-sort"
+                <CustomSelect
                   value={sortMode}
-                  onChange={(event) => setSortMode(event.target.value as SearchSortMode)}
-                  className="min-h-11 rounded-lg border border-border-custom bg-surface px-3 py-2 text-xs font-medium text-on-surface outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                >
-                  <option value="relevance">Relevance</option>
-                  <option value="rating">Top rated</option>
-                  <option value="newest">Newest</option>
-                </select>
+                  onChange={(val) => setSortMode(val as SearchSortMode)}
+                  ariaLabel="Sort search results"
+                  align="right"
+                  className="w-40"
+                  testId="search-sort-select"
+                  options={[
+                    { value: "relevance", label: "Relevance" },
+                    { value: "rating", label: "Top rated" },
+                    { value: "newest", label: "Newest" },
+                  ]}
+                />
               </div>
             </div>
 
