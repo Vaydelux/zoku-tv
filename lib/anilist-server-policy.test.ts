@@ -3,6 +3,7 @@ import test from "node:test";
 import { NextRequest } from "next/server";
 import { isRestrictedAniListMedia } from "./anilist-content-policy";
 import { POST } from "../app/api/anilist/route";
+import { anilistProxyCache } from "./server/api-cache";
 
 const safe = (id: number) => ({ id, type: "ANIME", title: { english: `Anime ${id}` }, isAdult: false, genres: ["Comedy"], tags: [] });
 const hentai = { ...safe(80801), isAdult: true, genres: ["Hentai"] };
@@ -52,6 +53,7 @@ test("server filters adult anime from pages, studio results and previously saved
     assert.equal(arbitrary.status, 404);
   } finally {
     globalThis.fetch = originalFetch;
+    anilistProxyCache.clear();
   }
 });
 
@@ -86,6 +88,7 @@ test("server prevents restricted anime direct details and filters nested recomme
     assert.equal(calls, 2);
   } finally {
     globalThis.fetch = originalFetch;
+    anilistProxyCache.clear();
   }
 });
 
@@ -113,5 +116,6 @@ test("adult preference opt-in enables browse while an invalid cookie retains fil
     assert.equal((seen[1] as Record<string, unknown>).isAdult, false);
   } finally {
     globalThis.fetch = oldFetch;
+    anilistProxyCache.clear();
   }
 });

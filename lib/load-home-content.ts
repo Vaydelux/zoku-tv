@@ -102,27 +102,43 @@ export async function loadHomeTrending(): Promise<{
   return result;
 }
 
-async function loadAllTmdbGenres(): Promise<TMDBGenre[]> {
-  const cached = readSessionCache<TMDBGenre[]>(GENRE_CATALOG_CACHE_KEY);
-  if (cached && cached.length > 0) return cached;
+interface CachedGenreCatalog {
+  all: TMDBGenre[];
+  movieIds: number[];
+  tvIds: number[];
+}
+
+async function loadAllTmdbGenres(): Promise<CachedGenreCatalog> {
+  const cached = readSessionCache<CachedGenreCatalog | TMDBGenre[]>(GENRE_CATALOG_CACHE_KEY);
+  if (cached && !Array.isArray(cached) && cached.all?.length > 0) {
+    return cached;
+  }
 
   const [movieGenres, tvGenres] = await Promise.all([getGenres("movie"), getGenres("tv")]);
-  const allGenres = [...movieGenres, ...tvGenres].reduce((acc, genre) => {
+  const all = [...movieGenres, ...tvGenres].reduce((acc, genre) => {
     if (!acc.some((item) => item.id === genre.id)) acc.push(genre);
     return acc;
   }, [] as TMDBGenre[]);
 
-  if (allGenres.length > 0) {
-    writeSessionCache(GENRE_CATALOG_CACHE_KEY, allGenres);
+  const catalog: CachedGenreCatalog = {
+    all,
+    movieIds: movieGenres.map((g) => g.id),
+    tvIds: tvGenres.map((g) => g.id),
+  };
+
+  if (all.length > 0) {
+    writeSessionCache(GENRE_CATALOG_CACHE_KEY, catalog);
   }
-  return allGenres;
+  return catalog;
 }
 
 export async function loadHomeGenreRails(prefGenreIds: number[]): Promise<GenreRail[]> {
   if (prefGenreIds.length === 0) return [];
   await syncAdultFilterState();
 
-  const allGenres = await loadAllTmdbGenres();
+  const { all: allGenres, movieIds, tvIds } = await loadAllTmdbGenres();
+  const movieGenreSet = new Set(movieIds);
+  const tvGenreSet = new Set(tvIds);
   const resultsById = new Map<number, GenreRail>();
   const uncachedGenreIds: number[] = [];
 
@@ -136,7 +152,6 @@ export async function loadHomeGenreRails(prefGenreIds: number[]): Promise<GenreR
   }
 
   // Fetch uncached genres in controlled batches of 6 to prevent API rate-limiting or UI lag
-  // even when all 19+ genres are selected.
   for (let i = 0; i < uncachedGenreIds.length; i += CONCURRENCY_BATCH_SIZE) {
     const batch = uncachedGenreIds.slice(i, i + CONCURRENCY_BATCH_SIZE);
     await Promise.all(
@@ -144,7 +159,9 @@ export async function loadHomeGenreRails(prefGenreIds: number[]): Promise<GenreR
         const matchedGenre = allGenres.find((genre) => genre.id === genreId);
         if (!matchedGenre) return;
 
-        const mediaType: "movie" | "tv" = genreId % 2 === 0 ? "movie" : "tv";
+        // Accurately route TMDB genre IDs to Movie or TV instead of using parity
+        const mediaType: "movie" | "tv" =
+          tvGenreSet.has(genreId) && !movieGenreSet.has(genreId) ? "tv" : "movie";
         const titles = await discoverMedia(mediaType, {
           with_genres: String(genreId),
           sort_by: "popularity.desc",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, use } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,6 +16,8 @@ import {
   SkipForward,
   Image as ImageIcon,
   Play,
+  Keyboard,
+  FastForward,
 } from "lucide-react";
 import {
   getAnimeDetails,
@@ -24,20 +26,28 @@ import {
   AniListMediaDetail,
 } from "@/lib/anilist";
 import {
-  ANIME_EMBED_SERVER_CATALOG,
   DEFAULT_ANIME_SERVER_ID,
   groupAnimeEmbedServers,
-  getAnimeServerById,
   getAnimeEmbedUrl,
 } from "@/lib/anime-embed";
+import { resolveActiveAnimeServers } from "@/lib/dynamic-servers";
 import {
   useSessionStore,
   useEpisodeProgressStore,
+  useDynamicServerStore,
 } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { useAnimeWatchProgress } from "@/hooks/useAnimeWatchProgress";
 import { ServerSelect } from "@/components/watch/ServerSelect";
+import { AutoNextOverlay, WatchShortcutsPopover } from "@/components/watch/AutoNextOverlay";
 import { isAnimeAllowedInKidsMode } from "@/lib/kids-mode";
+import {
+  readAutoNextEnabled,
+  writeAutoNextEnabled,
+  resolveWatchShortcutAction,
+  shouldIgnoreShortcutTarget,
+} from "@/lib/watch-shortcuts";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const ANIME_SERVER_STORAGE_KEY = "zoku_selected_anime_server_id";
 
@@ -64,25 +74,46 @@ export default function WatchAnimePage({
   const [showToolsPanel, setShowToolsPanel] = useState(false);
   const [iframeReady, setIframeReady] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
+  const [autoNextEnabled, setAutoNextEnabled] = useState(true);
+  const [showAutoNext, setShowAutoNext] = useState(false);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+
+  useEffect(() => {
+    setAutoNextEnabled(readAutoNextEnabled());
+  }, []);
+
+  useEffect(() => {
+    setShowAutoNext(false);
+  }, [numericId, seasonNum, episodeNum]);
+
+  const serverConfig = useDynamicServerStore((s) => s.config);
+  const activeAnimeServers = useMemo(
+    () => resolveActiveAnimeServers(serverConfig),
+    [serverConfig]
+  );
 
   const { newServers, defaultServers } = useMemo(
-    () => groupAnimeEmbedServers(ANIME_EMBED_SERVER_CATALOG),
-    []
+    () => groupAnimeEmbedServers(activeAnimeServers),
+    [activeAnimeServers]
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
       const saved = localStorage.getItem(ANIME_SERVER_STORAGE_KEY);
-      if (saved && ANIME_EMBED_SERVER_CATALOG.some((s) => s.id === saved)) {
+      if (saved && activeAnimeServers.some((s) => s.id === saved)) {
         setSelectedServerId(saved);
       }
     } catch {
       /* ignore storage errors */
     }
-  }, []);
+  }, [activeAnimeServers]);
 
-  const handleServerChange = (serverId: string) => {
+  const currentServerObj =
+    activeAnimeServers.find((s) => s.id === selectedServerId) ||
+    activeAnimeServers[0];
+
+  const handleServerChange = useCallback((serverId: string) => {
     setSelectedServerId(serverId);
     setIframeReady(false);
     if (typeof window !== "undefined") {
@@ -92,23 +123,24 @@ export default function WatchAnimePage({
         /* ignore */
       }
     }
-  };
+  }, []);
 
-  const handleNextServer = () => {
-    const idx = ANIME_EMBED_SERVER_CATALOG.findIndex(
-      (s) => s.id === selectedServerId
+  const handleNextServer = useCallback(() => {
+    if (!currentServerObj) return;
+    const idx = activeAnimeServers.findIndex(
+      (s) => s.id === currentServerObj.id
     );
     const next =
-      ANIME_EMBED_SERVER_CATALOG[(idx + 1) % ANIME_EMBED_SERVER_CATALOG.length];
+      activeAnimeServers[(idx + 1) % activeAnimeServers.length];
     if (next) {
       handleServerChange(next.id);
     }
-  };
+  }, [activeAnimeServers, currentServerObj, handleServerChange]);
 
-  const handleRetryFrame = () => {
+  const handleRetryFrame = useCallback(() => {
     setIframeReady(false);
     setLoadAttempts((prev) => prev + 1);
-  };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,7 +163,6 @@ export default function WatchAnimePage({
     setIframeReady(false);
   }, [selectedServerId, numericId, seasonNum, episodeNum, sandbox]);
 
-  const currentServerObj = getAnimeServerById(selectedServerId);
   const embedUrl = getAnimeEmbedUrl(
     currentServerObj,
     numericId,
@@ -140,6 +171,9 @@ export default function WatchAnimePage({
   );
 
   const displayTitle = anime ? getAnimeDisplayTitle(anime) : "Loading Anime...";
+  useDocumentTitle(
+    anime ? `Watch Ep ${episodeNum} · ${getAnimeDisplayTitle(anime)}` : "Watch Anime"
+  );
   const totalEpisodes = Math.max(
     episodeNum,
     anime?.episodes || anime?.streamingEpisodes?.length || 12
@@ -169,6 +203,89 @@ export default function WatchAnimePage({
     embedUrl,
     ready: Boolean(anime && anime.id === numericId) && !loading && !kidsRestricted,
   });
+
+  const prevCompletedRef = useRef(isCompleted);
+  useEffect(() => {
+    if (!prevCompletedRef.current && isCompleted && autoNextEnabled && hasNext) {
+      setShowAutoNext(true);
+    }
+    prevCompletedRef.current = isCompleted;
+  }, [isCompleted, autoNextEnabled, hasNext]);
+
+  const handlePlayNextEpisode = useCallback(() => {
+    setShowAutoNext(false);
+    if (hasNext) {
+      router.push(`/watch/anime/${anilistId}/${seasonNum}/${episodeNum + 1}`);
+    }
+  }, [hasNext, router, anilistId, seasonNum, episodeNum]);
+
+  const handleMarkWatchedAndAdvance = useCallback(() => {
+    markCompleted();
+    if (hasNext) {
+      if (autoNextEnabled) {
+        setShowAutoNext(true);
+      } else {
+        router.push(`/watch/anime/${anilistId}/${seasonNum}/${episodeNum + 1}`);
+      }
+    }
+  }, [markCompleted, hasNext, autoNextEnabled, router, anilistId, seasonNum, episodeNum]);
+
+  const handleRewatch = useCallback(() => {
+    setShowAutoNext(false);
+    resetProgress();
+  }, [resetProgress]);
+
+  const handleToggleAutoNext = () => {
+    const next = !autoNextEnabled;
+    setAutoNextEnabled(next);
+    writeAutoNextEnabled(next);
+    if (!next) setShowAutoNext(false);
+  };
+
+  useEffect(() => {
+    if (!anime || anime.id !== numericId || kidsRestricted) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (shouldIgnoreShortcutTarget(e.target)) return;
+      const action = resolveWatchShortcutAction(e);
+      if (!action) return;
+      e.preventDefault();
+      if (action === "next_episode" && hasNext) {
+        handlePlayNextEpisode();
+      } else if (action === "prev_episode" && hasPrev) {
+        router.push(`/watch/anime/${anilistId}/${seasonNum}/${episodeNum - 1}`);
+      } else if (action === "next_server") {
+        handleNextServer();
+      } else if (action === "retry_frame") {
+        handleRetryFrame();
+      } else if (action === "toggle_watched") {
+        if (isCompleted) {
+          handleRewatch();
+        } else {
+          handleMarkWatchedAndAdvance();
+        }
+      } else if (action === "toggle_shortcuts_help") {
+        setShowShortcutsHelp((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    anime,
+    numericId,
+    kidsRestricted,
+    hasNext,
+    hasPrev,
+    router,
+    anilistId,
+    seasonNum,
+    episodeNum,
+    handlePlayNextEpisode,
+    handleNextServer,
+    handleRetryFrame,
+    isCompleted,
+    handleRewatch,
+    handleMarkWatchedAndAdvance,
+  ]);
 
   // No third-party player can mount until the trusted AniList endpoint confirms
   // that this exact ID is allowed under the active adult-content policy.
@@ -214,17 +331,6 @@ export default function WatchAnimePage({
     : iframeReady
     ? "Container Ready"
     : "Loading Frame...";
-
-  const handleMarkWatchedAndAdvance = () => {
-    markCompleted();
-    if (hasNext) {
-      router.push(`/watch/anime/${anilistId}/${seasonNum}/${episodeNum + 1}`);
-    }
-  };
-
-  const handleRewatch = () => {
-    resetProgress();
-  };
 
   const episodeNumbers = Array.from(
     { length: Math.min(totalEpisodes, 100) },
@@ -289,9 +395,27 @@ export default function WatchAnimePage({
           <div className={`relative flex items-center gap-2 shrink-0 ${showToolsPanel ? "z-50" : "z-20"}`}>
             <button
               type="button"
+              onClick={() => setShowShortcutsHelp((prev) => !prev)}
+              aria-expanded={showShortcutsHelp}
+              aria-label="Player keyboard shortcuts"
+              title="Keyboard shortcuts (?)"
+              data-testid="watch-shortcuts-toggle-btn"
+              data-tv-focusable="true"
+              className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border transition-colors ${
+                showShortcutsHelp
+                  ? "border-primary/50 bg-primary/15 text-primary"
+                  : "border-white/10 bg-white/[0.04] text-white/75 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <Keyboard className="h-4 w-4" />
+            </button>
+
+            <button
+              type="button"
               onClick={() => setShowToolsPanel((prev) => !prev)}
               aria-expanded={showToolsPanel}
               aria-label="Player container settings and troubleshooting"
+              data-tv-focusable="true"
               className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border transition-colors ${
                 showToolsPanel || sandbox
                   ? "border-primary/50 bg-primary/15 text-primary"
@@ -302,8 +426,8 @@ export default function WatchAnimePage({
             </button>
 
             {showToolsPanel && (
-              <div className="glass-panel absolute right-0 top-11 sm:top-12 z-50 w-[min(19rem,calc(100vw-1.5rem))] rounded-2xl border border-border-custom bg-surface/95 p-4 shadow-2xl backdrop-blur-2xl animate-scale-up">
-                <div className="flex items-center justify-between mb-3">
+              <div className="glass-panel absolute right-0 top-11 sm:top-12 z-50 w-[min(19rem,calc(100vw-1.5rem))] rounded-2xl border border-border-custom bg-surface/95 p-4 shadow-2xl backdrop-blur-2xl animate-scale-up space-y-2.5">
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
                     Container Controls
                   </span>
@@ -335,9 +459,27 @@ export default function WatchAnimePage({
                     {sandbox ? "ON" : "OFF"}
                   </span>
                 </button>
-                <p className="mt-2.5 text-[11px] leading-relaxed text-white/50">
-                  Anime streams are served by third-party providers. If an episode fails to load on the current server, click{" "}
-                  <strong className="text-white/80">Retry</strong> or switch to another provider.
+                <button
+                  type="button"
+                  onClick={handleToggleAutoNext}
+                  data-testid="toggle-auto-next-btn"
+                  className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-medium border transition-colors ${
+                    autoNextEnabled
+                      ? "bg-primary/15 text-primary border-primary/40"
+                      : "bg-white/[0.04] text-white/80 border-white/10 hover:bg-white/[0.08]"
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <FastForward className="w-4 h-4" />
+                    Auto-Next Episode
+                  </span>
+                  <span className="font-mono text-[11px]">
+                    {autoNextEnabled ? "ON" : "OFF"}
+                  </span>
+                </button>
+                <p className="text-[11px] leading-relaxed text-white/50">
+                  Anime streams are served by third-party providers. Press{" "}
+                  <strong className="text-white/80">?</strong> for keyboard shortcuts or switch servers if an episode fails to load.
                 </p>
               </div>
             )}
@@ -578,6 +720,21 @@ export default function WatchAnimePage({
           </div>
         </section>
       </div>
+
+      {hasNext && (
+        <AutoNextOverlay
+          visible={showAutoNext}
+          nextEpisodeLabel={`Season ${seasonNum} · Episode ${episodeNum + 1}`}
+          nextEpisodeTitle={anime?.streamingEpisodes?.[episodeNum]?.title || undefined}
+          onPlayNext={handlePlayNextEpisode}
+          onCancel={() => setShowAutoNext(false)}
+        />
+      )}
+
+      <WatchShortcutsPopover
+        open={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+      />
     </div>
   );
 }

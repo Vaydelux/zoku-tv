@@ -93,28 +93,65 @@ service cloud.firestore {
 
     function validWatchHistoryItem() {
       let data = request.resource.data;
-      return data.keys().hasAll(['media_type', 'title', 'watched_at'])
+      return data.keys().hasAll(['media_type', 'title'])
+        && (('last_watched_at' in data && data.last_watched_at is string)
+          || ('watched_at' in data && data.watched_at is string))
         && data.media_type in ['movie', 'tv', 'anime']
         && data.title is string
-        && data.watched_at is string
         && (
           (data.media_type == 'anime' && 'anilistId' in data && data.anilistId is int)
           || (data.media_type in ['movie', 'tv'] && 'tmdbId' in data && data.tmdbId is int)
         )
         && (!('season' in data) || data.season == null || data.season is int)
         && (!('episode' in data) || data.episode == null || data.episode is int)
+        && (!('overview' in data) || data.overview == null || data.overview is string)
+        && (!('vote_average' in data) || data.vote_average == null || data.vote_average is number)
         && (!('poster_path' in data) || data.poster_path == null || data.poster_path is string)
-        && (!('backdrop_path' in data) || data.backdrop_path == null || data.backdrop_path is string);
+        && (!('backdrop_path' in data) || data.backdrop_path == null || data.backdrop_path is string)
+        && (!('progress_percent' in data) || data.progress_percent == null
+          || (data.progress_percent is number && data.progress_percent >= 0 && data.progress_percent <= 100))
+        && (!('current_time_sec' in data) || data.current_time_sec == null || data.current_time_sec is number)
+        && (!('duration_sec' in data) || data.duration_sec == null || data.duration_sec is number)
+        && (!('completed' in data) || data.completed is bool)
+        && (!('watch_count' in data) || (data.watch_count is int && data.watch_count >= 1));
     }
 
     function validEpisodeProgressItem() {
       let data = request.resource.data;
-      return data.keys().hasAll(['media_type', 'season', 'episode', 'status', 'updated_at'])
+      return data.keys().hasAll(['media_type', 'season', 'episode', 'updated_at'])
         && data.media_type in ['tv', 'anime']
         && data.season is int && data.season >= 1
         && data.episode is int && data.episode >= 1
-        && data.status in ['in_progress', 'completed']
+        && (('completed' in data && data.completed is bool)
+          || ('status' in data && data.status in ['in_progress', 'completed']))
+        && (!('progress_percent' in data)
+          || (data.progress_percent is number && data.progress_percent >= 0 && data.progress_percent <= 100))
+        && (!('current_time_sec' in data) || data.current_time_sec is number)
+        && (!('duration_sec' in data) || data.duration_sec == null || data.duration_sec is number)
+        && (!('tmdbId' in data) || data.tmdbId == null || data.tmdbId is int)
+        && (!('anilistId' in data) || data.anilistId == null || data.anilistId is int)
         && data.updated_at is string;
+    }
+
+    function validServerConfigDoc() {
+      let data = request.resource.data;
+      return data.version is int && data.version == 1
+        && data.tmdbActiveIds is list && data.tmdbActiveIds.size() <= 100
+        && data.animeActiveIds is list && data.animeActiveIds.size() <= 100
+        && data.customTmdbServers is list && data.customTmdbServers.size() <= 50
+        && data.customAnimeServers is list && data.customAnimeServers.size() <= 50
+        && (!('updatedAt' in data) || data.updatedAt is string);
+    }
+
+    function validCustomCollection() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['id', 'name', 'itemKeys', 'createdAt', 'updatedAt'])
+        && data.id is string && data.id.size() >= 2 && data.id.size() <= 64
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 60
+        && (!('description' in data) || data.description == null || (data.description is string && data.description.size() <= 160))
+        && data.itemKeys is list && data.itemKeys.size() <= 250
+        && data.createdAt is string
+        && data.updatedAt is string;
     }
 
     match /users/{userId} {
@@ -153,6 +190,18 @@ service cloud.firestore {
         match /episodeProgress/{entryKey} {
           allow read: if isOwner(userId);
           allow create, update: if isOwner(userId) && validEpisodeProgressItem();
+          allow delete: if isOwner(userId);
+        }
+
+        match /serverConfig/{docId} {
+          allow read: if isOwner(userId);
+          allow create, update: if isOwner(userId) && validServerConfigDoc();
+          allow delete: if isOwner(userId);
+        }
+
+        match /collections/{collectionId} {
+          allow read: if isOwner(userId);
+          allow create, update: if isOwner(userId) && validCustomCollection();
           allow delete: if isOwner(userId);
         }
       }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Check, Star, Play, CheckCircle2 } from "lucide-react";
-import { useWatchlistStore, useWatchHistoryStore } from "@/stores";
+import { useWatchlistStore, useWatchHistoryStore, useQuickTrailerStore } from "@/stores";
 import { getTitleDetails, TMDBTitle } from "@/lib/tmdb";
 import { isReleasedWithinLast30Days } from "@/lib/media-types";
 import { useCardPlayProgress } from "@/lib/card-play-progress";
@@ -28,13 +28,14 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
     title.backdrop_path ?? null
   );
 
+  const prefetchedRef = useRef(false);
   const name = title.title || title.name || "Untitled Masterpiece";
   const rawImagePath = resolvedBackdrop || title.backdrop_path || title.poster_path;
   const imagePath = rawImagePath
     ? rawImagePath.startsWith("http")
       ? rawImagePath
       : `https://image.tmdb.org/t/p/w780${rawImagePath}`
-    : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=900";
+    : "";
 
   const rating = title.vote_average ? title.vote_average.toFixed(1) : "N/A";
   const rawReleaseDate = title.release_date || title.first_air_date || null;
@@ -144,6 +145,14 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
         fullWidth={fullWidth}
         onOpen={handleClick}
         onPlay={() => router.push(`/watch/${actualMediaType}/${title.id}`)}
+        onQuickTrailer={() => {
+          void useQuickTrailerStore.getState().openTmdbTrailer(actualMediaType, title.id, name);
+        }}
+        onPrefetch={() => {
+          if (prefetchedRef.current) return;
+          prefetchedRef.current = true;
+          router.prefetch(`/title/${actualMediaType}/${title.id}`);
+        }}
         onToggleWatchlist={() => handleWatchlistToggle()}
         onToggleWatched={() => handleHistoryToggle()}
       />

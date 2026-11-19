@@ -23,6 +23,14 @@ export interface TMDBTitle {
   episode_run_time?: number[];
   number_of_seasons?: number;
   number_of_episodes?: number;
+  tagline?: string;
+  status?: string;
+  belongs_to_collection?: {
+    id: number;
+    name: string;
+    poster_path: string | null;
+    backdrop_path: string | null;
+  } | null;
   seasons?: {
     id: number;
     name: string;
@@ -31,6 +39,47 @@ export interface TMDBTitle {
     episode_count: number;
     poster_path: string | null;
   }[];
+}
+
+export interface TMDBCollection {
+  id: number;
+  name: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  parts: TMDBTitle[];
+}
+
+export interface TMDBPersonCredit extends TMDBTitle {
+  character?: string;
+  job?: string;
+  department?: string;
+  vote_count?: number;
+}
+
+export interface TMDBPersonDetail {
+  id: number;
+  name: string;
+  biography: string;
+  birthday: string | null;
+  deathday: string | null;
+  place_of_birth: string | null;
+  known_for_department: string;
+  profile_path: string | null;
+  popularity: number;
+  also_known_as?: string[];
+  combined_credits?: {
+    cast: TMDBPersonCredit[];
+    crew: TMDBPersonCredit[];
+  };
+}
+
+export interface TMDBFullTitleBundle {
+  details: TMDBTitle;
+  cast: TMDBCredit[];
+  videos: TMDBVideo[];
+  similar: TMDBTitle[];
+  recommendations: TMDBTitle[];
 }
 
 export interface TMDBGenre {
@@ -264,4 +313,89 @@ export async function getSeasonDetails(
   seasonNumber: number
 ): Promise<TMDBSeasonDetail> {
   return await tmdbFetch(`/tv/${tvId}/season/${seasonNumber}`);
+}
+
+const PREFERRED_VIDEO_TYPES = new Set(["Trailer", "Teaser", "Clip", "Featurette"]);
+
+/**
+ * Fetches title details together with credits, trailers, similar, and recommendations
+ * in a single server-verified request instead of a 4-request waterfall.
+ */
+export async function getFullTitleDetails(
+  type: "movie" | "tv",
+  id: number
+): Promise<TMDBFullTitleBundle> {
+  const data = await tmdbFetch(`/${type}/${id}`, {
+    append_to_response: "release_dates,content_ratings,keywords,credits,videos,similar,recommendations",
+  });
+  if (type === "movie") {
+    requireMovieCatalogAvailable();
+    if (isAdultFilterEnabled() && (!Array.isArray(data.production_companies) || data.id !== id)) {
+      throw new Error("This title is unavailable while the adult-content filter is enabled.");
+    }
+  }
+  const details: TMDBTitle = { ...data, media_type: type };
+  if (isAdultFilterEnabled() && isRestrictedTmdbTitle(details)) {
+    throw new Error("This title is unavailable while the adult-content filter is enabled.");
+  }
+
+  const cast: TMDBCredit[] = Array.isArray(data.credits?.cast) ? data.credits.cast : [];
+  const rawVideos: TMDBVideo[] = Array.isArray(data.videos?.results) ? data.videos.results : [];
+  const videos = rawVideos
+    .filter((video) => video.site === "YouTube" && PREFERRED_VIDEO_TYPES.has(video.type))
+    .sort((a, b) => {
+      const rank = (t: string) => (t === "Trailer" ? 0 : t === "Teaser" ? 1 : t === "Clip" ? 2 : 3);
+      return rank(a.type) - rank(b.type);
+    });
+
+  const similar = filterRestrictedTmdbTitles<TMDBTitle>(
+    (data.similar?.results || []).map((item: any) => ({ ...item, media_type: type }))
+  );
+  const recommendations = filterRestrictedTmdbTitles<TMDBTitle>(
+    (data.recommendations?.results || []).map((item: any) => ({ ...item, media_type: type }))
+  );
+
+  return { details, cast, videos, similar, recommendations };
+}
+
+export async function getCollectionDetails(collectionId: number): Promise<TMDBCollection> {
+  const data = await tmdbFetch(`/collection/${collectionId}`);
+  const parts = filterRestrictedTmdbTitles<TMDBTitle>(
+    (data.parts || []).map((item: any) => ({ ...item, media_type: "movie" as const }))
+  ).sort((a, b) => (a.release_date || "9999-12-31").localeCompare(b.release_date || "9999-12-31"));
+  return {
+    id: data.id,
+    name: data.name || "Collection",
+    overview: data.overview || "",
+    poster_path: data.poster_path || null,
+    backdrop_path: data.backdrop_path || null,
+    parts,
+  };
+}
+
+export async function getPersonDetails(personId: number): Promise<TMDBPersonDetail> {
+  const data = await tmdbFetch(`/person/${personId}`);
+  const cast = filterRestrictedTmdbTitles<TMDBPersonCredit>(
+    (data.combined_credits?.cast || []).filter(
+      (item: any) => item && (item.media_type === "movie" || item.media_type === "tv")
+    )
+  );
+  const crew = filterRestrictedTmdbTitles<TMDBPersonCredit>(
+    (data.combined_credits?.crew || []).filter(
+      (item: any) => item && (item.media_type === "movie" || item.media_type === "tv")
+    )
+  );
+  return {
+    id: data.id,
+    name: data.name || "Unknown",
+    biography: data.biography || "",
+    birthday: data.birthday || null,
+    deathday: data.deathday || null,
+    place_of_birth: data.place_of_birth || null,
+    known_for_department: data.known_for_department || "Acting",
+    profile_path: data.profile_path || null,
+    popularity: data.popularity || 0,
+    also_known_as: Array.isArray(data.also_known_as) ? data.also_known_as : [],
+    combined_credits: { cast, crew },
+  };
 }

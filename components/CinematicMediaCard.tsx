@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Bookmark, BookmarkCheck, CheckCircle2, ImageOff, Play, Star } from "lucide-react";
+import { Bookmark, BookmarkCheck, CheckCircle2, Film, ImageOff, Play, Star } from "lucide-react";
 
 export interface CinematicMediaCardProps {
   title: string;
@@ -18,6 +18,8 @@ export interface CinematicMediaCardProps {
   fullWidth?: boolean;
   onOpen: () => void;
   onPlay?: () => void;
+  onQuickTrailer?: () => void;
+  onPrefetch?: () => void;
   onToggleWatchlist: () => void;
   onToggleWatched: () => void;
 }
@@ -42,6 +44,8 @@ export function CinematicMediaCard({
   fullWidth = false,
   onOpen,
   onPlay,
+  onQuickTrailer,
+  onPrefetch,
   onToggleWatchlist,
   onToggleWatched,
 }: CinematicMediaCardProps) {
@@ -55,6 +59,8 @@ export function CinematicMediaCard({
     <article
       className={`cinematic-poster-card group/card relative min-w-0 shrink-0 ${fullWidth ? "w-full" : "w-[31vw] min-w-[112px] max-w-[210px] sm:w-[190px] lg:w-[200px]"}`}
       aria-label={title}
+      onPointerEnter={onPrefetch}
+      onFocus={onPrefetch}
     >
       <div className="cinematic-poster-art relative aspect-[2/3] overflow-hidden rounded-xl bg-surface border border-border-custom">
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface text-on-surface-variant">
@@ -104,7 +110,7 @@ export function CinematicMediaCard({
             </button>
           </div>
         )}
-        <div className="absolute right-2 top-2 z-20">
+        <div className="absolute right-2 top-2 z-20 flex flex-col gap-1.5">
           <button
             type="button"
             data-tv-focusable="true"
@@ -116,6 +122,19 @@ export function CinematicMediaCard({
           >
             {saved ? <BookmarkCheck className="h-4 w-4" aria-hidden="true" /> : <Bookmark className="h-4 w-4" aria-hidden="true" />}
           </button>
+          {onQuickTrailer && (
+            <button
+              type="button"
+              data-tv-focusable="true"
+              data-testid="card-quick-trailer-btn"
+              aria-label={`Watch trailer for ${title}`}
+              title={`Watch trailer for ${title}`}
+              onClick={onQuickTrailer}
+              className="cinematic-poster-action flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/70 text-white shadow-sm transition-colors hover:bg-primary hover:text-primary-contrast"
+            >
+              <Film className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
         </div>
         <div className="absolute right-2 bottom-2 z-20">
           <button

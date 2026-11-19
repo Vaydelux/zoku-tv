@@ -165,11 +165,7 @@ body::before {
   box-shadow: var(--shadow-card);
 }
 
-/* Full 100% width layout instead of max-w-7xl cap */
-.max-w-7xl {
-  max-width: 100% !important;
-  width: 100%;
-}
+/* Full-width rails opt in via w-full; max-w-7xl containers preserve desktop reading measure */
 
 /* Visible, theme-reactive horizontal & vertical scrollbars for all scrollable containers */
 .custom-scrollbar,

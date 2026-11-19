@@ -8,7 +8,9 @@ import {
   useContinueWatchingStore, 
   useWatchHistoryStore, 
   useEpisodeProgressStore,
-  useEmbedStore 
+  useEmbedStore,
+  useDynamicServerStore,
+  useCustomCollectionsStore,
 } from "@/stores";
 import { isBrandRoute } from "@/lib/auth-routes";
 import {
@@ -40,6 +42,10 @@ export function ClientInitializer() {
   const initWatchHistory = useWatchHistoryStore((state) => state.initWatchHistory);
   const initEpisodeProgress = useEpisodeProgressStore((state) => state.initEpisodeProgress);
   const hydrateEmbedPreferences = useEmbedStore((state) => state.hydrateEmbedPreferences);
+  const hydrateDynamicServers = useDynamicServerStore((state) => state.hydrateLocal);
+  const initDynamicServers = useDynamicServerStore((state) => state.initDynamicServers);
+  const hydrateCollections = useCustomCollectionsStore((state) => state.hydrateLocal);
+  const initCollections = useCustomCollectionsStore((state) => state.initCollections);
   const user = useSessionStore((state) => state.user);
   const currentProfile = useSessionStore((state) => state.currentProfile);
   const initializing = useSessionStore((state) => state.initializing);
@@ -51,12 +57,14 @@ export function ClientInitializer() {
     (window as unknown as Record<string, unknown>).__ZOKU_APPLY_THEME__ = applyTheme;
     (window as unknown as Record<string, unknown>).__ZOKU_EPISODE_STORE__ = useEpisodeProgressStore;
     (window as unknown as Record<string, unknown>).__ZOKU_WATCH_HISTORY_STORE__ = useWatchHistoryStore;
+    hydrateDynamicServers();
+    hydrateCollections();
     hydrateEmbedPreferences();
     const unsubscribeSession = initSession();
     return () => {
       unsubscribeSession();
     };
-  }, [initSession, hydrateEmbedPreferences]);
+  }, [initSession, hydrateDynamicServers, hydrateCollections, hydrateEmbedPreferences]);
 
   // Brand lock on splash / login / signup / profiles; profile theme only in-app
   useEffect(() => {
@@ -105,21 +113,25 @@ export function ClientInitializer() {
     }
   }, []);
 
-  // Initialize watchlist, continue watching, watch history, and episode progress listeners whenever user or profile changes
+  // Initialize watchlist, continue watching, watch history, episode progress, dynamic servers, and custom collections listeners whenever user or profile changes
   useEffect(() => {
     if (user && currentProfile && !isBrandRoute(pathname)) {
       const unsubscribeWatchlist = initWatchlist();
       const unsubscribeContinueWatching = initContinueWatching();
       const unsubscribeWatchHistory = initWatchHistory();
       const unsubscribeEpisodeProgress = initEpisodeProgress();
+      const unsubscribeDynamicServers = initDynamicServers();
+      const unsubscribeCollections = initCollections();
       return () => {
         unsubscribeWatchlist();
         unsubscribeContinueWatching();
         unsubscribeWatchHistory();
         unsubscribeEpisodeProgress();
+        unsubscribeDynamicServers();
+        unsubscribeCollections();
       };
     }
-  }, [user, currentProfile, pathname, initWatchlist, initContinueWatching, initWatchHistory, initEpisodeProgress]);
+  }, [user, currentProfile, pathname, initWatchlist, initContinueWatching, initWatchHistory, initEpisodeProgress, initDynamicServers, initCollections]);
 
   return null;
 }

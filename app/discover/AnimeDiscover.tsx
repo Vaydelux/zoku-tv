@@ -11,6 +11,7 @@ import {
   BookOpen,
   Tv,
   Calendar,
+  CalendarDays,
   X,
 } from "lucide-react";
 import { useSessionStore } from "@/stores";
@@ -18,6 +19,7 @@ import { isAdultFilterEnabled, syncAdultFilterState } from "@/lib/adult-content"
 import { Navbar } from "@/components/Navbar";
 import { CustomSelect } from "@/components/CustomSelect";
 import { AnimeCard } from "@/components/anime/AnimeCard";
+import { AnimeAiringSchedule } from "@/components/anime/AnimeAiringSchedule";
 import {
   ANILIST_GENRES,
   ANILIST_SEASONS,
@@ -29,6 +31,7 @@ import {
 } from "@/lib/anilist";
 import { filterAnimeForKidsMode } from "@/lib/kids-mode";
 import { visibleAnimeGenres } from "@/lib/anime-genre-visibility";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function AnimeDiscoverPage() {
   return (
@@ -64,12 +67,15 @@ export function AnimeDiscoverContent() {
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(true);
 
   const sortBy = searchParams.get("sort") || "POPULARITY_DESC";
-  const genreParam = searchParams.get("genres") || "";
+  const genreParam = searchParams.get("genres") || searchParams.get("genre") || "";
   const season = searchParams.get("season") || "";
   const seasonYear = searchParams.get("year") || "";
   const format = searchParams.get("format") || "";
   const source = searchParams.get("source") || "";
   const studio = searchParams.get("studio") || "";
+  const isScheduleView = searchParams.get("view") === "schedule";
+
+  useDocumentTitle(isScheduleView ? "Anime Airing Schedule" : "Discover Anime");
 
   const [selectedGenres, setSelectedGenres] = useState<string[]>(
     genreParam ? genreParam.split(",").filter(Boolean) : []
@@ -100,6 +106,7 @@ export function AnimeDiscoverContent() {
   }, [sortBy, genreParam, season, seasonYear, format, source, studio, isKidMode, adultFilterEnabled, currentProfile?.id]);
 
   useEffect(() => {
+    if (isScheduleView) return;
     let cancelled = false;
 
     async function loadResults() {
@@ -162,7 +169,7 @@ export function AnimeDiscoverContent() {
     return () => {
       cancelled = true;
     };
-  }, [page, sortBy, genreParam, season, seasonYear, format, source, studio, isKidMode, adultFilterEnabled, currentProfile?.id]);
+  }, [isScheduleView, page, sortBy, genreParam, season, seasonYear, format, source, studio, isKidMode, adultFilterEnabled, currentProfile?.id]);
 
   const updateUrlFilters = (updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -313,19 +320,56 @@ export function AnimeDiscoverContent() {
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-              className={`theme-panel p-2.5 rounded-xl flex items-center justify-center gap-2 hover:bg-surface-hover text-xs font-semibold ${
-                isFilterPanelOpen ? "text-primary border-primary" : "text-on-surface"
-              }`}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              <span className="hidden md:inline">Filters</span>
-            </button>
+            <div className="theme-panel flex rounded-xl p-1" role="tablist" aria-label="Anime View Mode">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!isScheduleView}
+                data-testid="anime-mode-catalog"
+                onClick={() => updateUrlFilters({ view: "" })}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  !isScheduleView
+                    ? "bg-primary/15 text-primary border border-primary/40"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                Catalog
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isScheduleView}
+                data-testid="anime-mode-schedule"
+                onClick={() => updateUrlFilters({ view: "schedule" })}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  isScheduleView
+                    ? "bg-primary/15 text-primary border border-primary/40"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+                <span>Airing Schedule</span>
+              </button>
+            </div>
+
+            {!isScheduleView && (
+              <button
+                type="button"
+                onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+                className={`theme-panel p-2.5 rounded-xl flex items-center justify-center gap-2 hover:bg-surface-hover text-xs font-semibold ${
+                  isFilterPanelOpen ? "text-primary border-primary" : "text-on-surface"
+                }`}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span className="hidden md:inline">Filters</span>
+              </button>
+            )}
           </div>
         </div>
 
+        {isScheduleView ? (
+          <AnimeAiringSchedule isKidMode={isKidMode} />
+        ) : (
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           {isFilterPanelOpen && (
             <div className="glass-panel w-full lg:w-80 rounded-2xl p-6 space-y-5 shrink-0 lg:sticky lg:top-20">
@@ -599,6 +643,7 @@ export function AnimeDiscoverContent() {
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

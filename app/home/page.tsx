@@ -58,6 +58,8 @@ import {
   getThemeOption,
   normalizeAppearance,
 } from "@/lib/themes";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function HomePage() {
   const { user, currentProfile, updateProfile } = useSessionStore();
@@ -67,6 +69,7 @@ export default function HomePage() {
   const watchlistItems = useWatchlistStore((state) => state.items);
 
   const catalogMode = currentProfile?.catalogMode ?? "tmdb";
+  useDocumentTitle(catalogMode === "anime" ? "Anime Home" : "Home");
   const cinematicLayout = process.env.NEXT_PUBLIC_ZOKU_LAYOUT !== "classic";
   const isKidMode = Boolean(currentProfile?.kidMode);
   const currentTheme = getThemeOption(currentProfile?.themePreference);
@@ -118,7 +121,7 @@ export default function HomePage() {
   const [loadingTrending, setLoadingTrending] = useState(true);
   const [loadingGenreRails, setLoadingGenreRails] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState("Loading your home feed...");
-  const [isOffline, setIsOffline] = useState(false);
+  const isOffline = !useOnlineStatus();
 
   const filteredCw = useMemo(
     () => adultPolicyReady ? filterSavedMediaItems(filterContinueWatchingByCatalog(continueWatchingItems, catalogMode), safeAnimeIds) : [],
@@ -160,20 +163,6 @@ export default function HomePage() {
   useEffect(() => {
     setSelectedRailFilter("all");
   }, [catalogMode, currentProfile?.id, setSelectedRailFilter]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsOffline(!navigator.onLine);
-      const handleOnline = () => setIsOffline(false);
-      const handleOffline = () => setIsOffline(true);
-      window.addEventListener("online", handleOnline);
-      window.addEventListener("offline", handleOffline);
-      return () => {
-        window.removeEventListener("online", handleOnline);
-        window.removeEventListener("offline", handleOffline);
-      };
-    }
-  }, []);
 
   useEffect(() => {
     if (!user || !currentProfile) return;

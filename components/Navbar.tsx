@@ -17,15 +17,25 @@ import {
   Clapperboard,
   Wifi,
   WifiOff,
-  Zap
+  Zap,
+  Server,
+  Command,
+  FolderHeart,
 } from "lucide-react";
-import { useSessionStore, useRailFilterStore, useSearchHistoryStore, logout } from "@/stores";
+import {
+  useSessionStore,
+  useRailFilterStore,
+  useSearchHistoryStore,
+  useCommandPaletteStore,
+  logout,
+} from "@/stores";
 import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
 import { getNavbarNetworkStatus } from "@/lib/network-status";
 import { VoiceSearchButton } from "@/components/VoiceSearchButton";
 import { SearchAutocompleteDropdown } from "@/components/SearchAutocompleteDropdown";
 import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 import { usePerfMode } from "@/hooks/usePerfMode";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { normalizeAppearance } from "@/lib/themes";
 import { ZOKU_NAV_ITEMS, activeZokuNavHref } from "@/lib/design-navigation";
 import { MobileTabBar } from "@/components/MobileTabBar";
@@ -39,7 +49,7 @@ export function Navbar() {
   const { is60FpsActive, togglePerfMode, isAutoDetectedTvOr32Bit } = usePerfMode();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isStatusPopoverOpen, setIsStatusPopoverOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const isOnline = useOnlineStatus();
   const [searchQuery, setSearchQuery] = useState("");
   const [showNavAutocomplete, setShowNavAutocomplete] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -50,26 +60,11 @@ export function Navbar() {
   useDropdownViewportClamp(isDropdownOpen, profileMenuRef);
   useDropdownViewportClamp(isStatusPopoverOpen, statusPopoverRef);
 
-  // Track browser online/offline state
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    setIsOnline(navigator.onLine);
-
-    const handleOnline = () => {
-      setIsOnline(true);
+    if (isOnline) {
       setIsStatusPopoverOpen(false);
-    };
-    const handleOffline = () => {
-      setIsOnline(false);
-    };
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
+    }
+  }, [isOnline]);
 
   // Close dropdowns on click outside or Escape
   useEffect(() => {
@@ -148,21 +143,20 @@ export function Navbar() {
       className={`site-nav sticky top-0 z-40 w-full border-b ${networkStatus.navBorderClass} bg-background/90 backdrop-blur-md transition-colors duration-300`}
     >
       <div className="mx-auto w-full px-3 sm:px-6 lg:px-8">
-        <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4">
+        <div className="flex h-[52px] sm:h-16 items-center justify-between gap-2 sm:gap-4">
           
           {/* Logo & Main Nav */}
           <div className="flex min-w-0 items-center gap-4 lg:gap-8">
-            <Link href="/home" className="zoku-brand-lockup flex shrink-0 flex-col gap-0.5 text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-              <span className="flex items-center gap-1.5 sm:gap-2">
-                {cinematicLayout ? (
-                  <span className="zoku-brand-mark flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast"><Play className="h-4 w-4 fill-current" aria-hidden="true" /></span>
-                ) : <Tv className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />}
-                <span className="font-display text-lg sm:text-xl font-bold tracking-wider text-on-surface">
-                  ZOKU<span className="text-primary font-mono text-xs sm:text-sm ml-0.5">TV</span>
+            <Link href="/home" className="zoku-brand-lockup flex shrink-0 items-center gap-2 text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+              {cinematicLayout ? (
+                <span className="zoku-brand-mark flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-contrast">
+                  <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" aria-hidden="true" />
                 </span>
-              </span>
-              <span className="hidden xs:block pl-6 sm:pl-8 text-[8px] sm:text-[9px] font-mono uppercase tracking-widest text-on-surface-variant truncate">
-                {catalogLabel}
+              ) : (
+                <Tv className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+              )}
+              <span className="font-display text-lg sm:text-xl font-bold tracking-wider text-on-surface leading-none">
+                ZOKU<span className="text-primary font-mono text-xs sm:text-sm ml-0.5">TV</span>
               </span>
             </Link>
 
@@ -188,7 +182,8 @@ export function Navbar() {
           {/* Search, Connectivity Status Indicator & Profile */}
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             
-            {/* Subtle Connectivity Status Indicator */}
+            {/* Connectivity Indicator: show inline only when offline in cinematic layout, or always in classic */}
+            {(!cinematicLayout || networkStatus.isOffline) && (
             <div className={`zoku-status-control relative ${isStatusPopoverOpen ? "z-50" : "z-20"}`} ref={statusRef}>
               <button
                 type="button"
@@ -244,8 +239,10 @@ export function Navbar() {
                 </div>
               )}
             </div>
+            )}
 
-            {/* 60fps TV / Virtual Mouse Butter Mode Quick Toggle */}
+            {/* 60fps TV / Virtual Mouse Butter Mode Quick Toggle (inline in classic, inside profile menu in cinematic) */}
+            {!cinematicLayout && (
             <button
               type="button"
               onClick={togglePerfMode}
@@ -274,6 +271,7 @@ export function Navbar() {
               />
               <span>{is60FpsActive ? "60FPS ON" : "60FPS"}</span>
             </button>
+            )}
 
             {/* Search Bar with Voice Input & Real-time Autocomplete */}
             {cinematicLayout ? (
@@ -439,15 +437,41 @@ export function Navbar() {
 
                     {cinematicLayout && (
                       <div className="flex flex-col gap-1 border-b border-border-custom px-2 py-2">
-                        <p className="px-1 text-xs text-on-surface-variant">Network: {networkStatus.label}</p>
-                        <button type="button" onClick={togglePerfMode} aria-pressed={is60FpsActive}
-                          className="flex min-h-10 items-center gap-2 rounded-lg px-2 text-xs text-on-surface hover:bg-surface-hover">
-                          <Zap className="h-4 w-4 text-primary" /> TV performance: {is60FpsActive ? "60 FPS" : "Standard"}
+                        <button
+                          type="button"
+                          onClick={togglePerfMode}
+                          data-testid="navbar-perf-mode-toggle"
+                          aria-pressed={is60FpsActive}
+                          className="flex min-h-10 items-center justify-between gap-2 rounded-lg px-2 text-xs text-on-surface hover:bg-surface-hover"
+                        >
+                          <span className="inline-flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-primary" /> TV 60fps Mode
+                          </span>
+                          <span className="font-mono text-[10px] text-primary">
+                            {is60FpsActive ? "ON" : "OFF"}
+                          </span>
                         </button>
                       </div>
                     )}
                     {/* Action Links */}
                     <div className="py-1.5 space-y-0.5">
+                      <button
+                        type="button"
+                        data-testid="navbar-quick-jump-btn"
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          useCommandPaletteStore.getState().setOpen(true);
+                        }}
+                        className="w-full flex items-center justify-between gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
+                      >
+                        <span className="inline-flex items-center gap-2.5">
+                          <Command className="h-4 w-4 text-primary/80" />
+                          <span>Quick Jump</span>
+                        </span>
+                        <kbd className="rounded border border-border-custom bg-background px-1.5 py-0.5 font-mono text-[10px] text-on-surface-variant">
+                          Ctrl+K
+                        </kbd>
+                      </button>
                       <Link
                         href="/profiles"
                         onClick={() => setIsDropdownOpen(false)}
@@ -465,6 +489,14 @@ export function Navbar() {
                         <span>Switch Catalog</span>
                       </Link>
                       <Link
+                        href="/settings?section=servers"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
+                      >
+                        <Server className="h-4 w-4 text-primary/80" />
+                        <span>Playback Servers</span>
+                      </Link>
+                      <Link
                         href="/settings"
                         onClick={() => setIsDropdownOpen(false)}
                         className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
@@ -479,6 +511,14 @@ export function Navbar() {
                       >
                         <Heart className="h-4 w-4 text-primary/80" />
                         <span>My Watchlist</span>
+                      </Link>
+                      <Link
+                        href="/watchlist?tab=collections"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover hover:text-primary rounded-xl transition-colors"
+                      >
+                        <FolderHeart className="h-4 w-4 text-primary/80" />
+                        <span>Collections &amp; Backup</span>
                       </Link>
                       <Link
                         href="/watchlist?tab=history"

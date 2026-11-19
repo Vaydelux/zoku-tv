@@ -100,6 +100,11 @@ query ($id: Int) {
       }
     }
     trailer { id site thumbnail }
+    nextAiringEpisode {
+      episode
+      airingAt
+      timeUntilAiring
+    }
     streamingEpisodes { title thumbnail url site }
     relations {
       edges {
@@ -120,10 +125,15 @@ query ($id: Int) {
         }
       }
     }
-    characters(sort: [ROLE, RELEVANCE], perPage: 8) {
+    characters(sort: [ROLE, RELEVANCE], perPage: 10) {
       edges {
         role
         node { id name { full } image { large } }
+        voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) {
+          id
+          name { full }
+          image { large medium }
+        }
       }
     }
     recommendations(perPage: 8, sort: [RATING_DESC]) {
@@ -136,6 +146,25 @@ query ($id: Int) {
   }
 }`;
 
+export const AIRING_SCHEDULE_QUERY = `
+query ($airingAt_greater: Int, $airingAt_lesser: Int, $page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
+    pageInfo { total currentPage lastPage hasNextPage }
+    airingSchedules(
+      airingAt_greater: $airingAt_greater,
+      airingAt_lesser: $airingAt_lesser,
+      sort: TIME
+    ) {
+      id
+      airingAt
+      timeUntilAiring
+      episode
+      media {
+        ${BROWSE_MEDIA_FIELDS}
+      }
+    }
+  }
+}`;
 
 export const ELIGIBILITY_QUERY = `
 query ($ids: [Int]) {

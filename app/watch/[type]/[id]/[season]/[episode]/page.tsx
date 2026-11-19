@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, use } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,6 +16,8 @@ import {
   SkipForward,
   Image as ImageIcon,
   Play,
+  Keyboard,
+  FastForward,
 } from "lucide-react";
 import {
   getTitleDetails,
@@ -24,20 +26,29 @@ import {
   TMDBEpisode,
 } from "@/lib/tmdb";
 import {
-  EMBED_SERVER_CATALOG,
   groupEmbedServers,
   getEmbedUrl,
 } from "@/lib/embed";
+import { resolveActiveTmdbServers } from "@/lib/dynamic-servers";
 import {
   useSessionStore,
   useEmbedStore,
   useEpisodeProgressStore,
+  useDynamicServerStore,
 } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { useWatchProgress } from "@/hooks/useWatchProgress";
 import { ResumePrompt } from "@/components/watch/ResumePrompt";
 import { ServerSelect } from "@/components/watch/ServerSelect";
+import { AutoNextOverlay, WatchShortcutsPopover } from "@/components/watch/AutoNextOverlay";
 import { isTmdbAllowedInKidsMode } from "@/lib/kids-mode";
+import {
+  readAutoNextEnabled,
+  writeAutoNextEnabled,
+  resolveWatchShortcutAction,
+  shouldIgnoreShortcutTarget,
+} from "@/lib/watch-shortcuts";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function WatchTvPage({
   params,
@@ -75,10 +86,27 @@ export default function WatchTvPage({
   const [showToolsPanel, setShowToolsPanel] = useState(false);
   const [iframeReady, setIframeReady] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
+  const [autoNextEnabled, setAutoNextEnabled] = useState(true);
+  const [showAutoNext, setShowAutoNext] = useState(false);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+
+  useEffect(() => {
+    setAutoNextEnabled(readAutoNextEnabled());
+  }, []);
+
+  useEffect(() => {
+    setShowAutoNext(false);
+  }, [numericId, seasonNum, episodeNum]);
+
+  const serverConfig = useDynamicServerStore((s) => s.config);
+  const activeServers = useMemo(
+    () => resolveActiveTmdbServers(serverConfig),
+    [serverConfig]
+  );
 
   const { newServers, defaultServers } = useMemo(
-    () => groupEmbedServers(EMBED_SERVER_CATALOG),
-    []
+    () => groupEmbedServers(activeServers),
+    [activeServers]
   );
 
   useEffect(() => {
@@ -119,6 +147,9 @@ export default function WatchTvPage({
   );
 
   const displayTitle = details?.name || details?.title || "Loading Series...";
+  useDocumentTitle(
+    details ? `Watch S${seasonNum}E${episodeNum} · ${details.name || details.title || "Series"}` : "Watch"
+  );
   const validSeasons = (details?.seasons || []).filter(
     (s) => s.season_number > 0
   );
@@ -144,6 +175,142 @@ export default function WatchTvPage({
     selectedServerId,
     ready: Boolean(details && details.id === numericId) && !kidsRestricted,
   });
+
+  const currentServerObj =
+    activeServers.find((s) => s.id === selectedServerId) ||
+    activeServers[0];
+
+  const isCurrentWatched = isEpisodeCompleted(
+    "tv",
+    numericId,
+    seasonNum,
+    episodeNum
+  );
+
+  const prevWatchedRef = useRef(isCurrentWatched);
+  useEffect(() => {
+    if (!prevWatchedRef.current && isCurrentWatched && autoNextEnabled && nextEp) {
+      setShowAutoNext(true);
+    }
+    prevWatchedRef.current = isCurrentWatched;
+  }, [isCurrentWatched, autoNextEnabled, nextEp]);
+
+  const handlePlayNextEpisode = useCallback(() => {
+    setShowAutoNext(false);
+    if (nextEp) {
+      router.push(`/watch/tv/${id}/${seasonNum}/${nextEp.episode_number}`);
+    }
+  }, [nextEp, router, id, seasonNum]);
+
+  const handleServerChange = useCallback(
+    (newServerId: string) => {
+      setServerId(newServerId);
+      setIframeReady(false);
+    },
+    [setServerId]
+  );
+
+  const handleNextServer = useCallback(() => {
+    if (!currentServerObj) return;
+    markServerFailing(currentServerObj.id);
+    const idx = activeServers.findIndex((s) => s.id === currentServerObj.id);
+    const next = activeServers[(idx + 1) % activeServers.length];
+    if (next) {
+      handleServerChange(next.id);
+    }
+  }, [activeServers, currentServerObj, markServerFailing, handleServerChange]);
+
+  const handleRetryFrame = useCallback(() => {
+    setIframeReady(false);
+    setLoadAttempts((prev) => prev + 1);
+  }, []);
+
+  const handleMarkWatchedAndAdvance = useCallback(async () => {
+    handleProgress(100, 0);
+    await recordEpisodeProgress({
+      media_type: "tv",
+      tmdbId: numericId,
+      season: seasonNum,
+      episode: episodeNum,
+      progress_percent: 100,
+      current_time_sec: 0,
+      completed: true,
+    });
+    if (nextEp) {
+      if (autoNextEnabled) {
+        setShowAutoNext(true);
+      } else {
+        router.push(`/watch/tv/${id}/${seasonNum}/${nextEp.episode_number}`);
+      }
+    }
+  }, [
+    handleProgress,
+    recordEpisodeProgress,
+    numericId,
+    seasonNum,
+    episodeNum,
+    nextEp,
+    autoNextEnabled,
+    router,
+    id,
+  ]);
+
+  const handleRewatch = useCallback(async () => {
+    setShowAutoNext(false);
+    await resetEpisodeProgress("tv", numericId, seasonNum, episodeNum);
+    handleStartOver();
+  }, [resetEpisodeProgress, numericId, seasonNum, episodeNum, handleStartOver]);
+
+  const handleToggleAutoNext = () => {
+    const next = !autoNextEnabled;
+    setAutoNextEnabled(next);
+    writeAutoNextEnabled(next);
+    if (!next) setShowAutoNext(false);
+  };
+
+  useEffect(() => {
+    if (!details || details.id !== numericId || kidsRestricted) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (shouldIgnoreShortcutTarget(e.target)) return;
+      const action = resolveWatchShortcutAction(e);
+      if (!action) return;
+      e.preventDefault();
+      if (action === "next_episode" && nextEp) {
+        handlePlayNextEpisode();
+      } else if (action === "prev_episode" && prevEp) {
+        router.push(`/watch/tv/${id}/${seasonNum}/${prevEp.episode_number}`);
+      } else if (action === "next_server") {
+        handleNextServer();
+      } else if (action === "retry_frame") {
+        handleRetryFrame();
+      } else if (action === "toggle_watched") {
+        if (isCurrentWatched) {
+          void handleRewatch();
+        } else {
+          void handleMarkWatchedAndAdvance();
+        }
+      } else if (action === "toggle_shortcuts_help") {
+        setShowShortcutsHelp((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    details,
+    numericId,
+    kidsRestricted,
+    nextEp,
+    prevEp,
+    router,
+    id,
+    seasonNum,
+    handlePlayNextEpisode,
+    handleNextServer,
+    handleRetryFrame,
+    isCurrentWatched,
+    handleRewatch,
+    handleMarkWatchedAndAdvance,
+  ]);
 
   if (!details || details.id !== numericId) {
     return (
@@ -182,10 +349,6 @@ export default function WatchTvPage({
     );
   }
 
-  const currentServerObj =
-    EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) ||
-    EMBED_SERVER_CATALOG[0];
-
   const embedUrl = getEmbedUrl(
     currentServerObj,
     "tv",
@@ -198,58 +361,11 @@ export default function WatchTvPage({
   const useSandbox =
     iframeMode === "Strict" && currentServerObj.supportsSandbox;
 
-  const isCurrentWatched = isEpisodeCompleted(
-    "tv",
-    numericId,
-    seasonNum,
-    episodeNum
-  );
-
   const containerStatusLabel = hasConfirmedPlayback
     ? "Playback Synced"
     : iframeReady
     ? "Container Ready"
     : "Loading Frame...";
-
-  const handleServerChange = (newServerId: string) => {
-    setServerId(newServerId);
-    setIframeReady(false);
-  };
-
-  const handleNextServer = () => {
-    markServerFailing(currentServerObj.id);
-    const idx = EMBED_SERVER_CATALOG.findIndex((s) => s.id === currentServerObj.id);
-    const next = EMBED_SERVER_CATALOG[(idx + 1) % EMBED_SERVER_CATALOG.length];
-    if (next) {
-      handleServerChange(next.id);
-    }
-  };
-
-  const handleRetryFrame = () => {
-    setIframeReady(false);
-    setLoadAttempts((prev) => prev + 1);
-  };
-
-  const handleMarkWatchedAndAdvance = async () => {
-    handleProgress(100, 0);
-    await recordEpisodeProgress({
-      media_type: "tv",
-      tmdbId: numericId,
-      season: seasonNum,
-      episode: episodeNum,
-      progress_percent: 100,
-      current_time_sec: 0,
-      completed: true,
-    });
-    if (nextEp) {
-      router.push(`/watch/tv/${id}/${seasonNum}/${nextEp.episode_number}`);
-    }
-  };
-
-  const handleRewatch = async () => {
-    await resetEpisodeProgress("tv", numericId, seasonNum, episodeNum);
-    handleStartOver();
-  };
 
   const handleSeasonSwitch = (nextSeason: number) => {
     router.push(`/watch/tv/${id}/${nextSeason}/1`);
@@ -314,9 +430,27 @@ export default function WatchTvPage({
           <div className={`relative flex items-center gap-2 shrink-0 ${showToolsPanel ? "z-50" : "z-20"}`}>
             <button
               type="button"
+              onClick={() => setShowShortcutsHelp((prev) => !prev)}
+              aria-expanded={showShortcutsHelp}
+              aria-label="Player keyboard shortcuts"
+              title="Keyboard shortcuts (?)"
+              data-testid="watch-shortcuts-toggle-btn"
+              data-tv-focusable="true"
+              className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border transition-colors ${
+                showShortcutsHelp
+                  ? "border-primary/50 bg-primary/15 text-primary"
+                  : "border-white/10 bg-white/[0.04] text-white/75 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <Keyboard className="h-4 w-4" />
+            </button>
+
+            <button
+              type="button"
               onClick={() => setShowToolsPanel((prev) => !prev)}
               aria-expanded={showToolsPanel}
               aria-label="Player container settings and troubleshooting"
+              data-tv-focusable="true"
               className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border transition-colors ${
                 showToolsPanel || useSandbox
                   ? "border-primary/50 bg-primary/15 text-primary"
@@ -327,8 +461,8 @@ export default function WatchTvPage({
             </button>
 
             {showToolsPanel && (
-              <div className="glass-panel absolute right-0 top-11 sm:top-12 z-50 w-[min(19rem,calc(100vw-1.5rem))] rounded-2xl border border-border-custom bg-surface/95 p-4 shadow-2xl backdrop-blur-2xl animate-scale-up">
-                <div className="flex items-center justify-between mb-3">
+              <div className="glass-panel absolute right-0 top-11 sm:top-12 z-50 w-[min(19rem,calc(100vw-1.5rem))] rounded-2xl border border-border-custom bg-surface/95 p-4 shadow-2xl backdrop-blur-2xl animate-scale-up space-y-2.5">
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
                     Container Controls
                   </span>
@@ -362,9 +496,27 @@ export default function WatchTvPage({
                     {useSandbox ? "SANDBOX" : "COMPAT"}
                   </span>
                 </button>
-                <p className="mt-2.5 text-[11px] leading-relaxed text-white/50">
-                  Streams are hosted by external third-party providers. If a server displays a blank screen or fails to load, use{" "}
-                  <strong className="text-white/80">Retry</strong> or switch to another server.
+                <button
+                  type="button"
+                  onClick={handleToggleAutoNext}
+                  data-testid="toggle-auto-next-btn"
+                  className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-medium border transition-colors ${
+                    autoNextEnabled
+                      ? "bg-primary/15 text-primary border-primary/40"
+                      : "bg-white/[0.04] text-white/80 border-white/10 hover:bg-white/[0.08]"
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <FastForward className="w-4 h-4" />
+                    Auto-Next Episode
+                  </span>
+                  <span className="font-mono text-[11px]">
+                    {autoNextEnabled ? "ON" : "OFF"}
+                  </span>
+                </button>
+                <p className="text-[11px] leading-relaxed text-white/50">
+                  Streams are hosted by external third-party providers. Press{" "}
+                  <strong className="text-white/80">?</strong> for keyboard shortcuts or switch servers if a frame fails to load.
                 </p>
               </div>
             )}
@@ -643,6 +795,21 @@ export default function WatchTvPage({
           )}
         </section>
       </div>
+
+      {nextEp && (
+        <AutoNextOverlay
+          visible={showAutoNext}
+          nextEpisodeLabel={`S${seasonNum} · Episode ${nextEp.episode_number}`}
+          nextEpisodeTitle={nextEp.name || undefined}
+          onPlayNext={handlePlayNextEpisode}
+          onCancel={() => setShowAutoNext(false)}
+        />
+      )}
+
+      <WatchShortcutsPopover
+        open={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+      />
     </div>
   );
 }

@@ -3,12 +3,15 @@ import test from "node:test";
 import { NextRequest } from "next/server";
 import { GET } from "../app/api/tmdb/[...path]/route";
 import { parseTmdbScope, sanitizedTmdbQuery } from "./server/tmdb-proxy-policy";
+import { tmdbProxyCache } from "./server/api-cache";
 
 test("TMDB proxy endpoint allowlist rejects arbitrary paths and invalid pagination", () => {
   assert.equal(parseTmdbScope(["discover", "movie"])?.media, "movie");
   assert.equal(parseTmdbScope(["tv", "21", "season", "2"])?.kind, "child");
   assert.equal(parseTmdbScope(["movie", "42", "credits"])?.kind, "child");
-  assert.equal(parseTmdbScope(["person", "1"]), null);
+  assert.equal(parseTmdbScope(["person", "1"])?.kind, "person");
+  assert.equal(parseTmdbScope(["collection", "10"])?.kind, "collection");
+  assert.equal(parseTmdbScope(["account", "1"]), null);
   assert.equal(parseTmdbScope(["search", "company"]), null);
   assert.equal(parseTmdbScope(["movie", "42", "external_ids"]), null);
   assert.equal(parseTmdbScope(["movie", "..", "credits"]), null);
@@ -70,6 +73,7 @@ test("server excludes blocked ID on discovery and rejects direct title and child
     assert.equal((await allowed.json()).id, 100);
   } finally {
     globalThis.fetch = oldFetch;
+    tmdbProxyCache.clear();
     if (oldToken === undefined) delete process.env.TMDB_API_READ_ACCESS_TOKEN;
     else process.env.TMDB_API_READ_ACCESS_TOKEN = oldToken;
   }
@@ -96,6 +100,7 @@ test("server respects passwordless adult preference cookie for unfiltered catalo
     assert.deepEqual(calls, ["/3/search/multi"]);
   } finally {
     globalThis.fetch = oldFetch;
+    tmdbProxyCache.clear();
     if (oldToken === undefined) delete process.env.TMDB_API_READ_ACCESS_TOKEN;
     else process.env.TMDB_API_READ_ACCESS_TOKEN = oldToken;
   }

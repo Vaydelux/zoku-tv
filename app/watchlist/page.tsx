@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Film,
@@ -13,12 +14,18 @@ import {
   Calendar,
   Search,
   X,
-  Sparkles,
   History,
   Bookmark,
+  FolderHeart,
 } from "lucide-react";
-import { useSessionStore, useWatchlistStore, useWatchHistoryStore } from "@/stores";
+import {
+  useSessionStore,
+  useWatchlistStore,
+  useWatchHistoryStore,
+  useCustomCollectionsStore,
+} from "@/stores";
 import { getWatchlistItemId } from "@/lib/media-types";
+import { canonicalMediaKey } from "@/lib/custom-collections";
 import { filterSavedMediaItems, syncAdultFilterState } from "@/lib/adult-content";
 import { getEligibleSavedAnimeIds } from "@/lib/anilist";
 import { Navbar } from "@/components/Navbar";
@@ -37,8 +44,34 @@ import {
   getWatchHistoryItemId,
   type WatchHistoryItem,
 } from "@/lib/watch-history";
-import { WatchlistAnalyticsSection } from "@/components/watchlist/WatchlistAnalyticsSection";
 import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+
+const WatchlistAnalyticsSection = dynamic(
+  () =>
+    import("@/components/watchlist/WatchlistAnalyticsSection").then(
+      (m) => m.WatchlistAnalyticsSection
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-44 w-full animate-pulse rounded-xl bg-background/60 border border-border-custom" />
+    ),
+  }
+);
+
+const LibraryCollectionsAndBackup = dynamic(
+  () =>
+    import("@/components/watchlist/LibraryCollectionsAndBackup").then(
+      (m) => m.LibraryCollectionsAndBackup
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-56 w-full animate-pulse rounded-2xl bg-surface/60 border border-border-custom" />
+    ),
+  }
+);
 
 export default function WatchlistPage() {
   return (
@@ -53,13 +86,24 @@ function WatchlistPageContent() {
   const searchParams = useSearchParams();
   const selectedTab = searchParams.get("tab");
   const { currentProfile } = useSessionStore();
-  const { items, initWatchlist, clearWatchlist } = useWatchlistStore();
+  const { items, clearWatchlist } = useWatchlistStore();
   const watchHistoryItems = useWatchHistoryStore((state) => state.items);
   const removeWatchHistoryItem = useWatchHistoryStore((state) => state.removeItem);
+  const customCollections = useCustomCollectionsStore((state) => state.collections);
 
-  const [activeTab, setActiveTab] = useState<"watchlist" | "history">("watchlist");
+  const [activeTab, setActiveTab] = useState<"watchlist" | "collections" | "history">("watchlist");
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [adultPolicyReady, setAdultPolicyReady] = useState(false);
   const [safeAnimeIds, setSafeAnimeIds] = useState<ReadonlySet<number>>(new Set());
+
+  useDocumentTitle(
+    activeTab === "history"
+      ? "Watch History"
+      : activeTab === "collections"
+      ? "Collections & Backup"
+      : "Watchlist"
+  );
+
   useEffect(() => {
     let active = true;
     setAdultPolicyReady(false);
@@ -93,20 +137,30 @@ function WatchlistPageContent() {
   useDropdownViewportClamp(isSortOpen, sortMenuRef);
 
   useEffect(() => {
-    setActiveTab(selectedTab === "history" ? "history" : "watchlist");
+    if (selectedTab === "history") {
+      setActiveTab("history");
+    } else if (selectedTab === "collections") {
+      setActiveTab("collections");
+    } else {
+      setActiveTab("watchlist");
+    }
   }, [selectedTab]);
 
-  const selectTab = (tab: "watchlist" | "history") => {
+  const selectTab = (tab: "watchlist" | "collections" | "history") => {
     setActiveTab(tab);
-    router.replace(tab === "history" ? "/watchlist?tab=history" : "/watchlist", { scroll: false });
+    const href =
+      tab === "history"
+        ? "/watchlist?tab=history"
+        : tab === "collections"
+        ? "/watchlist?tab=collections"
+        : "/watchlist";
+    router.replace(href, { scroll: false });
   };
 
-  useEffect(() => {
-    if (currentProfile) {
-      const unsubscribe = initWatchlist();
-      return () => unsubscribe();
-    }
-  }, [currentProfile, initWatchlist]);
+  const notify = (message: string) => {
+    setFeedbackNotice(message);
+    window.setTimeout(() => setFeedbackNotice(null), 3500);
+  };
 
   // Close sorting dropdown on click outside or Escape
   useEffect(() => {
@@ -158,6 +212,22 @@ function WatchlistPageContent() {
     [searchedItems, sortBy]
   );
 
+  const selectedCollection = useMemo(
+    () => customCollections.find((col) => col.id === selectedCollectionId) ?? null,
+    [customCollections, selectedCollectionId]
+  );
+
+  const selectedCollectionItems = useMemo(() => {
+    if (!selectedCollection) return [];
+    const safeAll = adultPolicyReady ? filterSavedMediaItems(items, safeAnimeIds) : [];
+    const keySet = new Set(selectedCollection.itemKeys);
+    return safeAll.filter((item) => {
+      const id = getWatchlistItemId(item);
+      if (!id) return false;
+      return keySet.has(canonicalMediaKey(item.media_type, id));
+    });
+  }, [selectedCollection, items, adultPolicyReady, safeAnimeIds]);
+
   if (!currentProfile) {
     return null;
   }
@@ -194,8 +264,12 @@ function WatchlistPageContent() {
         <div className="border-b border-border-custom pb-5 sm:pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-3 min-w-0">
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-bold text-on-surface uppercase tracking-wide">
-                {activeTab === "watchlist" ? "My Watchlist" : "Watch History"}
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-bold text-on-surface tracking-tight">
+                {activeTab === "watchlist"
+                  ? "My Watchlist"
+                  : activeTab === "collections"
+                  ? "Collections & Backup"
+                  : "Watch History"}
               </h1>
               {feedbackNotice && (
                 <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[11px] font-medium text-emerald-400 animate-fade-in">
@@ -208,7 +282,7 @@ function WatchlistPageContent() {
             <div
               role="tablist"
               aria-label="Library view tabs"
-              className="inline-flex w-full xs:w-auto max-w-full overflow-x-auto items-center rounded-xl border border-border-custom bg-surface p-1"
+              className="grid grid-cols-3 sm:inline-flex w-full sm:w-auto max-w-full items-center gap-1 rounded-xl border border-border-custom bg-surface p-1"
             >
               <button
                 type="button"
@@ -216,16 +290,37 @@ function WatchlistPageContent() {
                 aria-selected={activeTab === "watchlist"}
                 data-testid="tab-watchlist"
                 onClick={() => selectTab("watchlist")}
-                className={`inline-flex flex-1 xs:flex-initial items-center justify-center gap-1.5 sm:gap-2 rounded-lg px-3 sm:px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                className={`inline-flex items-center justify-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-3.5 py-2 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "watchlist"
                     ? "bg-primary text-primary-contrast shadow-sm"
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >
-                <Bookmark className="h-3.5 w-3.5 shrink-0" />
-                <span>My Watchlist</span>
+                <Bookmark className="h-3.5 w-3.5 shrink-0 hidden xs:inline-block sm:inline-block" />
+                <span>
+                  <span className="hidden sm:inline">My </span>Watchlist
+                </span>
                 <span className="font-mono text-[10px] opacity-85 tabular-nums">
                   ({catalogFilteredItems.length})
+                </span>
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "collections"}
+                data-testid="tab-collections"
+                onClick={() => selectTab("collections")}
+                className={`inline-flex items-center justify-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-3.5 py-2 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  activeTab === "collections"
+                    ? "bg-primary text-primary-contrast shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <FolderHeart className="h-3.5 w-3.5 shrink-0 hidden xs:inline-block sm:inline-block" />
+                <span>Collections</span>
+                <span className="font-mono text-[10px] opacity-85 tabular-nums">
+                  ({customCollections.length})
                 </span>
               </button>
 
@@ -235,14 +330,16 @@ function WatchlistPageContent() {
                 aria-selected={activeTab === "history"}
                 data-testid="tab-watch-history"
                 onClick={() => selectTab("history")}
-                className={`inline-flex flex-1 xs:flex-initial items-center justify-center gap-1.5 sm:gap-2 rounded-lg px-3 sm:px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                className={`inline-flex items-center justify-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-3.5 py-2 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "history"
                     ? "bg-primary text-primary-contrast shadow-sm"
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >
-                <History className="h-3.5 w-3.5 shrink-0" />
-                <span>Watch History</span>
+                <History className="h-3.5 w-3.5 shrink-0 hidden xs:inline-block sm:inline-block" />
+                <span>
+                  <span className="hidden sm:inline">Watch </span>History
+                </span>
                 <span className="font-mono text-[10px] opacity-85 tabular-nums">
                   ({catalogFilteredHistory.length})
                 </span>
@@ -250,9 +347,18 @@ function WatchlistPageContent() {
             </div>
 
             <p className="text-xs text-on-surface-variant">
-              {catalogMode === "anime" ? "Anime" : "Movies & TV"}{" "}
-              {activeTab === "watchlist" ? "saved by" : "watched by"}{" "}
-              <span className="text-primary font-bold">{currentProfile.name}</span>.
+              {activeTab === "collections" ? (
+                <>
+                  Custom lists &amp; portable JSON backups for{" "}
+                  <span className="text-primary font-bold">{currentProfile.name}</span>.
+                </>
+              ) : (
+                <>
+                  {catalogMode === "anime" ? "Anime" : "Movies & TV"}{" "}
+                  {activeTab === "watchlist" ? "saved by" : "watched by"}{" "}
+                  <span className="text-primary font-bold">{currentProfile.name}</span>.
+                </>
+              )}
             </p>
           </div>
 
@@ -384,6 +490,92 @@ function WatchlistPageContent() {
               catalogMode={catalogMode}
               onQuickRemoveItem={handleQuickRemoveHistoryItem}
             />
+          </div>
+        ) : activeTab === "collections" ? (
+          <div className="space-y-8">
+            <LibraryCollectionsAndBackup
+              selectedCollectionId={selectedCollectionId}
+              onSelectCollection={setSelectedCollectionId}
+              onNotify={notify}
+            />
+
+            {selectedCollection && (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-custom pb-3">
+                  <div>
+                    <h2 className="text-base sm:text-lg font-display font-bold text-on-surface">
+                      {selectedCollection.name}
+                    </h2>
+                    <p className="text-xs text-on-surface-variant tabular-nums">
+                      {selectedCollectionItems.length} saved{" "}
+                      {selectedCollectionItems.length === 1 ? "title" : "titles"} matched in your watchlist
+                      {selectedCollection.description ? ` · ${selectedCollection.description}` : ""}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCollectionId(null)}
+                    className="rounded-lg border border-border-custom bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface-variant hover:text-on-surface"
+                  >
+                    Close Preview
+                  </button>
+                </div>
+
+                {selectedCollectionItems.length > 0 ? (
+                  <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 animate-fade-in">
+                    {selectedCollectionItems.map((item) => {
+                      const parsedYear = item.release_date
+                        ? Number.parseInt(item.release_date.split("-")[0] || "", 10)
+                        : undefined;
+                      return (
+                        <div key={`${item.media_type}_${getWatchlistItemId(item)}`} className="w-full">
+                          {item.media_type === "anime" ? (
+                            <AnimeCard
+                              fullWidth
+                              anime={{
+                                id: item.anilistId!,
+                                title: { english: item.title, romaji: item.title },
+                                coverImage: { large: item.poster_path },
+                                bannerImage: item.backdrop_path,
+                                averageScore: item.vote_average ? item.vote_average * 10 : null,
+                                seasonYear: Number.isFinite(parsedYear) ? parsedYear : null,
+                                media_type: "anime",
+                              } as AniListMedia}
+                            />
+                          ) : (
+                            <TitleCard
+                              fullWidth
+                              title={{
+                                id: item.tmdbId!,
+                                title: item.title || "",
+                                name: item.title || "",
+                                poster_path: item.poster_path || null,
+                                backdrop_path: item.backdrop_path || null,
+                                vote_average: item.vote_average || 0,
+                                release_date: item.release_date ?? undefined,
+                                first_air_date: item.release_date ?? undefined,
+                                media_type: item.media_type as "movie" | "tv",
+                                overview: "",
+                              }}
+                              mediaType={item.media_type as "movie" | "tv"}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-border-custom bg-surface/50 p-8 text-center space-y-2">
+                    <p className="text-sm font-semibold text-on-surface">
+                      No watchlisted titles in &quot;{selectedCollection.name}&quot; yet
+                    </p>
+                    <p className="text-xs text-on-surface-variant max-w-md mx-auto">
+                      Open any movie, series, or anime page, add it to your watchlist, and select &quot;Add to List&quot; to pin it here.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <>

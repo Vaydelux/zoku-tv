@@ -19,6 +19,7 @@ import {
   isGenreIdAllowedInKidsMode,
 } from "@/lib/kids-mode";
 import { AnimeDiscoverContent } from "./AnimeDiscover";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function DiscoverPage() {
   return (
@@ -65,6 +66,8 @@ function TmdbDiscoverContent() {
 
   const rawType = searchParams.get("type");
   const mediaType: "movie" | "tv" = rawType === "tv" ? "tv" : "movie";
+
+  useDocumentTitle(mediaType === "tv" ? "Discover TV Shows" : "Discover Movies");
   const sortBy = searchParams.get("sort_by") || "popularity.desc";
   const withGenres = searchParams.get("with_genres") || "";
   const yearFrom = searchParams.get("year_from") || "";

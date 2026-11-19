@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { Check, ChevronDown, Settings2 } from "lucide-react";
 import { useDropdownViewportClamp } from "@/hooks/useDropdownViewportClamp";
 
 export interface ServerSelectOption {
@@ -18,6 +19,7 @@ interface ServerSelectProps {
   className?: string;
   label?: string;
   align?: "left" | "right";
+  manageHref?: string;
 }
 
 function optionLabel(
@@ -50,6 +52,7 @@ export function ServerSelect({
   className = "",
   label = "Server",
   align = "left",
+  manageHref = "/settings?section=servers",
 }: ServerSelectProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -199,6 +202,22 @@ export function ServerSelect({
         >
           {renderGroup("Recommended servers", newServers)}
           {renderGroup("All servers", defaultServers)}
+          {manageHref && (
+            <div className="border-t border-white/10 mt-1 pt-1 px-1 pb-0.5">
+              <Link
+                href={manageHref}
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[11px] font-semibold text-primary hover:bg-primary/10 transition-colors"
+                data-tv-focusable="true"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <Settings2 className="h-3.5 w-3.5" aria-hidden />
+                  Manage &amp; Add Servers
+                </span>
+                <span className="text-[10px] opacity-75">JSON</span>
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>

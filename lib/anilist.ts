@@ -48,14 +48,36 @@ export interface AniListRelationEdge {
   node?: AniListMedia | null;
 }
 
+export interface AniListVoiceActor {
+  id: number;
+  name?: { full?: string | null } | null;
+  image?: { large?: string | null; medium?: string | null } | null;
+}
+
+export interface AniListNextAiringEpisode {
+  episode: number;
+  airingAt: number;
+  timeUntilAiring: number;
+}
+
+export interface AniListAiringScheduleItem {
+  id: number;
+  airingAt: number;
+  timeUntilAiring: number;
+  episode: number;
+  media: AniListMedia;
+}
+
 export interface AniListMediaDetail extends AniListMedia {
   trailer?: { id?: string | null; site?: string | null; thumbnail?: string | null } | null;
+  nextAiringEpisode?: AniListNextAiringEpisode | null;
   streamingEpisodes?: AniListStreamingEpisode[] | null;
   relations?: { edges?: AniListRelationEdge[] | null } | null;
   characters?: {
     edges?: {
       role?: string | null;
       node?: { id: number; name?: { full?: string | null }; image?: { large?: string | null } | null } | null;
+      voiceActors?: AniListVoiceActor[] | null;
     }[] | null;
   } | null;
   recommendations?: {
@@ -139,11 +161,20 @@ export function getAnimePoster(media: AniListMedia): string | null {
   return media.coverImage?.large || media.coverImage?.extraLarge || null;
 }
 
-import { BROWSE_QUERY, STUDIO_BROWSE_QUERY, DETAIL_QUERY } from "@/lib/anilist-queries";
+import { BROWSE_QUERY, STUDIO_BROWSE_QUERY, DETAIL_QUERY, AIRING_SCHEDULE_QUERY } from "@/lib/anilist-queries";
 
 /** Restricted AniList requests go through the server; no raw GraphQL query is accepted. */
 async function anilistFetch<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
-  const operation = query === BROWSE_QUERY ? "browse" : query === STUDIO_BROWSE_QUERY ? "studio" : query === DETAIL_QUERY ? "detail" : null;
+  const operation =
+    query === BROWSE_QUERY
+      ? "browse"
+      : query === STUDIO_BROWSE_QUERY
+      ? "studio"
+      : query === DETAIL_QUERY
+      ? "detail"
+      : query === AIRING_SCHEDULE_QUERY
+      ? "airing"
+      : null;
   if (!operation) throw new Error("Unsupported AniList operation");
   const response = await fetch("/api/anilist", {
     method: "POST",
@@ -289,6 +320,44 @@ export async function getPopularAnime(perPage = 12) {
 
 export async function getAnimeByGenre(genre: string, perPage = 12) {
   return browseAnime({ page: 1, perPage, genres: [genre], sort: ["POPULARITY_DESC"] });
+}
+
+export async function getAnimeAiringSchedule(
+  startSec: number,
+  endSec: number,
+  page = 1,
+  perPage = 50
+): Promise<{
+  pageInfo: { total: number; currentPage: number; lastPage: number; hasNextPage: boolean };
+  schedules: AniListAiringScheduleItem[];
+}> {
+  const data = await anilistFetch<{
+    Page: {
+      pageInfo: { total: number; currentPage: number; lastPage: number; hasNextPage: boolean };
+      airingSchedules: AniListAiringScheduleItem[];
+    };
+  }>(AIRING_SCHEDULE_QUERY, {
+    airingAt_greater: Math.floor(startSec),
+    airingAt_lesser: Math.floor(endSec),
+    page,
+    perPage,
+  });
+
+  const schedules = (data.Page?.airingSchedules ?? [])
+    .filter((entry) => entry && entry.media)
+    .map((entry) => ({
+      ...entry,
+      media: {
+        ...entry.media,
+        media_type: "anime" as const,
+        description: stripHtml(entry.media.description),
+      },
+    }));
+
+  return {
+    pageInfo: data.Page?.pageInfo ?? { total: schedules.length, currentPage: page, lastPage: page, hasNextPage: false },
+    schedules,
+  };
 }
 
 /**

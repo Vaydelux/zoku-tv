@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Check, Star, Play, CheckCircle2 } from "lucide-react";
-import { useWatchlistStore, useWatchHistoryStore } from "@/stores";
+import { useWatchlistStore, useWatchHistoryStore, useQuickTrailerStore } from "@/stores";
 import type { AniListMedia } from "@/lib/anilist";
 import { getAnimeDetails, getAnimeDisplayTitle, getAnimePoster } from "@/lib/anilist";
 import { isReleasedWithinLast30Days } from "@/lib/media-types";
@@ -27,13 +27,14 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
     anime.bannerImage ?? null
   );
 
+  const prefetchedRef = useRef(false);
   const name = getAnimeDisplayTitle(anime);
   const posterFallback = getAnimePoster(anime);
   const imagePath =
     resolvedBanner ||
     anime.bannerImage ||
     posterFallback ||
-    "https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=900";
+    "";
 
   const rating = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : "N/A";
   const year = anime.seasonYear
@@ -146,6 +147,14 @@ export function AnimeCard({ anime, fullWidth = false }: AnimeCardProps) {
         fullWidth={fullWidth}
         onOpen={() => router.push(`/anime/${anime.id}`)}
         onPlay={anime.episodes && anime.episodes > 0 ? () => router.push(`/watch/anime/${anime.id}/1/1`) : undefined}
+        onQuickTrailer={() => {
+          void useQuickTrailerStore.getState().openAnimeTrailer(anime.id, name);
+        }}
+        onPrefetch={() => {
+          if (prefetchedRef.current) return;
+          prefetchedRef.current = true;
+          router.prefetch(`/anime/${anime.id}`);
+        }}
         onToggleWatchlist={() => handleWatchlistToggle()}
         onToggleWatched={() => handleHistoryToggle()}
       />

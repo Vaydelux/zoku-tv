@@ -24,6 +24,37 @@ import {
 } from "@/lib/themes";
 import { canAddProfile, MAX_PROFILES } from "@/lib/profile-limits";
 import { EMBED_SERVER_CATALOG } from "@/lib/embed";
+import { ANIME_EMBED_SERVER_CATALOG } from "@/lib/anime-embed";
+import {
+  createDefaultServerConfig,
+  DEFAULT_ACTIVE_ANIME_SERVER_IDS,
+  DEFAULT_ACTIVE_TMDB_SERVER_IDS,
+  importServerConfigJson,
+  readLocalServerConfig,
+  sanitizeDynamicServerConfig,
+  validateCustomAnimeServer,
+  validateCustomTmdbServer,
+  writeLocalServerConfig,
+  type CustomAnimeServer,
+  type CustomAnimeServerInput,
+  type CustomTmdbServer,
+  type CustomTmdbServerInput,
+  type DynamicServerConfig,
+  type ImportServerSummary,
+} from "@/lib/dynamic-servers";
+import {
+  createCollectionRecord,
+  importLibraryBackupJson,
+  readLocalCollections,
+  sanitizeCustomCollections,
+  toggleItemInCollection,
+  validateCollectionInput,
+  writeLocalCollections,
+  type CustomCollection,
+  type LibraryBackupSummary,
+} from "@/lib/custom-collections";
+import { getVideos, type TMDBVideo } from "@/lib/tmdb";
+import { getAnimeDetails } from "@/lib/anilist";
 import {
   COMPLETION_THRESHOLD_PERCENT,
   MAX_CONTINUE_WATCHING_ITEMS,
@@ -456,6 +487,7 @@ interface WatchlistState {
   removeItem: (media_type: MediaType, id: number) => Promise<void>;
   hasItem: (media_type: MediaType, id: number) => boolean;
   clearWatchlist: (catalogMode?: "tmdb" | "anime" | "all") => Promise<void>;
+  importItems: (nextItems: WatchlistItem[], replaceExisting: boolean) => Promise<void>;
 }
 
 export const useWatchlistStore = create<WatchlistState>((set, get) => ({
@@ -586,6 +618,57 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     } catch (e) {
       set({ items: currentItems });
       console.error("Failed to clear watchlist", e);
+    }
+  },
+
+  importItems: async (nextItems, replaceExisting) => {
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+    const previous = get().items;
+
+    set({ items: nextItems });
+    if (!user || !profile) return;
+
+    try {
+      const nextKeys = new Set(
+        nextItems
+          .map((item) => {
+            const id = getWatchlistItemId(item);
+            return id ? watchlistEntryKey(item.media_type, id) : null;
+          })
+          .filter((k): k is string => Boolean(k))
+      );
+
+      if (replaceExisting) {
+        await Promise.all(
+          previous.map((entry) => {
+            const id = getWatchlistItemId(entry);
+            if (!id) return Promise.resolve();
+            const key = watchlistEntryKey(entry.media_type, id);
+            if (nextKeys.has(key)) return Promise.resolve();
+            const docRef = getDocRef(
+              `users/${user.uid}/profiles/${profile.id}/watchlist`,
+              key
+            );
+            return deleteDocument(docRef);
+          })
+        );
+      }
+
+      await Promise.all(
+        nextItems.map((entry) => {
+          const id = getWatchlistItemId(entry);
+          if (!id) return Promise.resolve();
+          const docRef = getDocRef(
+            `users/${user.uid}/profiles/${profile.id}/watchlist`,
+            watchlistEntryKey(entry.media_type, id)
+          );
+          return setDocument(docRef, entry);
+        })
+      );
+    } catch (e) {
+      console.error("Failed to sync imported watchlist items", e);
     }
   },
 }));
@@ -1386,7 +1469,11 @@ export const useEmbedStore = create<EmbedState>((set, get) => ({
   serverHealth: {},
 
   setServerId: (id) => {
-    const nextId = EMBED_SERVER_CATALOG.some(server => server.id === id) ? id : "vidsrc";
+    const customTmdb = useDynamicServerStore.getState().config.customTmdbServers;
+    const valid =
+      EMBED_SERVER_CATALOG.some((server) => server.id === id) ||
+      customTmdb.some((server) => server.id === id);
+    const nextId = valid ? id : "vidsrc";
     set({ selectedServerId: nextId });
     if (typeof window !== "undefined") {
       try { localStorage.setItem("zoku_selected_server_id", nextId); } catch { /* private mode */ }
@@ -1421,7 +1508,14 @@ export const useEmbedStore = create<EmbedState>((set, get) => ({
       const savedMode = localStorage.getItem("zoku_iframe_mode");
       const updates: Partial<EmbedState> = {};
       if (savedServer) {
-        if (EMBED_SERVER_CATALOG.some(server => server.id === savedServer)) {
+        const dynamicCfg =
+          useDynamicServerStore.getState().config.customTmdbServers.length > 0
+            ? useDynamicServerStore.getState().config
+            : readLocalServerConfig(useSessionStore.getState().currentProfile?.id);
+        const isKnownServer =
+          EMBED_SERVER_CATALOG.some((server) => server.id === savedServer) ||
+          dynamicCfg.customTmdbServers.some((server) => server.id === savedServer);
+        if (isKnownServer) {
           updates.selectedServerId = savedServer;
         } else {
           // Retired domains must never remain selected after a catalog update.
@@ -1548,6 +1642,609 @@ export const useRailFilterStore = create<RailFilterState>((set) => ({
   setActiveFilter: (filterId: string) => set({ activeFilter: filterId }),
   setFilterOptions: (options: RailFilterOption[]) => set({ filterOptions: options }),
   setRailSort: (sort: RailSortMode) => set({ railSort: sort }),
+}));
+
+// === 5. DYNAMIC PLAYBACK SERVERS STORE ===
+
+interface DynamicServerState {
+  config: DynamicServerConfig;
+  hydrated: boolean;
+  hydrateLocal: () => void;
+  initDynamicServers: () => () => void;
+  addBuiltInServer: (kind: "tmdb" | "anime", serverId: string) => Promise<void>;
+  removeActiveServer: (kind: "tmdb" | "anime", serverId: string) => Promise<void>;
+  moveActiveServer: (
+    kind: "tmdb" | "anime",
+    serverId: string,
+    direction: "up" | "down"
+  ) => Promise<void>;
+  addAllBuiltIns: (kind: "tmdb" | "anime") => Promise<void>;
+  resetDefaults: (kind: "tmdb" | "anime") => Promise<void>;
+  addCustomTmdbServer: (
+    input: CustomTmdbServerInput
+  ) => Promise<{ ok: true; server: CustomTmdbServer } | { ok: false; error: string }>;
+  addCustomAnimeServer: (
+    input: CustomAnimeServerInput
+  ) => Promise<{ ok: true; server: CustomAnimeServer } | { ok: false; error: string }>;
+  deleteCustomServer: (kind: "tmdb" | "anime", serverId: string) => Promise<void>;
+  importConfigJson: (
+    rawJson: string,
+    mode: "merge" | "replace"
+  ) => Promise<
+    { ok: true; config: DynamicServerConfig; summary: ImportServerSummary } | { ok: false; error: string }
+  >;
+}
+
+async function persistDynamicServerConfig(next: DynamicServerConfig): Promise<void> {
+  const session = useSessionStore.getState();
+  const profileId = session.currentProfile?.id ?? null;
+  writeLocalServerConfig(next, profileId);
+
+  if (session.user && session.currentProfile) {
+    try {
+      const docRef = getDocRef(
+        `users/${session.user.uid}/profiles/${session.currentProfile.id}/serverConfig`,
+        "default"
+      );
+      await setDocument(docRef, {
+        version: next.version,
+        tmdbActiveIds: next.tmdbActiveIds,
+        animeActiveIds: next.animeActiveIds,
+        customTmdbServers: next.customTmdbServers,
+        customAnimeServers: next.customAnimeServers,
+        updatedAt: next.updatedAt,
+      });
+    } catch (e) {
+      console.error("Failed to sync dynamic server config to Firestore", e);
+    }
+  }
+}
+
+export const useDynamicServerStore = create<DynamicServerState>((set, get) => ({
+  config: createDefaultServerConfig(),
+  hydrated: false,
+
+  hydrateLocal: () => {
+    const profileId = useSessionStore.getState().currentProfile?.id ?? null;
+    const local = readLocalServerConfig(profileId);
+    set({ config: local, hydrated: true });
+  },
+
+  initDynamicServers: () => {
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+
+    const local = readLocalServerConfig(profile?.id ?? null);
+    set({ config: local, hydrated: true });
+
+    if (!user || !profile) {
+      return () => {};
+    }
+
+    const docRef = getDocRef(
+      `users/${user.uid}/profiles/${profile.id}/serverConfig`,
+      "default"
+    );
+
+    const unsubscribe = listenToDoc(docRef, (snap) => {
+      if (!snap.exists()) return;
+      const remote = sanitizeDynamicServerConfig(snap.data());
+      const current = get().config;
+      const remoteTs = Date.parse(remote.updatedAt || "");
+      const localTs = Date.parse(current.updatedAt || "");
+      if (!Number.isNaN(remoteTs) && (Number.isNaN(localTs) || remoteTs >= localTs)) {
+        set({ config: remote, hydrated: true });
+        writeLocalServerConfig(remote, profile.id);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  },
+
+  addBuiltInServer: async (kind, serverId) => {
+    const current = get().config;
+    const now = new Date().toISOString();
+    const listKey = kind === "tmdb" ? "tmdbActiveIds" : "animeActiveIds";
+    if (current[listKey].includes(serverId)) return;
+
+    const next = sanitizeDynamicServerConfig({
+      ...current,
+      [listKey]: [...current[listKey], serverId],
+      updatedAt: now,
+    });
+    set({ config: next });
+    await persistDynamicServerConfig(next);
+  },
+
+  removeActiveServer: async (kind, serverId) => {
+    const current = get().config;
+    const listKey = kind === "tmdb" ? "tmdbActiveIds" : "animeActiveIds";
+    const remaining = current[listKey].filter((id) => id !== serverId);
+    if (remaining.length === 0) return;
+
+    const next = sanitizeDynamicServerConfig({
+      ...current,
+      [listKey]: remaining,
+      updatedAt: new Date().toISOString(),
+    });
+    set({ config: next });
+    await persistDynamicServerConfig(next);
+  },
+
+  moveActiveServer: async (kind, serverId, direction) => {
+    const current = get().config;
+    const listKey = kind === "tmdb" ? "tmdbActiveIds" : "animeActiveIds";
+    const list = [...current[listKey]];
+    const idx = list.indexOf(serverId);
+    if (idx < 0) return;
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+
+    [list[idx], list[targetIdx]] = [list[targetIdx], list[idx]];
+    const next = sanitizeDynamicServerConfig({
+      ...current,
+      [listKey]: list,
+      updatedAt: new Date().toISOString(),
+    });
+    set({ config: next });
+    await persistDynamicServerConfig(next);
+  },
+
+  addAllBuiltIns: async (kind) => {
+    const current = get().config;
+    const allIds =
+      kind === "tmdb"
+        ? EMBED_SERVER_CATALOG.map((s) => s.id)
+        : ANIME_EMBED_SERVER_CATALOG.map((s) => s.id);
+    const listKey = kind === "tmdb" ? "tmdbActiveIds" : "animeActiveIds";
+    const merged = [...new Set([...current[listKey], ...allIds])];
+
+    const next = sanitizeDynamicServerConfig({
+      ...current,
+      [listKey]: merged,
+      updatedAt: new Date().toISOString(),
+    });
+    set({ config: next });
+    await persistDynamicServerConfig(next);
+  },
+
+  resetDefaults: async (kind) => {
+    const current = get().config;
+    const now = new Date().toISOString();
+    const next = sanitizeDynamicServerConfig(
+      kind === "tmdb"
+        ? {
+            ...current,
+            tmdbActiveIds: [
+              ...DEFAULT_ACTIVE_TMDB_SERVER_IDS,
+              ...current.customTmdbServers.map((s) => s.id),
+            ],
+            updatedAt: now,
+          }
+        : {
+            ...current,
+            animeActiveIds: [
+              ...DEFAULT_ACTIVE_ANIME_SERVER_IDS,
+              ...current.customAnimeServers.map((s) => s.id),
+            ],
+            updatedAt: now,
+          }
+    );
+    set({ config: next });
+    await persistDynamicServerConfig(next);
+  },
+
+  addCustomTmdbServer: async (input) => {
+    const result = validateCustomTmdbServer(input);
+    if (!result.ok) return result;
+    const current = get().config;
+    const nextCustom = [
+      ...current.customTmdbServers.filter((s) => s.id !== result.server.id),
+      result.server,
+    ];
+    const nextActive = [
+      result.server.id,
+      ...current.tmdbActiveIds.filter((id) => id !== result.server.id),
+    ];
+    const next = sanitizeDynamicServerConfig({
+      ...current,
+      customTmdbServers: nextCustom,
+      tmdbActiveIds: nextActive,
+      updatedAt: new Date().toISOString(),
+    });
+    set({ config: next });
+    await persistDynamicServerConfig(next);
+    return { ok: true, server: result.server };
+  },
+
+  addCustomAnimeServer: async (input) => {
+    const result = validateCustomAnimeServer(input);
+    if (!result.ok) return result;
+    const current = get().config;
+    const nextCustom = [
+      ...current.customAnimeServers.filter((s) => s.id !== result.server.id),
+      result.server,
+    ];
+    const nextActive = [
+      result.server.id,
+      ...current.animeActiveIds.filter((id) => id !== result.server.id),
+    ];
+    const next = sanitizeDynamicServerConfig({
+      ...current,
+      customAnimeServers: nextCustom,
+      animeActiveIds: nextActive,
+      updatedAt: new Date().toISOString(),
+    });
+    set({ config: next });
+    await persistDynamicServerConfig(next);
+    return { ok: true, server: result.server };
+  },
+
+  deleteCustomServer: async (kind, serverId) => {
+    const current = get().config;
+    const now = new Date().toISOString();
+    const next = sanitizeDynamicServerConfig(
+      kind === "tmdb"
+        ? {
+            ...current,
+            customTmdbServers: current.customTmdbServers.filter((s) => s.id !== serverId),
+            tmdbActiveIds: current.tmdbActiveIds.filter((id) => id !== serverId),
+            updatedAt: now,
+          }
+        : {
+            ...current,
+            customAnimeServers: current.customAnimeServers.filter((s) => s.id !== serverId),
+            animeActiveIds: current.animeActiveIds.filter((id) => id !== serverId),
+            updatedAt: now,
+          }
+    );
+    set({ config: next });
+    await persistDynamicServerConfig(next);
+  },
+
+  importConfigJson: async (rawJson, mode) => {
+    const current = get().config;
+    const result = importServerConfigJson(rawJson, current, mode);
+    if (!result.ok) return result;
+    set({ config: result.config });
+    await persistDynamicServerConfig(result.config);
+    return result;
+  },
+}));
+
+// === 6. CUSTOM COLLECTIONS & LIBRARY BACKUP STORE ===
+
+interface CustomCollectionsState {
+  collections: CustomCollection[];
+  hydrated: boolean;
+  hydrateLocal: () => void;
+  initCollections: () => () => void;
+  createCollection: (input: {
+    name: string;
+    description?: string;
+    initialMediaKey?: string;
+  }) => Promise<{ ok: true; collection: CustomCollection } | { ok: false; error: string }>;
+  renameCollection: (
+    collectionId: string,
+    input: { name: string; description?: string }
+  ) => Promise<{ ok: true } | { ok: false; error: string }>;
+  deleteCollection: (collectionId: string) => Promise<void>;
+  toggleItemInCollection: (collectionId: string, mediaKey: string) => Promise<void>;
+  importLibraryJson: (
+    rawJson: string,
+    mode: "merge" | "replace"
+  ) => Promise<{ ok: true; summary: LibraryBackupSummary } | { ok: false; error: string }>;
+}
+
+async function persistCollectionDoc(col: CustomCollection): Promise<void> {
+  const session = useSessionStore.getState();
+  if (!session.user || !session.currentProfile) return;
+  try {
+    const docRef = getDocRef(
+      `users/${session.user.uid}/profiles/${session.currentProfile.id}/collections`,
+      col.id
+    );
+    await setDocument(docRef, {
+      id: col.id,
+      name: col.name,
+      description: col.description ?? null,
+      itemKeys: col.itemKeys,
+      createdAt: col.createdAt,
+      updatedAt: col.updatedAt,
+    });
+  } catch (e) {
+    console.error("Failed to sync custom collection to Firestore", e);
+  }
+}
+
+export const useCustomCollectionsStore = create<CustomCollectionsState>((set, get) => ({
+  collections: [],
+  hydrated: false,
+
+  hydrateLocal: () => {
+    const profileId = useSessionStore.getState().currentProfile?.id ?? null;
+    set({ collections: readLocalCollections(profileId), hydrated: true });
+  },
+
+  initCollections: () => {
+    const session = useSessionStore.getState();
+    const user = session.user;
+    const profile = session.currentProfile;
+
+    const local = readLocalCollections(profile?.id ?? null);
+    set({ collections: local, hydrated: true });
+
+    if (!user || !profile) {
+      return () => {};
+    }
+
+    const colRef = getCollectionRef(
+      `users/${user.uid}/profiles/${profile.id}/collections`
+    );
+    return listenToCollection(colRef, (snapshot) => {
+      const remoteList: unknown[] = [];
+      snapshot.forEach((docSnap: any) => {
+        remoteList.push(docSnap.data());
+      });
+      const sanitized = sanitizeCustomCollections(remoteList);
+      set({ collections: sanitized, hydrated: true });
+      writeLocalCollections(sanitized, profile.id);
+    });
+  },
+
+  createCollection: async (input) => {
+    const res = createCollectionRecord({
+      name: input.name,
+      description: input.description,
+      itemKeys: input.initialMediaKey ? [input.initialMediaKey] : [],
+    });
+    if (!res.ok) return res;
+
+    const profileId = useSessionStore.getState().currentProfile?.id ?? null;
+    const next = [res.collection, ...get().collections];
+    set({ collections: next });
+    writeLocalCollections(next, profileId);
+    await persistCollectionDoc(res.collection);
+    return { ok: true, collection: res.collection };
+  },
+
+  renameCollection: async (collectionId, input) => {
+    const validated = validateCollectionInput(input);
+    if (!validated.ok) return validated;
+
+    const current = get().collections;
+    const target = current.find((c) => c.id === collectionId);
+    if (!target) return { ok: false, error: "Collection not found." };
+
+    const updated: CustomCollection = {
+      ...target,
+      name: validated.name,
+      description: validated.description,
+      updatedAt: new Date().toISOString(),
+    };
+    const next = current.map((c) => (c.id === collectionId ? updated : c));
+    const profileId = useSessionStore.getState().currentProfile?.id ?? null;
+    set({ collections: next });
+    writeLocalCollections(next, profileId);
+    await persistCollectionDoc(updated);
+    return { ok: true };
+  },
+
+  deleteCollection: async (collectionId) => {
+    const session = useSessionStore.getState();
+    const profileId = session.currentProfile?.id ?? null;
+    const next = get().collections.filter((c) => c.id !== collectionId);
+    set({ collections: next });
+    writeLocalCollections(next, profileId);
+
+    if (session.user && session.currentProfile) {
+      try {
+        const docRef = getDocRef(
+          `users/${session.user.uid}/profiles/${session.currentProfile.id}/collections`,
+          collectionId
+        );
+        await deleteDocument(docRef);
+      } catch (e) {
+        console.error("Failed to delete custom collection", e);
+      }
+    }
+  },
+
+  toggleItemInCollection: async (collectionId, mediaKey) => {
+    const current = get().collections;
+    const target = current.find((c) => c.id === collectionId);
+    if (!target) return;
+
+    const updated = toggleItemInCollection(target, mediaKey);
+    const next = current.map((c) => (c.id === collectionId ? updated : c));
+    const profileId = useSessionStore.getState().currentProfile?.id ?? null;
+    set({ collections: next });
+    writeLocalCollections(next, profileId);
+    await persistCollectionDoc(updated);
+  },
+
+  importLibraryJson: async (rawJson, mode) => {
+    const watchlistStore = useWatchlistStore.getState();
+    const historyStore = useWatchHistoryStore.getState();
+    const currentCollections = get().collections;
+
+    const result = importLibraryBackupJson(
+      rawJson,
+      {
+        watchlist: watchlistStore.items,
+        collections: currentCollections,
+        watchHistory: historyStore.items,
+      },
+      mode
+    );
+    if (!result.ok) return result;
+
+    const session = useSessionStore.getState();
+    const profileId = session.currentProfile?.id ?? null;
+
+    // 1. Apply Watchlist
+    await watchlistStore.importItems(result.watchlist, mode === "replace");
+
+    // 2. Apply Custom Collections
+    const prevCollectionIds = new Set(currentCollections.map((c) => c.id));
+    const nextCollectionIds = new Set(result.collections.map((c) => c.id));
+    set({ collections: result.collections });
+    writeLocalCollections(result.collections, profileId);
+    if (session.user && session.currentProfile) {
+      if (mode === "replace") {
+        await Promise.all(
+          [...prevCollectionIds]
+            .filter((id) => !nextCollectionIds.has(id))
+            .map((id) =>
+              deleteDocument(
+                getDocRef(
+                  `users/${session.user!.uid}/profiles/${session.currentProfile!.id}/collections`,
+                  id
+                )
+              )
+            )
+        );
+      }
+      await Promise.all(result.collections.map((col) => persistCollectionDoc(col)));
+    }
+
+    // 3. Apply Watch History
+    if (profileId) {
+      writeLocalWatchHistory(profileId, result.watchHistory);
+    }
+    useWatchHistoryStore.setState({ items: result.watchHistory });
+    if (session.user && session.currentProfile) {
+      await Promise.all(
+        result.watchHistory.slice(0, 60).map((entry) => {
+          const id = getWatchHistoryItemId(entry);
+          if (!id) return Promise.resolve();
+          const docRef = getDocRef(
+            `users/${session.user!.uid}/profiles/${session.currentProfile!.id}/watchHistory`,
+            watchHistoryEntryKey(entry.media_type, id)
+          );
+          return setDocument(docRef, entry);
+        })
+      );
+    }
+
+    return { ok: true, summary: result.summary };
+  },
+}));
+
+// === 7. GLOBAL QUICK TRAILER OVERLAY STORE ===
+
+export interface QuickTrailerClip {
+  id: string;
+  key: string;
+  name: string;
+  site: "YouTube";
+  type: string;
+  official?: boolean;
+}
+
+interface QuickTrailerState {
+  open: boolean;
+  loading: boolean;
+  title: string;
+  videos: QuickTrailerClip[];
+  error: string | null;
+  openTmdbTrailer: (mediaType: "movie" | "tv", id: number, title: string) => Promise<void>;
+  openAnimeTrailer: (anilistId: number, title: string) => Promise<void>;
+  close: () => void;
+}
+
+export const useQuickTrailerStore = create<QuickTrailerState>((set) => ({
+  open: false,
+  loading: false,
+  title: "",
+  videos: [],
+  error: null,
+
+  openTmdbTrailer: async (mediaType, id, title) => {
+    set({ open: true, loading: true, title, videos: [], error: null });
+    try {
+      const raw: TMDBVideo[] = await getVideos(mediaType, id);
+      const yt = raw
+        .filter((v) => v.site === "YouTube" && Boolean(v.key))
+        .map((v) => ({
+          id: v.id,
+          key: v.key,
+          name: v.name,
+          site: "YouTube" as const,
+          type: v.type,
+          official: v.type === "Trailer",
+        }));
+      if (yt.length === 0) {
+        set({
+          loading: false,
+          videos: [],
+          error: `No official YouTube trailer is available for ${title}.`,
+        });
+        return;
+      }
+      set({ loading: false, videos: yt, error: null });
+    } catch {
+      set({
+        loading: false,
+        videos: [],
+        error: "Unable to load trailer right now. Please try again shortly.",
+      });
+    }
+  },
+
+  openAnimeTrailer: async (anilistId, title) => {
+    set({ open: true, loading: true, title, videos: [], error: null });
+    try {
+      const detail = await getAnimeDetails(anilistId);
+      if (detail?.trailer?.site?.toLowerCase() === "youtube" && detail.trailer.id) {
+        set({
+          loading: false,
+          videos: [
+            {
+              id: detail.trailer.id,
+              key: detail.trailer.id,
+              name: `${title} — Official Trailer`,
+              site: "YouTube",
+              type: "Trailer",
+              official: true,
+            },
+          ],
+          error: null,
+        });
+        return;
+      }
+      set({
+        loading: false,
+        videos: [],
+        error: `No official YouTube trailer is available for ${title}.`,
+      });
+    } catch {
+      set({
+        loading: false,
+        videos: [],
+        error: "Unable to load anime trailer right now.",
+      });
+    }
+  },
+
+  close: () => set({ open: false, loading: false, error: null }),
+}));
+
+// === 8. GLOBAL COMMAND PALETTE STORE ===
+
+interface CommandPaletteState {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  toggle: () => void;
+}
+
+export const useCommandPaletteStore = create<CommandPaletteState>((set) => ({
+  open: false,
+  setOpen: (open) => set({ open }),
+  toggle: () => set((s) => ({ open: !s.open })),
 }));
 
 // Re-export authentication helpers for clean access from page controllers

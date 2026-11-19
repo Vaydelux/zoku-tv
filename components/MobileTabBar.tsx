@@ -34,7 +34,7 @@ export function MobileTabBar({ pathname }: { pathname: string | null }) {
               href={item.href}
               aria-current={active ? "page" : undefined}
               data-tv-focusable="true"
-              className={`zoku-mobile-tab flex min-h-[60px] min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[11px] font-medium transition-colors ${active ? "text-primary" : "text-on-surface-variant hover:text-on-surface"}`}
+              className={`zoku-mobile-tab flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[11px] font-medium transition-colors ${active ? "text-primary" : "text-on-surface-variant hover:text-on-surface"}`}
             >
               <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
               <span className="max-w-full truncate">{item.label}</span>

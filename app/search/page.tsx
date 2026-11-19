@@ -28,6 +28,7 @@ import { shouldOfferMoreSearchResults, getSearchPageResultStatus, matchesSearchM
 import { SEARCH_MEDIA_GENRES, matchesSearchGenre, type SearchGenreLabel } from "@/lib/search-media-genre";
 import { LEGACY_SEARCH_SESSION_KEY, searchQueryStorageKey, searchViewScopeKey, sanitizeSavedSearchQuery, type SavedSearchQuery } from "@/lib/search-session-scope";
 import { sortSearchEntries, type SearchSortMode } from "@/lib/search-result-sort";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 type SearchFilterTab = SearchMediaTab;
 
@@ -103,6 +104,7 @@ function SearchPageContent() {
 
   const savedInitial = useMemo(() => readSavedSearchSession(profileId), [profileId]);
   const urlQueryParam = searchParams.get("q") || "";
+  useDocumentTitle(urlQueryParam ? `Search: ${urlQueryParam}` : "Search");
 
   // Remounting on profile/Kids Mode changes clears all previous catalog data.
   // Match the server render first; profile-scoped query restoration happens

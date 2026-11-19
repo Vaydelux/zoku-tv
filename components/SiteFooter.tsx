@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,25 +15,13 @@ import {
 import { shouldHideZokuFooter } from "@/lib/site-footer-routing";
 import { isCloudFirebaseConfigured } from "@/lib/firebase";
 import { useSessionStore } from "@/stores";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 export function SiteFooter() {
   const pathname = usePathname();
   const cinematicLayout = process.env.NEXT_PUBLIC_ZOKU_LAYOUT !== "classic";
   const currentProfile = useSessionStore((s) => s.currentProfile);
-  const [isOnline, setIsOnline] = useState(true);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setIsOnline(navigator.onLine);
-    const onOnline = () => setIsOnline(true);
-    const onOffline = () => setIsOnline(false);
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
-    return () => {
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
-    };
-  }, []);
+  const isOnline = useOnlineStatus();
 
   // Hide on player + pre-app brand surfaces (splash/auth/profiles)
   if (shouldHideZokuFooter(pathname)) return null;
@@ -63,6 +50,7 @@ export function SiteFooter() {
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
             <span>Metadata by TMDB &amp; AniList</span>
             <Link href="/genres" className="hover:text-on-surface hover:underline">Genres</Link>
+            <Link href="/settings?section=servers" className="hover:text-on-surface hover:underline">Servers</Link>
             <Link href="/settings" className="hover:text-on-surface hover:underline">Settings</Link>
           </div>
         </div>

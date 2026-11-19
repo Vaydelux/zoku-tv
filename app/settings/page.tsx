@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Settings,
@@ -26,6 +27,7 @@ import {
   Cpu,
   Gauge,
   Sliders,
+  Server,
 } from "lucide-react";
 import {
   useSessionStore,
@@ -39,8 +41,34 @@ import { FirebaseStatusIndicator } from "@/components/FirebaseStatusIndicator";
 import { LoadingBanner } from "@/components/LoadingBanner";
 import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
 import { ConfirmDialog } from "@/components/ui/Primitives";
-import { GpuDiagnosticOverlay } from "@/components/GpuDiagnosticOverlay";
-import { PerformanceDiagnosticsPanel } from "@/components/PerformanceDiagnosticsPanel";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+
+const GpuDiagnosticOverlay = dynamic(
+  () => import("@/components/GpuDiagnosticOverlay").then((m) => m.GpuDiagnosticOverlay),
+  { ssr: false }
+);
+const PerformanceDiagnosticsPanel = dynamic(
+  () =>
+    import("@/components/PerformanceDiagnosticsPanel").then(
+      (m) => m.PerformanceDiagnosticsPanel
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 w-full animate-pulse rounded-2xl bg-background/60 border border-border-custom" />
+    ),
+  }
+);
+const DynamicServersPanel = dynamic(
+  () =>
+    import("@/components/settings/DynamicServersPanel").then((m) => m.DynamicServersPanel),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-72 w-full animate-pulse rounded-2xl bg-background/60 border border-border-custom" />
+    ),
+  }
+);
 import { getGenres, TMDBGenre } from "@/lib/tmdb";
 import { getDocRef, getDocumentForVerification } from "@/lib/firebase";
 import { genrePreferencesMatch } from "@/lib/genre-preferences";
@@ -72,6 +100,7 @@ type SettingsSection =
   | "catalog"
   | "genre-rails"
   | "profiles"
+  | "servers"
   | "iframe-mode"
   | "cache"
   | "diagnostics"
@@ -106,6 +135,7 @@ function SettingsPageContent() {
   } = usePerfMode();
 
   const [activeTab, setActiveTab] = useState<SettingsSection>("theme");
+  useDocumentTitle("Settings");
   const [localAppearance, setLocalAppearance] = useState<AppearanceMode>(DEFAULT_APPEARANCE);
   const [availableGenres, setAvailableGenres] = useState<TMDBGenre[]>([]);
   const [selectedGenreIds, setSelectedGenreIds] = useState<number[]>([]);
@@ -183,6 +213,7 @@ function SettingsPageContent() {
         "catalog",
         "genre-rails",
         "profiles",
+        "servers",
         "iframe-mode",
         "cache",
         "diagnostics",
@@ -585,6 +616,19 @@ function SettingsPageContent() {
             >
               <User className="h-4 w-4" />
               <span>Profiles & Kids Mode</span>
+            </button>
+
+            <button
+              onClick={() => switchTab("servers")}
+              data-testid="tab-servers"
+              className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold text-left transition-all ${
+                activeTab === "servers"
+                  ? "bg-primary text-primary-contrast"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface"
+              }`}
+            >
+              <Server className="h-4 w-4" />
+              <span>Playback Servers</span>
             </button>
 
             <button
@@ -1548,6 +1592,13 @@ function SettingsPageContent() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {activeTab === "servers" && (
+              <DynamicServersPanel
+                onNotifySuccess={notifySuccess}
+                onNotifyError={notifyError}
+              />
             )}
 
             {activeTab === "perf-diagnostics" && (

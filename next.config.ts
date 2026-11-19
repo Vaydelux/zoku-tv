@@ -11,13 +11,18 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "images.unsplash.com",
+        hostname: "s4.anilist.co",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "media.kitsu.io",
         pathname: "/**",
       },
     ],
   },
   experimental: {
-    optimizePackageImports: ["lucide-react", "framer-motion"],
+    optimizePackageImports: ["lucide-react", "framer-motion", "motion"],
   },
   async headers() {
     return [

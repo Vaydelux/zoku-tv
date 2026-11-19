@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, use } from "react";
+import { useCallback, useEffect, useState, useMemo, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,23 +14,31 @@ import {
   Play,
   SkipForward,
   Check,
+  Keyboard,
 } from "lucide-react";
 import { getTitleDetails, TMDBTitle } from "@/lib/tmdb";
 import {
-  EMBED_SERVER_CATALOG,
   groupEmbedServers,
   getEmbedUrl,
 } from "@/lib/embed";
+import { resolveActiveTmdbServers } from "@/lib/dynamic-servers";
 import {
   useSessionStore,
   useEmbedStore,
   useWatchHistoryStore,
+  useDynamicServerStore,
 } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { useWatchProgress } from "@/hooks/useWatchProgress";
 import { ResumePrompt } from "@/components/watch/ResumePrompt";
 import { ServerSelect } from "@/components/watch/ServerSelect";
+import { WatchShortcutsPopover } from "@/components/watch/AutoNextOverlay";
 import { isTmdbAllowedInKidsMode } from "@/lib/kids-mode";
+import {
+  resolveWatchShortcutAction,
+  shouldIgnoreShortcutTarget,
+} from "@/lib/watch-shortcuts";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function WatchMoviePage({
   params,
@@ -59,10 +67,17 @@ export default function WatchMoviePage({
   const [showToolsPanel, setShowToolsPanel] = useState(false);
   const [iframeReady, setIframeReady] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+
+  const serverConfig = useDynamicServerStore((s) => s.config);
+  const activeServers = useMemo(
+    () => resolveActiveTmdbServers(serverConfig),
+    [serverConfig]
+  );
 
   const { newServers, defaultServers } = useMemo(
-    () => groupEmbedServers(EMBED_SERVER_CATALOG),
-    []
+    () => groupEmbedServers(activeServers),
+    [activeServers]
   );
 
   useEffect(() => {
@@ -94,6 +109,9 @@ export default function WatchMoviePage({
   );
 
   const displayTitle = details?.title || details?.name || "Loading title...";
+  useDocumentTitle(
+    details ? `Watch · ${details.title || details.name || "Movie"}` : "Watch"
+  );
   const releaseYear = (details?.release_date || "").slice(0, 4);
 
   const {
@@ -114,6 +132,78 @@ export default function WatchMoviePage({
     selectedServerId,
     ready: Boolean(details && details.id === numericId) && type === "movie" && !kidsRestricted,
   });
+
+  const currentServerObj =
+    activeServers.find((s) => s.id === selectedServerId) ||
+    activeServers[0];
+
+  const handleServerChange = useCallback(
+    (newServerId: string) => {
+      setServerId(newServerId);
+      setIframeReady(false);
+    },
+    [setServerId]
+  );
+
+  const handleNextServer = useCallback(() => {
+    if (!currentServerObj) return;
+    markServerFailing(currentServerObj.id);
+    const idx = activeServers.findIndex((s) => s.id === currentServerObj.id);
+    const next = activeServers[(idx + 1) % activeServers.length];
+    if (next) {
+      handleServerChange(next.id);
+    }
+  }, [activeServers, currentServerObj, markServerFailing, handleServerChange]);
+
+  const handleRetryFrame = useCallback(() => {
+    setIframeReady(false);
+    setLoadAttempts((prev) => prev + 1);
+  }, []);
+
+  const handleToggleCompleted = useCallback(async () => {
+    if (!details) return;
+    await toggleCompletedInHistory({
+      media_type: "movie",
+      tmdbId: numericId,
+      title: displayTitle,
+      overview: details.overview ?? null,
+      vote_average: details.vote_average ?? null,
+      poster_path: details.poster_path ?? null,
+      backdrop_path: details.backdrop_path ?? null,
+    });
+  }, [details, toggleCompletedInHistory, numericId, displayTitle]);
+
+  useEffect(() => {
+    if (type === "tv" || !details || details.id !== numericId || kidsRestricted) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (shouldIgnoreShortcutTarget(e.target)) return;
+      const action = resolveWatchShortcutAction(e);
+      if (!action) return;
+      if (action === "next_server") {
+        e.preventDefault();
+        handleNextServer();
+      } else if (action === "retry_frame") {
+        e.preventDefault();
+        handleRetryFrame();
+      } else if (action === "toggle_watched") {
+        e.preventDefault();
+        void handleToggleCompleted();
+      } else if (action === "toggle_shortcuts_help") {
+        e.preventDefault();
+        setShowShortcutsHelp((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    type,
+    details,
+    numericId,
+    kidsRestricted,
+    handleNextServer,
+    handleRetryFrame,
+    handleToggleCompleted,
+  ]);
 
   if (type === "tv") return null;
 
@@ -156,10 +246,6 @@ export default function WatchMoviePage({
     );
   }
 
-  const currentServerObj =
-    EMBED_SERVER_CATALOG.find((s) => s.id === selectedServerId) ||
-    EMBED_SERVER_CATALOG[0];
-
   const embedUrl = getEmbedUrl(
     currentServerObj,
     "movie",
@@ -172,39 +258,7 @@ export default function WatchMoviePage({
   const useSandbox =
     iframeMode === "Strict" && currentServerObj.supportsSandbox;
 
-  const handleServerChange = (newServerId: string) => {
-    setServerId(newServerId);
-    setIframeReady(false);
-  };
-
-  const handleNextServer = () => {
-    markServerFailing(currentServerObj.id);
-    const idx = EMBED_SERVER_CATALOG.findIndex((s) => s.id === currentServerObj.id);
-    const next = EMBED_SERVER_CATALOG[(idx + 1) % EMBED_SERVER_CATALOG.length];
-    if (next) {
-      handleServerChange(next.id);
-    }
-  };
-
-  const handleRetryFrame = () => {
-    setIframeReady(false);
-    setLoadAttempts((prev) => prev + 1);
-  };
-
   const isMovieCompleted = isCompletedInHistory("movie", numericId);
-
-  const handleToggleCompleted = async () => {
-    if (!details) return;
-    await toggleCompletedInHistory({
-      media_type: "movie",
-      tmdbId: numericId,
-      title: displayTitle,
-      overview: details.overview ?? null,
-      vote_average: details.vote_average ?? null,
-      poster_path: details.poster_path ?? null,
-      backdrop_path: details.backdrop_path ?? null,
-    });
-  };
 
   const containerStatusLabel = hasConfirmedPlayback
     ? "Playback Synced"
@@ -271,9 +325,27 @@ export default function WatchMoviePage({
           <div className={`relative flex items-center gap-2 shrink-0 ${showToolsPanel ? "z-50" : "z-20"}`}>
             <button
               type="button"
+              onClick={() => setShowShortcutsHelp((prev) => !prev)}
+              aria-expanded={showShortcutsHelp}
+              aria-label="Player keyboard shortcuts"
+              title="Keyboard shortcuts (?)"
+              data-testid="watch-shortcuts-toggle-btn"
+              data-tv-focusable="true"
+              className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border transition-colors ${
+                showShortcutsHelp
+                  ? "border-primary/50 bg-primary/15 text-primary"
+                  : "border-white/10 bg-white/[0.04] text-white/75 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <Keyboard className="h-4 w-4" />
+            </button>
+
+            <button
+              type="button"
               onClick={() => setShowToolsPanel((prev) => !prev)}
               aria-expanded={showToolsPanel}
               aria-label="Player container settings and troubleshooting"
+              data-tv-focusable="true"
               className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border transition-colors ${
                 showToolsPanel || useSandbox
                   ? "border-primary/50 bg-primary/15 text-primary"
@@ -476,6 +548,11 @@ export default function WatchMoviePage({
           </div>
         )}
       </div>
+
+      <WatchShortcutsPopover
+        open={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+      />
     </div>
   );
 }
