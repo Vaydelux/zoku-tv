@@ -147,7 +147,7 @@ html[data-zoku-layout="cinematic"] .zoku-home-browse {
   padding-bottom: 8px;
 }
 
-html[data-zoku-layout="cinematic"] .zoku-home-filters > summary {
+html[data-zoku-layout="cinematic"] .zoku-home-filters .zoku-feed-trigger {
   color: var(--on-surface-variant);
   font-size: 13px;
 }
@@ -460,15 +460,6 @@ html[data-zoku-layout="cinematic"] .zoku-genre-grid .zoku-genre-tile:nth-child(8
   }
   html[data-zoku-layout="cinematic"] .zoku-home-browse {
     padding-top: 10px;
-  }
-  html[data-zoku-layout="cinematic"] .zoku-home-filters-panel {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    top: auto;
-    bottom: calc(74px + env(safe-area-inset-bottom));
-    width: auto;
-    max-height: 65svh;
   }
   html[data-zoku-layout="cinematic"] .cinematic-poster-card > div:last-child {
     padding-top: 7px;

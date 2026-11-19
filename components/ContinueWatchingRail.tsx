@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { PlayCircle, Trash2 } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ContinueWatchingCard } from "@/components/ContinueWatchingCard";
 import { CinematicContinueWatchingCard } from "@/components/CinematicContinueWatchingCard";
 import { RailNavButton } from "@/components/RailNavButton";
+import { FloatingMenu } from "@/components/ui/FloatingMenu";
 import { useSmoothRailScroll } from "@/hooks/useSmoothRailScroll";
 import type { ContinueWatchingItem } from "@/lib/continue-watching";
 import { useContinueWatchingStore, useSessionStore } from "@/stores";
@@ -40,6 +41,8 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
   const catalogMode = useSessionStore(
     (state) => state.currentProfile?.catalogMode ?? "tmdb"
   );
+  const [manageOpen, setManageOpen] = useState(false);
+  const manageTriggerRef = useRef<HTMLButtonElement>(null);
 
   const {
     rowRef,
@@ -73,17 +76,48 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
 
         <div className="flex items-center gap-2.5">
           {cinematic ? (
-            <details className="zoku-continue-manage relative">
-              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center rounded-lg px-2 text-xs text-on-surface-variant hover:text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+            <div className="zoku-continue-manage shrink-0">
+              <button
+                ref={manageTriggerRef}
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={manageOpen}
+                data-tv-focusable="true"
+                onClick={() => setManageOpen((prev) => !prev)}
+                className={`zoku-dropdown-trigger inline-flex min-h-11 cursor-pointer items-center rounded-lg px-2.5 text-xs font-medium transition-colors ${
+                  manageOpen
+                    ? "bg-surface text-on-surface"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
                 Manage
-              </summary>
-              <div className="absolute right-0 top-full z-40 w-44 rounded-lg border border-border-custom bg-surface p-2 shadow-lg">
-                <button type="button" onClick={() => void clearContinueWatching(catalogMode)}
-                  className="inline-flex min-h-11 w-full items-center gap-2 rounded-md px-2 text-xs text-on-surface hover:bg-surface-hover">
-                  <Trash2 className="h-4 w-4" aria-hidden="true" /> Clear this catalog
+              </button>
+              <FloatingMenu
+                open={manageOpen}
+                anchorRef={manageTriggerRef}
+                onClose={() => setManageOpen(false)}
+                role="menu"
+                ariaLabel="Manage continue watching"
+                align="right"
+                minWidth={192}
+                maxWidth={224}
+                preferredMaxHeight={160}
+                className="p-1.5"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setManageOpen(false);
+                    void clearContinueWatching(catalogMode);
+                  }}
+                  className="zoku-menu-item inline-flex min-h-[40px] w-full items-center gap-2 rounded-lg px-2.5 text-xs font-medium text-red-500 hover:bg-red-500/15 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>Clear this catalog</span>
                 </button>
-              </div>
-            </details>
+              </FloatingMenu>
+            </div>
           ) : (
             <button
               type="button"

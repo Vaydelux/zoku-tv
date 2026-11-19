@@ -154,3 +154,17 @@ test("handles degenerate or NaN inputs gracefully without returning NaN coordina
   assert.ok(result.width >= 120);
   assert.ok(result.maxHeight >= 120);
 });
+
+test("flips watch player server dropdown upward when below space is cramped (< menu height) and above has ample room", () => {
+  const result = computeFloatingPosition(
+    { top: 620, bottom: 660, left: 64, right: 224, width: 160, height: 40 },
+    { width: 1440, height: 900 },
+    320,
+    { align: "left", minWidth: 240, maxWidth: 300, preferredMaxHeight: 340 }
+  );
+
+  assert.equal(result.placement, "top");
+  assert.equal(result.maxHeight, 340);
+  assert.equal(result.top, 620 - 6 - 320); // 294
+  assert.ok(result.top >= 12);
+});

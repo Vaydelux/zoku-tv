@@ -83,7 +83,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`h-full ${fontDisplay.variable} ${fontSans.variable} ${fontMono.variable}`}
+      className={`${fontDisplay.variable} ${fontSans.variable} ${fontMono.variable}`}
       data-theme="theme-crimson"
       data-scroll-behavior="smooth"
       data-zoku-layout={process.env.NEXT_PUBLIC_ZOKU_LAYOUT === "classic" ? "classic" : "cinematic"}
@@ -97,7 +97,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className="antialiased min-h-full bg-background text-on-surface"
+        className="antialiased min-h-dvh bg-background text-on-surface"
         suppressHydrationWarning
       >
         <ClientInitializer />

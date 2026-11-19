@@ -383,6 +383,7 @@ export default function HomePage() {
         cinematic={cinematicLayout}
         catalogMode={catalogMode}
         onCatalogChange={handleCatalogToggle}
+        hasHero={loadingTrending || (catalogMode === "anime" ? animeHero.length > 0 : heroSlides.length > 0)}
       >
       <div className="relative z-20 mx-auto -mt-3 sm:-mt-4 w-full px-3 sm:px-6 lg:px-8">
         <div className="glass-panel rounded-2xl p-2.5 sm:p-4 shadow-xl">

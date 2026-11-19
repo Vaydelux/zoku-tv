@@ -138,7 +138,7 @@ export function computeFloatingPosition(
         ? "top"
         : "bottom";
   } else {
-    const fitsBelow = spaceBelow >= neededHeight || spaceBelow >= safeFlipThreshold;
+    const fitsBelow = spaceBelow >= neededHeight;
     if (!fitsBelow && spaceAbove > spaceBelow) {
       placement = "top";
     }

@@ -1,9 +1,12 @@
 "use client";
 
 import {
+  createContext,
+  useContext,
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -24,6 +27,24 @@ const FLOATING_MENU_Z_INDEX = 80;
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
+interface FloatingMenuParentContextValue {
+  ancestorIds: string[];
+  depth: number;
+}
+
+const FloatingMenuParentContext = createContext<FloatingMenuParentContextValue>({
+  ancestorIds: [],
+  depth: 0,
+});
+
+interface FloatingMenuOpenDetail {
+  id: string;
+  ancestorIds: string[];
+}
+
+// Tracks open FloatingMenus in open order so Escape closes the deepest/most recent menu first
+const openMenuStack: string[] = [];
+
 interface FloatingMenuProps {
   open: boolean;
   anchorRef: RefObject<HTMLElement | null>;
@@ -36,18 +57,20 @@ interface FloatingMenuProps {
   maxWidth?: number;
   preferredMaxHeight?: number;
   preferTop?: boolean;
+  restoreFocusOnEscape?: boolean;
   className?: string;
   menuRef?: RefObject<HTMLDivElement | null>;
   children: ReactNode;
 }
 
 /**
- * Portal-rendered fixed-position dropdown/popover menu.
+ * Portal-rendered viewport-aware dropdown/popover menu.
  * - Renders into document.body with position: fixed so opening a dropdown NEVER
- *   grows document height, spawns secondary body scrollbars, or resizes the screen.
- * - Automatically flips upward when space below is tight (e.g. player server bar).
- * - Clamps cleanly inside mobile, tablet, desktop, and TV viewports with overscroll containment.
- * - Auto-dismisses when its anchor scrolls completely off-screen, when another
+ *   grows parent or document height, spawns secondary scrollbars, or gets clipped by ancestors.
+ * - Automatically flips between bottom and top and clamps horizontally/vertically inside the viewport.
+ * - Supports nested menus (e.g. a sort dropdown inside a filter popover) without closing parents
+ *   or expanding parent containers.
+ * - Auto-dismisses when its anchor scrolls completely off-screen, when a sibling
  *   FloatingMenu opens, or when CommandPalette (Ctrl/Cmd+K) is invoked.
  */
 export function FloatingMenu({
@@ -62,11 +85,23 @@ export function FloatingMenu({
   maxWidth = 320,
   preferredMaxHeight = 320,
   preferTop = false,
+  restoreFocusOnEscape = true,
   className = "",
   menuRef: externalMenuRef,
   children,
 }: FloatingMenuProps) {
   const instanceId = useId();
+  const parentCtx = useContext(FloatingMenuParentContext);
+  const ancestorIds = parentCtx.ancestorIds;
+  const depth = parentCtx.depth;
+  const childCtxValue = useMemo<FloatingMenuParentContextValue>(
+    () => ({
+      ancestorIds: [...ancestorIds, instanceId],
+      depth: depth + 1,
+    }),
+    [ancestorIds, instanceId, depth]
+  );
+
   const internalMenuRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const [mounted, setMounted] = useState(false);
@@ -87,26 +122,36 @@ export function FloatingMenu({
     }
   };
 
-  // Single-active menu coordination: opening one FloatingMenu closes any other open FloatingMenu
+  // Maintain LIFO open stack and sibling-only single-active coordination
   useEffect(() => {
     if (!open || !mounted) return;
 
-    window.dispatchEvent(
-      new CustomEvent(FLOATING_MENU_OPEN_EVENT, { detail: instanceId })
-    );
+    const existingIdx = openMenuStack.indexOf(instanceId);
+    if (existingIdx >= 0) openMenuStack.splice(existingIdx, 1);
+    openMenuStack.push(instanceId);
+
+    const detail: FloatingMenuOpenDetail = {
+      id: instanceId,
+      ancestorIds,
+    };
+    window.dispatchEvent(new CustomEvent(FLOATING_MENU_OPEN_EVENT, { detail }));
 
     const handleOtherMenuOpen = (event: Event) => {
-      const customEvent = event as CustomEvent<string>;
-      if (customEvent.detail !== instanceId) {
-        onCloseRef.current();
-      }
+      const customEvent = event as CustomEvent<FloatingMenuOpenDetail>;
+      const opened = customEvent.detail;
+      if (!opened || opened.id === instanceId) return;
+      // Keep ancestor menus open when a child dropdown opens inside them
+      if (opened.ancestorIds.includes(instanceId)) return;
+      onCloseRef.current();
     };
 
     window.addEventListener(FLOATING_MENU_OPEN_EVENT, handleOtherMenuOpen);
     return () => {
+      const idx = openMenuStack.indexOf(instanceId);
+      if (idx >= 0) openMenuStack.splice(idx, 1);
       window.removeEventListener(FLOATING_MENU_OPEN_EVENT, handleOtherMenuOpen);
     };
-  }, [open, mounted, instanceId]);
+  }, [open, mounted, instanceId, ancestorIds]);
 
   useIsomorphicLayoutEffect(() => {
     if (!open || !mounted) {
@@ -155,14 +200,18 @@ export function FloatingMenu({
     }
 
     const handleScrollOrResize = (event: Event) => {
-      // Ignore scrolling that originates inside the floating menu itself
-      if (
-        event.type === "scroll" &&
-        internalMenuRef.current &&
-        event.target instanceof Node &&
-        internalMenuRef.current.contains(event.target)
-      ) {
-        return;
+      // Ignore scrolling that originates inside this floating menu or any child floating menu
+      if (event.type === "scroll" && event.target instanceof Node) {
+        if (internalMenuRef.current?.contains(event.target)) return;
+        const targetEl =
+          event.target instanceof Element
+            ? event.target
+            : event.target.parentElement;
+        const floatingHost = targetEl?.closest<HTMLElement>("[data-floating-menu='true']");
+        if (floatingHost) {
+          const ancestors = (floatingHost.dataset.floatingAncestors || "").split(" ");
+          if (ancestors.includes(instanceId)) return;
+        }
       }
       updatePosition(event.type === "scroll");
     };
@@ -179,7 +228,7 @@ export function FloatingMenu({
       window.removeEventListener("resize", handleScrollOrResize);
       window.removeEventListener("scroll", handleScrollOrResize, true);
     };
-  }, [open, mounted, anchorRef, align, minWidth, maxWidth, preferredMaxHeight, preferTop]);
+  }, [open, mounted, anchorRef, align, minWidth, maxWidth, preferredMaxHeight, preferTop, instanceId]);
 
   useEffect(() => {
     if (!open) return;
@@ -189,14 +238,28 @@ export function FloatingMenu({
       if (!target) return;
       if (anchorRef.current?.contains(target)) return;
       if (internalMenuRef.current?.contains(target)) return;
+
+      // Do not dismiss parent floating menu when interacting with a nested child floating menu
+      const targetEl =
+        target instanceof Element ? target : target.parentElement;
+      const floatingHost = targetEl?.closest<HTMLElement>("[data-floating-menu='true']");
+      if (floatingHost) {
+        const hostAncestors = (floatingHost.dataset.floatingAncestors || "").split(" ");
+        if (hostAncestors.includes(instanceId)) return;
+      }
+
       onCloseRef.current();
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        // Close only the topmost open menu on Escape so nested menus unwind one layer at a time
+        if (openMenuStack[openMenuStack.length - 1] !== instanceId) return;
         event.stopPropagation();
         onCloseRef.current();
-        anchorRef.current?.focus();
+        if (restoreFocusOnEscape) {
+          anchorRef.current?.focus();
+        }
         return;
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -214,9 +277,11 @@ export function FloatingMenu({
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, anchorRef, role]);
+  }, [open, anchorRef, role, instanceId, restoreFocusOnEscape]);
 
   if (!open || !mounted) return null;
+
+  const zIndex = Math.min(88, FLOATING_MENU_Z_INDEX + depth);
 
   const style: CSSProperties = pos
     ? {
@@ -226,31 +291,36 @@ export function FloatingMenu({
         width: `${pos.width}px`,
         maxHeight: `${pos.maxHeight}px`,
         transformOrigin: pos.transformOrigin,
-        zIndex: FLOATING_MENU_Z_INDEX,
+        zIndex,
       }
     : {
         position: "fixed",
-        top: "-9999px",
-        left: "-9999px",
+        top: "0px",
+        left: "0px",
         width: `${minWidth}px`,
         maxHeight: `${preferredMaxHeight}px`,
-        zIndex: FLOATING_MENU_Z_INDEX,
+        zIndex,
         visibility: "hidden",
+        pointerEvents: "none",
       };
 
   return createPortal(
-    <div
-      ref={setRefs}
-      id={id}
-      role={role}
-      aria-label={ariaLabel}
-      data-floating-menu="true"
-      data-placement={pos?.placement ?? "bottom"}
-      style={style}
-      className={`zoku-floating-menu overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-border-custom bg-surface text-on-surface shadow-2xl custom-scrollbar ${className}`.trim()}
-    >
-      {children}
-    </div>,
+    <FloatingMenuParentContext.Provider value={childCtxValue}>
+      <div
+        ref={setRefs}
+        id={id}
+        role={role}
+        aria-label={ariaLabel}
+        data-floating-menu="true"
+        data-floating-menu-id={instanceId}
+        data-floating-ancestors={ancestorIds.join(" ")}
+        data-placement={pos?.placement ?? "bottom"}
+        style={style}
+        className={`zoku-floating-menu overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-border-custom bg-surface text-on-surface shadow-2xl custom-scrollbar ${className}`.trim()}
+      >
+        {children}
+      </div>
+    </FloatingMenuParentContext.Provider>,
     document.body
   );
 }

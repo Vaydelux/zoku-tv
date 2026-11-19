@@ -43,7 +43,7 @@ html[data-zoku-layout="cinematic"] .zoku-home-filters {
   z-index: 32;
 }
 
-html[data-zoku-layout="cinematic"] .zoku-home-filters > summary {
+html[data-zoku-layout="cinematic"] .zoku-home-filters .zoku-feed-trigger {
   min-height: 44px;
   box-shadow: none;
 }
@@ -238,23 +238,13 @@ html[data-zoku-layout="cinematic"] .cinematic-poster-action {
   html[data-zoku-layout="cinematic"] .zoku-home-rails {
     padding-top: 28px;
   }
-  html[data-zoku-layout="cinematic"] .zoku-home-filters {
+  html[data-zoku-layout="cinematic"] .zoku-home-filters[data-has-hero="true"] {
     right: 16px;
     bottom: 54px;
   }
-  html[data-zoku-layout="cinematic"] .zoku-home-filters > summary {
+  html[data-zoku-layout="cinematic"] .zoku-home-filters .zoku-feed-trigger {
     width: 44px;
     padding: 0;
-  }
-  html[data-zoku-layout="cinematic"] .zoku-home-filters-panel {
-    position: fixed;
-    top: auto;
-    right: 12px;
-    left: 12px;
-    bottom: calc(75px + env(safe-area-inset-bottom));
-    width: auto;
-    max-height: min(68dvh, 620px);
-    overflow-y: auto;
   }
   html[data-zoku-layout="cinematic"] .zoku-home-rails .rail-section:not([aria-label="Watch History"]) .rail-nav-btn {
     display: none;

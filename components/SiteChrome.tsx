@@ -47,11 +47,11 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   }, [pathname, togglePalette, setPaletteOpen]);
 
   return (
-    <div className={`relative z-[1] flex min-h-full flex-col ${cinematicLayout && showZokuMobileNav(pathname) ? "zoku-has-mobile-nav" : ""}`}>
+    <div className={`relative z-[1] flex min-h-dvh flex-col ${cinematicLayout && showZokuMobileNav(pathname) ? "zoku-has-mobile-nav" : ""}`}>
       <AmbientBackground />
       <div
         key={pathname}
-        className="page-route-transition relative z-[1] flex min-h-full flex-1 flex-col"
+        className="page-route-transition relative z-[1] flex flex-1 flex-col"
       >
         {children}
       </div>

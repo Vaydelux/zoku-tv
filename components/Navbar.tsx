@@ -290,7 +290,9 @@ export function Navbar() {
                 query={searchQuery}
                 isOpen={showNavAutocomplete}
                 onClose={() => setShowNavAutocomplete(false)}
-                className="w-72 md:w-80 right-0 left-auto"
+                align="right"
+                minWidth={300}
+                maxWidth={340}
                 onSelectSuggestion={(suggestion) => {
                   setShowNavAutocomplete(false);
                   setSearchQuery("");

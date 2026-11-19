@@ -466,6 +466,9 @@ function SearchPageContent() {
               query={inputValue}
               isOpen={showAutocomplete}
               onClose={() => setShowAutocomplete(false)}
+              align="stretch"
+              minWidth={280}
+              maxWidth={720}
               onSelectSuggestion={(suggestion) => {
                 setShowAutocomplete(false);
                 const savedQuery = inputValue.trim() || suggestion.title;
