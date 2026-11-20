@@ -587,17 +587,17 @@ export function AnimeDiscoverContent() {
             )}
 
             {loading ? (
-              <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 justify-center justify-items-center gap-5">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div
                     key={i}
-                    className="aspect-video rounded-xl bg-surface border border-border-custom animate-pulse"
+                    className="aspect-video w-full rounded-xl bg-surface border border-border-custom animate-pulse"
                   />
                 ))}
               </div>
             ) : results.length > 0 ? (
               <div className="space-y-8">
-                <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                <div className="zoku-poster-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 justify-center justify-items-center gap-5">
                   {results.map((anime) => (
                     <AnimeCard key={anime.id} anime={anime} fullWidth />
                   ))}

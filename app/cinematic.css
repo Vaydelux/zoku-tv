@@ -118,8 +118,9 @@ html[data-zoku-layout="cinematic"] .zoku-anime-hero-content {
 
 html[data-zoku-layout="cinematic"] .zoku-anime-hero-content {
   padding-inline: var(--cinematic-gutter);
-  padding-bottom: clamp(32px, 6svh, 72px);
-  align-items: flex-end;
+  padding-bottom: clamp(68px, 7svh, 104px);
+  align-items: flex-start;
+  justify-content: flex-end;
 }
 
 html[data-zoku-layout="cinematic"] .zoku-hero .hero-copy h1 {
@@ -266,7 +267,7 @@ html[data-zoku-layout="cinematic"] .zoku-poster-grid {
   align-items: start;
 }
 
-html[data-zoku-layout="cinematic"] .zoku-poster-grid > div {
+html[data-zoku-layout="cinematic"] .zoku-poster-grid > * {
   min-width: 0;
 }
 
@@ -289,6 +290,33 @@ html[data-zoku-layout="cinematic"] .zoku-poster-grid > .animate-pulse {
 @media (min-width: 1536px) {
   html[data-zoku-layout="cinematic"] .zoku-poster-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* Discover catalog grids (Anime & TMDB): keep items and tracks centered
+   so both full catalogs and narrow filtered result sets stay balanced. */
+html[data-zoku-layout="cinematic"] .zoku-cinematic-discover .zoku-poster-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  justify-content: center;
+  justify-items: center;
+  place-items: start center;
+}
+
+html[data-zoku-layout="cinematic"] .zoku-cinematic-discover .zoku-poster-grid > * {
+  width: 100%;
+  max-width: 280px;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  html[data-zoku-layout="cinematic"] .zoku-cinematic-discover .zoku-poster-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  html[data-zoku-layout="cinematic"] .zoku-cinematic-discover .zoku-poster-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   }
 }
 

@@ -110,7 +110,7 @@ export function CinematicAnimeHero({
         <div className="hero-media-scrim absolute inset-0" />
       </div>
 
-      <div className="zoku-anime-hero-content zoku-hero-content relative z-[1] mx-auto flex w-full flex-col justify-end px-4 pb-12 pt-14 sm:px-6 lg:px-8">
+      <div className="zoku-anime-hero-content zoku-hero-content relative z-[1] mx-auto flex w-full flex-col items-start justify-end px-4 pb-12 pt-14 sm:px-6 lg:px-8">
         <div className="hero-copy flex w-full max-w-[590px] flex-col items-start gap-3">
           <div className="hero-meta-chip flex flex-wrap items-center gap-2 text-xs">
             <span className="rounded-full border border-primary/40 bg-primary/15 px-2.5 py-0.5 font-semibold text-primary">Featured</span>
@@ -161,7 +161,11 @@ export function CinematicAnimeHero({
       </div>
 
       {slides.length > 1 && (
-        <div className="absolute bottom-7 left-4 z-[3] flex items-center gap-2 sm:left-8" aria-label="Carousel slides" role="tablist">
+        <div
+          className="absolute bottom-5 right-4 z-[3] flex items-center gap-1.5 sm:bottom-6 sm:right-[var(--cinematic-gutter)] sm:gap-2"
+          aria-label="Carousel slides"
+          role="tablist"
+        >
           {slides.map((slide, index) => (
             <button
               key={slide.id}
@@ -170,11 +174,13 @@ export function CinematicAnimeHero({
               aria-selected={index === active}
               aria-label={`Show featured anime ${index + 1}: ${getAnimeDisplayTitle(slide)}`}
               onClick={() => { setActive(index); setPaused(true); }}
-              className={`h-1.5 rounded-full transition-[width,background-color] duration-200 ${index === active ? "w-7 bg-primary" : "w-3.5 bg-on-surface/40 hover:bg-on-surface/70"}`}
+              className={`h-2 rounded-full transition-[width,background-color] duration-200 ${index === active ? "w-6 sm:w-8 bg-primary" : "w-2 bg-on-surface/40 hover:bg-on-surface/70"}`}
             />
           ))}
         </div>
       )}
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-16 bg-gradient-to-t from-background to-transparent sm:h-24" />
     </section>
   );
 }
