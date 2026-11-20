@@ -17,7 +17,7 @@ import {
   DEFAULT_PROFILE_AVATAR_COLOR,
   normalizeProfileAvatarColor,
   profileAvatarSrc,
-  randomPresetAvatarId,
+  randomPremiumAvatarId,
   randomProfileAvatarColor,
   resolveAvatarId,
 } from "@/lib/profile-avatars";
@@ -90,7 +90,7 @@ function ProfilesPageContent() {
 
   const resetForm = useCallback(() => {
     setNewName("");
-    setSelectedAvatarId(randomPresetAvatarId());
+    setSelectedAvatarId(randomPremiumAvatarId());
     setSelectedColor(randomProfileAvatarColor());
     setKidMode(false);
     setEditProfileId(null);

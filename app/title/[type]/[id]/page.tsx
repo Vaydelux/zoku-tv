@@ -315,7 +315,8 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
       <div className="zoku-detail-backdrop relative w-full h-[46dvh] md:h-[60dvh] lg:h-[66dvh] overflow-hidden bg-background">
         {backdropUrl ? (
           <div
-            className="absolute inset-0 bg-cover bg-center"
+            aria-hidden="true"
+            className="zoku-detail-backdrop-media pointer-events-none absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url('${backdropUrl}')` }}
           />
         ) : (

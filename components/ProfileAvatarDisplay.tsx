@@ -1,12 +1,9 @@
 "use client";
 
-import Image from "next/image";
-import { PresetSvgAvatar } from "@/components/PresetSvgAvatar";
+import { useEffect, useState } from "react";
 import {
   DEFAULT_PROFILE_AVATAR_COLOR,
   getProfileAvatarOption,
-  isPresetAvatarPath,
-  isPremiumAvatarPath,
   normalizeProfileAvatarColor,
   resolveAvatarId,
 } from "@/lib/profile-avatars";
@@ -37,37 +34,37 @@ export function ProfileAvatarDisplay({
   const avatarId = resolveAvatarId(avatar);
   const option = avatarId === "legacy" ? null : getProfileAvatarOption(avatarId);
   const src = option?.src ?? avatar;
-  const isPreset = isPresetAvatarPath(src);
-  const isPremium = isPremiumAvatarPath(src);
-  const usesBackground = option?.supportsBackgroundColor ?? isPreset;
+  const [imgFailed, setImgFailed] = useState(false);
+
+  useEffect(() => {
+    setImgFailed(false);
+  }, [src]);
+
+  const initial = (name?.trim()?.[0] ?? "Z").toUpperCase();
 
   return (
     <div
-      className={`relative shrink-0 overflow-hidden rounded-2xl ring-2 ring-white/10 shadow-lg ${SIZE_CLASSES[size]} ${className}`}
-      style={usesBackground ? { backgroundColor: color } : undefined}
+      className={`relative shrink-0 overflow-hidden rounded-2xl ring-2 ring-white/10 shadow-lg bg-surface ${SIZE_CLASSES[size]} ${className}`}
+      style={imgFailed ? { backgroundColor: color } : undefined}
       title={name}
     >
-      {isPreset && (
-        <PresetSvgAvatar src={src} backgroundColor={color} className="absolute inset-0" />
-      )}
-
-      {isPremium && (
-        <Image
-          src={src}
-          alt={name ? `${name} avatar` : "Profile avatar"}
-          fill
-          sizes="112px"
-          className="object-cover"
-          unoptimized
-        />
-      )}
-
-      {!isPreset && !isPremium && (
+      {!imgFailed ? (
         <img
           src={src}
           alt={name ? `${name} avatar` : "Profile avatar"}
-          className="h-full w-full object-cover bg-surface"
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setImgFailed(true)}
+          className="h-full w-full object-cover"
         />
+      ) : (
+        <span
+          aria-hidden="true"
+          className="flex h-full w-full items-center justify-center font-display text-lg font-bold text-white"
+        >
+          {initial}
+        </span>
       )}
     </div>
   );

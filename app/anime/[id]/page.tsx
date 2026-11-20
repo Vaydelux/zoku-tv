@@ -288,11 +288,16 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
     <div className="zoku-cinematic-detail zoku-cinematic-anime-detail app-page-shell text-on-surface pb-16">
       <Navbar />
 
-      <div
-        className="zoku-detail-backdrop relative min-h-[340px] sm:min-h-[400px] bg-cover bg-center"
-        style={{ backgroundImage: banner ? `url(${banner})` : undefined }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/75 to-black/45" />
+      <div className="zoku-detail-backdrop relative min-h-[340px] sm:min-h-[400px]">
+        {banner && (
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div
+              className="zoku-detail-backdrop-media absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${banner})` }}
+            />
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/75 to-black/45" />
         <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-20 pb-8 flex items-end gap-6">
           <button
             onClick={() => router.back()}

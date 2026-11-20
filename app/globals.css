@@ -37,6 +37,26 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
+/* Subtle 30s Ken Burns zoom & pan for detail page backdrop banners */
+@keyframes zoku-ken-burns {
+  0% {
+    transform: scale(1.04) translate3d(-1.5%, -0.6%, 0);
+  }
+  50% {
+    transform: scale(1.1) translate3d(0.6%, -1.1%, 0);
+  }
+  100% {
+    transform: scale(1.14) translate3d(1.75%, 0.9%, 0);
+  }
+}
+
+.zoku-detail-backdrop .zoku-detail-backdrop-media {
+  will-change: transform;
+  transform-origin: center center;
+  backface-visibility: hidden;
+  animation: zoku-ken-burns 30s ease-in-out infinite alternate;
+}
+
 /* Default token values — Crimson Cinema dark (overridden at runtime by applyTheme) */
 :root,
 [data-theme="theme-crimson"] {
@@ -721,5 +741,10 @@ html[data-gpu-limit-texture="true"] .poster-card img {
   .rail-scroll-track[data-scrolling="right"] .rail-card-slot,
   .rail-scroll-track[data-scrolling="left"] .rail-card-slot {
     animation: none !important;
+  }
+  .zoku-detail-backdrop .zoku-detail-backdrop-media {
+    animation: none !important;
+    will-change: auto;
+    transform: none;
   }
 }
