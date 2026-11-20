@@ -30,7 +30,8 @@ try {
   assert.equal(policy.filterEnabled, true, "Live site must start adult-locked for unauthenticated visitors");
   check("adult policy defaults to locked");
 
-  const unsupported = await api("/api/tmdb/person/1");
+  // A person-detail route is supported on production; an unlisted account route is not.
+  const unsupported = await api("/api/tmdb/account/1");
   assert.equal(unsupported.status, 404, "TMDB arbitrary endpoint must reject");
   check("TMDB unsupported endpoint rejected");
 
