@@ -52,7 +52,7 @@ export function parseTmdbScope(segments: string[]): TmdbRequestScope | null {
     if (segments.length === 3 && ["credits", "videos", "similar", "recommendations"].includes(segments[2])) {
       return { kind: "child", media: segments[0], id, path };
     }
-    if (segments[0] === "tv" && segments.length === 4 && segments[2] === "season" && POSITIVE_ID.test(segments[3])) {
+    if (segments[0] === "tv" && segments.length === 4 && segments[2] === "season" && NONNEGATIVE_SEASON.test(segments[3])) {
       return { kind: "child", media: "tv", id, path };
     }
   }
