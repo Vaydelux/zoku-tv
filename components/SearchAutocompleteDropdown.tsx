@@ -180,7 +180,7 @@ export function SearchAutocompleteDropdown({
                   }`}
                 >
                   {/* Poster Thumbnail */}
-                  <div className="relative h-12 w-9 shrink-0 overflow-hidden rounded-md border border-white/10 bg-neutral-900 shadow-sm">
+                  <div className="relative h-12 w-9 shrink-0 overflow-hidden rounded-md border border-border-custom bg-surface-hover shadow-sm">
                     {item.posterUrl ? (
                       <img
                         src={item.posterUrl}
@@ -189,7 +189,7 @@ export function SearchAutocompleteDropdown({
                         loading="lazy"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-white/40">
+                      <div className="flex h-full w-full items-center justify-center text-on-surface-variant/60">
                         <Film className="h-4 w-4" />
                       </div>
                     )}

@@ -9,6 +9,7 @@ import { Spinner } from "@/components/Spinner";
 import { GoogleAuthBadge } from "@/components/GoogleAuthBadge";
 import { BrandMark } from "@/components/BrandMark";
 import { BrandShell } from "@/components/BrandShell";
+import { AuthThemePicker } from "@/components/AuthThemePicker";
 import { resolvePostLoginPath } from "@/lib/auth-routes";
 
 function LoginPageContent() {
@@ -52,8 +53,14 @@ function LoginPageContent() {
 
   return (
     <BrandShell>
-      <div className="flex min-h-[100dvh] items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
-        <div className="glass-panel relative z-10 w-full max-w-md rounded-2xl p-6 sm:p-8 shadow-2xl animate-slide-up">
+      <AuthThemePicker />
+      <div className="flex min-h-[100dvh] items-center justify-center px-4 pt-16 pb-10 sm:px-6 sm:py-12 lg:px-8">
+        <div className="glass-panel relative z-10 w-full max-w-md overflow-hidden rounded-2xl p-6 sm:p-8 shadow-2xl animate-slide-up">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-1"
+            style={{ backgroundImage: "var(--button-gradient)" }}
+          />
           <div className="flex flex-col items-center text-center">
             <Link href="/" className="mb-4 focus:outline-none">
               <BrandMark size="lg" />

@@ -178,7 +178,7 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
       className={`poster-card group/card relative aspect-video ${widthClasses} cursor-pointer overflow-hidden rounded-xl border border-border-custom bg-surface select-none transition-[transform,border-color,box-shadow] duration-200 ease-out will-change-transform hover:-translate-y-1 hover:scale-[1.02] hover:border-primary focus-visible:-translate-y-1 focus-visible:scale-[1.02] focus-visible:border-primary`}
     >
       {imageLoading && (
-        <div className="absolute inset-0 flex animate-pulse items-center justify-center bg-neutral-900/90">
+        <div className="absolute inset-0 flex animate-pulse items-center justify-center bg-surface/90">
           <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
         </div>
       )}

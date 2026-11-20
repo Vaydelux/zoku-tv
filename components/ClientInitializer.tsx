@@ -15,10 +15,17 @@ import {
 import { isBrandRoute } from "@/lib/auth-routes";
 import {
   applyTheme,
-  BRAND_THEME_ID,
   DEFAULT_APPEARANCE,
   normalizeAppearance,
+  normalizeThemeId,
 } from "@/lib/themes";
+import { applyBackgroundPattern } from "@/lib/background-patterns";
+import {
+  consumePendingLoginThemeHandoff,
+  readPreAuthThemePreference,
+  readProfilePatternPreference,
+  writeProfilePatternPreference,
+} from "@/lib/preauth-theme";
 import { installWindowFetchGuard } from "@/lib/runtime-guards";
 import {
   applyHardwareAccelerationFlags,
@@ -29,6 +36,9 @@ if (typeof window !== "undefined") {
   installWindowFetchGuard(window);
   try {
     applyHardwareAccelerationFlags(readStoredHardwareFlags());
+    const initialPreAuth = readPreAuthThemePreference();
+    applyTheme(initialPreAuth.themeId, initialPreAuth.appearance);
+    applyBackgroundPattern(initialPreAuth.patternId);
   } catch {
     // Ignore early probe failure
   }
@@ -37,6 +47,7 @@ if (typeof window !== "undefined") {
 export function ClientInitializer() {
   const pathname = usePathname();
   const initSession = useSessionStore((state) => state.initSession);
+  const updateProfile = useSessionStore((state) => state.updateProfile);
   const initWatchlist = useWatchlistStore((state) => state.initWatchlist);
   const initContinueWatching = useContinueWatchingStore((state) => state.initContinueWatching);
   const initWatchHistory = useWatchHistoryStore((state) => state.initWatchHistory);
@@ -55,6 +66,7 @@ export function ClientInitializer() {
     installWindowFetchGuard(window);
     (window as unknown as Record<string, unknown>).__ZOKU_SESSION_STORE__ = useSessionStore;
     (window as unknown as Record<string, unknown>).__ZOKU_APPLY_THEME__ = applyTheme;
+    (window as unknown as Record<string, unknown>).__ZOKU_APPLY_PATTERN__ = applyBackgroundPattern;
     (window as unknown as Record<string, unknown>).__ZOKU_EPISODE_STORE__ = useEpisodeProgressStore;
     (window as unknown as Record<string, unknown>).__ZOKU_WATCH_HISTORY_STORE__ = useWatchHistoryStore;
     hydrateDynamicServers();
@@ -66,28 +78,55 @@ export function ClientInitializer() {
     };
   }, [initSession, hydrateDynamicServers, hydrateCollections, hydrateEmbedPreferences]);
 
-  // Brand lock on splash / login / signup / profiles; profile theme only in-app
+  // Honor user's pre-auth theme/pattern on login/signup/profiles and hand it off on authenticated entry
   useEffect(() => {
     if (initializing || isBrandRoute(pathname)) {
-      applyTheme(BRAND_THEME_ID, "dark");
+      const preAuth = readPreAuthThemePreference();
+      applyTheme(preAuth.themeId, preAuth.appearance);
+      applyBackgroundPattern(preAuth.patternId);
       return;
     }
 
     if (currentProfile) {
+      const handoff = consumePendingLoginThemeHandoff();
+      if (handoff) {
+        applyTheme(handoff.themeId, handoff.appearance);
+        applyBackgroundPattern(handoff.patternId);
+        writeProfilePatternPreference(currentProfile.id, handoff.patternId);
+
+        const currentTheme = normalizeThemeId(currentProfile.themePreference);
+        const currentAppearance = normalizeAppearance(
+          currentProfile.appearancePreference ?? DEFAULT_APPEARANCE
+        );
+        if (currentTheme !== handoff.themeId || currentAppearance !== handoff.appearance) {
+          void updateProfile(currentProfile.id, {
+            themePreference: handoff.themeId,
+            appearancePreference: handoff.appearance,
+          }).catch(() => {
+            // Keep applied theme visually active even if cloud write is temporarily unavailable
+          });
+        }
+        return;
+      }
+
       applyTheme(
         currentProfile.themePreference,
         normalizeAppearance(currentProfile.appearancePreference ?? DEFAULT_APPEARANCE)
       );
+      applyBackgroundPattern(readProfilePatternPreference(currentProfile.id));
       return;
     }
 
-    applyTheme(BRAND_THEME_ID, "dark");
+    const fallbackPreAuth = readPreAuthThemePreference();
+    applyTheme(fallbackPreAuth.themeId, fallbackPreAuth.appearance);
+    applyBackgroundPattern(fallbackPreAuth.patternId);
   }, [
     pathname,
     initializing,
+    currentProfile?.id,
     currentProfile?.themePreference,
     currentProfile?.appearancePreference,
-    currentProfile,
+    updateProfile,
   ]);
 
   // Register service worker for offline asset and request caching (deferred until load)

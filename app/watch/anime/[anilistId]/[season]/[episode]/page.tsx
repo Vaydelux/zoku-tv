@@ -305,21 +305,21 @@ export default function WatchAnimePage({
   if (kidsRestricted && anime) {
     return (
       <div
-        className="min-h-screen bg-[#070a10] text-white flex flex-col items-center justify-center p-6 text-center"
+        className="min-h-screen bg-background text-on-surface flex flex-col items-center justify-center p-6 text-center"
         data-testid="kids-mode-restricted-gate"
       >
         <Navbar />
-        <div className="max-w-md rounded-2xl border border-amber-400/25 bg-amber-500/10 p-8 shadow-2xl">
-          <ShieldAlert className="w-12 h-12 text-amber-300 mx-auto mb-4" />
+        <div className="max-w-md rounded-2xl border border-amber-500/30 bg-amber-500/10 p-8 shadow-2xl">
+          <ShieldAlert className="w-12 h-12 text-amber-500 mx-auto mb-4" />
           <h1 className="text-2xl font-display font-bold mb-2">
             Restricted in Kids Mode
           </h1>
-          <p className="text-sm text-white/70 mb-6">
+          <p className="text-sm text-on-surface-variant mb-6">
             This anime is hidden because the active profile ({currentProfile?.name}) has Kids Mode enabled.
           </p>
           <Link
             href="/home"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-contrast hover:brightness-110 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Safe Home
           </Link>
@@ -340,7 +340,7 @@ export default function WatchAnimePage({
   );
 
   return (
-    <div className="zoku-cinematic-player min-h-screen bg-[#070a10] text-white pt-28 md:pt-20 pb-16">
+    <div className="zoku-cinematic-player min-h-screen bg-background text-on-surface pt-28 md:pt-20 pb-16">
       <Navbar />
       <div className="mx-auto max-w-6xl px-3 sm:px-6 lg:px-8">
         {/* Top Header Bar */}
@@ -349,24 +349,24 @@ export default function WatchAnimePage({
             <button
               type="button"
               onClick={() => router.push(`/anime/${anilistId}`)}
-              className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+              className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border border-border-custom bg-surface/80 text-on-surface-variant hover:bg-surface-hover hover:text-on-surface transition-colors"
               aria-label="Back to anime details"
             >
               <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                <h1 className="text-sm sm:text-lg font-display font-bold tracking-tight text-white whitespace-nowrap">
+                <h1 className="text-sm sm:text-lg font-display font-bold tracking-tight text-on-surface whitespace-nowrap">
                   Now Watching
                 </h1>
                 <span
                   data-testid="player-container-status"
                   className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium whitespace-nowrap border ${
                     hasConfirmedPlayback
-                      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+                      ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-500"
                       : iframeReady
-                      ? "border-sky-400/30 bg-sky-500/10 text-sky-300"
-                      : "border-amber-400/30 bg-amber-500/10 text-amber-200"
+                      ? "border-primary/35 bg-primary/10 text-primary"
+                      : "border-amber-500/35 bg-amber-500/10 text-amber-500"
                   }`}
                   title={
                     hasConfirmedPlayback
@@ -379,16 +379,16 @@ export default function WatchAnimePage({
                   <span
                     className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                       hasConfirmedPlayback
-                        ? "bg-emerald-400"
+                        ? "bg-emerald-500"
                         : iframeReady
-                        ? "bg-sky-400"
-                        : "bg-amber-400 animate-pulse"
+                        ? "bg-primary"
+                        : "bg-amber-500 animate-pulse"
                     }`}
                   />
                   {containerStatusLabel}
                 </span>
               </div>
-              <p className="mt-0.5 text-xs sm:text-sm text-white/60 truncate">
+              <p className="mt-0.5 text-xs sm:text-sm text-on-surface-variant truncate">
                 {displayTitle} · Season {seasonNum} · Episode {episodeNum}
               </p>
             </div>
@@ -406,7 +406,7 @@ export default function WatchAnimePage({
               className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border transition-colors ${
                 showShortcutsHelp
                   ? "border-primary/50 bg-primary/15 text-primary"
-                  : "border-white/10 bg-white/[0.04] text-white/75 hover:bg-white/10 hover:text-white"
+                  : "border-border-custom bg-surface/80 text-on-surface-variant hover:bg-surface-hover hover:text-on-surface"
               }`}
             >
               <Keyboard className="h-4 w-4" />
@@ -422,7 +422,7 @@ export default function WatchAnimePage({
               className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border transition-colors ${
                 showToolsPanel || sandbox
                   ? "border-primary/50 bg-primary/15 text-primary"
-                  : "border-white/10 bg-white/[0.04] text-white/75 hover:bg-white/10 hover:text-white"
+                  : "border-border-custom bg-surface/80 text-on-surface-variant hover:bg-surface-hover hover:text-on-surface"
               }`}
             >
               <SlidersHorizontal className="h-4 w-4" />
@@ -500,19 +500,19 @@ export default function WatchAnimePage({
 
         {/* 16:9 External Player Frame Container */}
         <div
-          className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/15 bg-[#0d111a] shadow-2xl"
+          className="relative aspect-video w-full overflow-hidden rounded-2xl border border-border-custom bg-surface shadow-2xl"
           data-testid="external-player-frame-wrapper"
         >
           {(loading || !iframeReady) && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#0d111a]/95 p-6 text-center">
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-surface/95 p-6 text-center backdrop-blur-sm">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary border border-primary/30">
                 <Loader2 className="h-6 w-6 animate-spin" />
               </div>
               <div className="space-y-1 max-w-md">
-                <p className="text-base font-semibold text-white">
+                <p className="text-base font-semibold text-on-surface">
                   {loading ? "Loading anime metadata..." : "External video player"}
                 </p>
-                <p className="text-xs text-white/55">
+                <p className="text-xs text-on-surface-variant">
                   Unmodified third-party iframe ({currentServerObj.name}) · Waiting for provider frame
                 </p>
               </div>
@@ -521,7 +521,7 @@ export default function WatchAnimePage({
                   <button
                     type="button"
                     onClick={handleRetryFrame}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.06] px-3.5 py-2 text-xs font-medium text-white hover:bg-white/10 transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-border-custom bg-background/70 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover transition-colors"
                   >
                     <RotateCcw className="h-3.5 w-3.5" /> Retry
                   </button>
@@ -572,7 +572,7 @@ export default function WatchAnimePage({
             <button
               type="button"
               onClick={handleRetryFrame}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#141923] px-3 sm:px-4 text-xs font-semibold text-white/90 hover:border-white/20 hover:bg-[#1b2230] transition-colors"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-border-custom bg-surface px-3 sm:px-4 text-xs font-semibold text-on-surface hover:border-primary/40 hover:bg-surface-hover transition-colors"
               aria-label="Retry loading current server"
             >
               <RotateCcw className="h-3.5 w-3.5 shrink-0" />
@@ -582,7 +582,7 @@ export default function WatchAnimePage({
             <button
               type="button"
               onClick={handleNextServer}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#141923] px-3 sm:px-3.5 text-xs font-semibold text-white/75 hover:border-white/20 hover:bg-[#1b2230] hover:text-white transition-colors"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-border-custom bg-surface px-3 sm:px-3.5 text-xs font-semibold text-on-surface-variant hover:border-primary/40 hover:bg-surface-hover hover:text-on-surface transition-colors"
               aria-label="Switch to next server"
             >
               <SkipForward className="h-3.5 w-3.5 shrink-0" />
@@ -596,7 +596,7 @@ export default function WatchAnimePage({
               <button
                 type="button"
                 onClick={handleRewatch}
-                className="flex-1 sm:flex-initial inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-green-500/30 bg-green-500/15 px-3 sm:px-3.5 text-xs font-semibold text-green-300 hover:bg-green-500/25 transition-colors"
+                className="flex-1 sm:flex-initial inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-emerald-500/35 bg-emerald-500/15 px-3 sm:px-3.5 text-xs font-semibold text-emerald-500 hover:bg-emerald-500/25 transition-colors"
               >
                 <RotateCcw className="h-3.5 w-3.5 shrink-0" />
                 <span>Rewatch</span>
@@ -605,7 +605,7 @@ export default function WatchAnimePage({
               <button
                 type="button"
                 onClick={handleMarkWatchedAndAdvance}
-                className="flex-1 sm:flex-initial inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#141923] px-3 sm:px-3.5 text-xs font-semibold text-white/85 hover:border-white/20 hover:bg-[#1b2230] transition-colors"
+                className="flex-1 sm:flex-initial inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-border-custom bg-surface px-3 sm:px-3.5 text-xs font-semibold text-on-surface hover:border-primary/40 hover:bg-surface-hover transition-colors"
               >
                 <Check className="h-3.5 w-3.5 shrink-0" />
                 <span>{hasNext ? "Watched · Next" : "Mark Watched"}</span>
@@ -619,7 +619,7 @@ export default function WatchAnimePage({
                 hasPrev &&
                 router.push(`/watch/anime/${anilistId}/${seasonNum}/${episodeNum - 1}`)
               }
-              className="flex-1 sm:flex-initial inline-flex h-10 items-center justify-center rounded-xl border border-white/10 bg-[#141923] px-3.5 sm:px-4 text-xs font-semibold text-white/90 hover:border-white/20 hover:bg-[#1b2230] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+              className="flex-1 sm:flex-initial inline-flex h-10 items-center justify-center rounded-xl border border-border-custom bg-surface px-3.5 sm:px-4 text-xs font-semibold text-on-surface hover:border-primary/40 hover:bg-surface-hover disabled:opacity-40 disabled:pointer-events-none transition-colors"
             >
               Previous
             </button>
@@ -631,7 +631,7 @@ export default function WatchAnimePage({
                 hasNext &&
                 router.push(`/watch/anime/${anilistId}/${seasonNum}/${episodeNum + 1}`)
               }
-              className="flex-1 sm:flex-initial inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-primary/30 bg-[#1b263b] px-3.5 sm:px-4 text-xs font-semibold text-white hover:bg-[#23314d] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+              className="flex-1 sm:flex-initial inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary px-3.5 sm:px-4 text-xs font-semibold text-primary-contrast hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none transition-colors"
             >
               <span>Next</span>
               <ChevronRight className="h-3.5 w-3.5 shrink-0" />
@@ -640,12 +640,12 @@ export default function WatchAnimePage({
         </div>
 
         {/* Episodes Section Below Divider */}
-        <section className="mt-6 border-t border-white/10 pt-6" aria-label="Anime episodes">
+        <section className="mt-6 border-t border-border-custom pt-6" aria-label="Anime episodes">
           <div className="mb-4 flex items-center justify-between gap-4">
-            <h2 className="text-base sm:text-lg font-display font-bold text-white">
+            <h2 className="text-base sm:text-lg font-display font-bold text-on-surface">
               Episodes
             </h2>
-            <span className="rounded-xl border border-white/10 bg-[#141923] px-3.5 py-1.5 text-xs font-semibold text-white/80">
+            <span className="rounded-xl border border-border-custom bg-surface px-3.5 py-1.5 text-xs font-semibold text-on-surface-variant">
               Season {seasonNum}
             </span>
           </div>
@@ -682,8 +682,8 @@ export default function WatchAnimePage({
                   <div
                     className={`relative aspect-video w-full overflow-hidden rounded-2xl border transition-colors ${
                       isCurrent
-                        ? "border-primary/60 bg-[#1a2333]"
-                        : "border-white/10 bg-[#151c28] group-hover:border-white/25"
+                        ? "border-primary/60 bg-surface-hover"
+                        : "border-border-custom bg-surface group-hover:border-primary/50"
                     }`}
                   >
                     {thumbUrl ? (
@@ -691,24 +691,24 @@ export default function WatchAnimePage({
                         src={thumbUrl}
                         alt={streamEp?.title || `Episode ${epNum}`}
                         loading="lazy"
-                        className="h-full w-full object-cover opacity-80 transition-transform duration-300 group-hover:scale-105"
+                        className="h-full w-full object-cover opacity-85 transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-white/30">
+                      <div className="flex h-full w-full items-center justify-center text-on-surface-variant/40">
                         <ImageIcon className="h-6 w-6" />
                       </div>
                     )}
 
                     {isCurrent && (
                       <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-black/80 px-3 py-1 text-[11px] font-bold text-primary border border-primary/40">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-background/90 px-3 py-1 text-[11px] font-bold text-primary border border-primary/40">
                           <Play className="h-3 w-3 fill-current" /> Now Playing
                         </span>
                       </div>
                     )}
 
                     {isEpWatched && !isCurrent && (
-                      <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-green-500/20 border border-green-500/40 px-2 py-0.5 text-[10px] font-semibold text-green-300 backdrop-blur-sm">
+                      <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 backdrop-blur-sm">
                         <Check className="h-3 w-3" /> Watched
                       </span>
                     )}
@@ -719,7 +719,7 @@ export default function WatchAnimePage({
                       className={`text-xs font-semibold truncate ${
                         isCurrent
                           ? "text-primary"
-                          : "text-white/85 group-hover:text-white"
+                          : "text-on-surface-variant group-hover:text-on-surface"
                       }`}
                     >
                       Episode {epNum}

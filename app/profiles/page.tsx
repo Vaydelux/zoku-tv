@@ -7,6 +7,7 @@ import { useSessionStore } from "@/stores";
 import { Plus, Trash2, Edit2, Shield, Sparkles, X, Loader2 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
 import { BrandShell } from "@/components/BrandShell";
+import { AuthThemePicker } from "@/components/AuthThemePicker";
 import { ProfileAvatarDisplay } from "@/components/ProfileAvatarDisplay";
 import { Toast, type ToastType } from "@/components/Toast";
 import { LoadingBanner } from "@/components/LoadingBanner";
@@ -250,7 +251,8 @@ function ProfilesPageContent() {
 
   return (
     <BrandShell>
-      <div className="relative flex min-h-[100dvh] flex-col items-center justify-center px-4 py-8 text-on-surface sm:py-12">
+      <AuthThemePicker />
+      <div className="relative flex min-h-[100dvh] flex-col items-center justify-center px-4 pt-16 pb-8 text-on-surface sm:py-12">
         {(selectingProfileId || isNavigating) && (
           <LoadingBanner
             message={
@@ -505,7 +507,7 @@ function ProfilesPageContent() {
                     loading={isSubmitting}
                     loadingText={isCreating ? "Launching portal..." : "Saving settings..."}
                     disabled={isCreating && !canAddProfile(profiles.length)}
-                    className="flex-1 min-h-[44px] rounded-xl bg-primary py-2.5 text-xs font-semibold text-white transition-colors hover:bg-opacity-90 sm:text-sm"
+                    className="flex-1 min-h-[44px] rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-contrast transition-colors hover:brightness-110 sm:text-sm"
                   >
                     {isCreating ? "Launch Portal" : "Save Settings"}
                   </LoadingButton>

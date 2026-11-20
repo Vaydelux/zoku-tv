@@ -22,23 +22,23 @@ export function ResumePrompt({
   onStartOver,
 }: Props) {
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/85 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-950/95 px-6 py-7 text-center shadow-2xl">
-        <h3 className="mb-2 text-xl font-bold text-white">Continue watching?</h3>
-        <p className="mb-6 text-sm text-white/60">
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md rounded-2xl border border-border-custom bg-surface/95 px-6 py-7 text-center text-on-surface shadow-2xl">
+        <h3 className="mb-2 text-xl font-bold text-on-surface">Continue watching?</h3>
+        <p className="mb-6 text-sm text-on-surface-variant tabular-nums">
           You were at {formatTime(currentTimeSec)} ({Math.round(progressPercent)}%)
         </p>
         <div className="flex justify-center gap-3">
           <button
             onClick={onResume}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-opacity-95"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-contrast transition-colors hover:brightness-110"
           >
-            <Play className="h-4 w-4 fill-white" />
+            <Play className="h-4 w-4 fill-current" />
             Resume
           </button>
           <button
             onClick={onStartOver}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/5"
+            className="inline-flex items-center gap-2 rounded-xl border border-border-custom bg-background/60 px-5 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-hover"
           >
             <RotateCcw className="h-4 w-4" />
             Start Over

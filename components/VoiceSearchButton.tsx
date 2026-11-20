@@ -308,19 +308,19 @@ export function VoiceSearchButton({
                       width: "380px",
                     }
               }
-              className="pointer-events-auto absolute z-[101] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/15 bg-[#0b0e17]/95 p-5 shadow-2xl backdrop-blur-2xl transition-all duration-200 animate-scale-up"
+              className="pointer-events-auto absolute z-[101] max-w-[calc(100vw-2rem)] rounded-2xl border border-border-custom bg-surface/95 p-5 text-on-surface shadow-2xl backdrop-blur-2xl transition-all duration-200 animate-scale-up"
             >
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center justify-between border-b border-border-custom pb-3">
                 <div className="flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/20 text-primary">
                     <Mic className="h-4 w-4" />
                   </div>
                   <div>
-                    <h3 className="font-display text-sm font-bold tracking-wide text-white">
+                    <h3 className="font-display text-sm font-bold tracking-wide text-on-surface">
                       Voice Search
                     </h3>
-                    <p className="text-[10px] font-mono text-white/50">
+                    <p className="text-[10px] font-mono text-on-surface-variant">
                       {isListening ? "Listening now..." : "Audio input ready"}
                     </p>
                   </div>
@@ -332,7 +332,7 @@ export function VoiceSearchButton({
                     stopListening();
                     setIsOpen(false);
                   }}
-                  className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white transition-colors"
+                  className="rounded-lg p-1.5 text-on-surface-variant hover:bg-surface-hover hover:text-on-surface transition-colors"
                   aria-label="Close voice search"
                 >
                   <X className="h-4 w-4" />
@@ -354,14 +354,14 @@ export function VoiceSearchButton({
                     onClick={isListening ? stopListening : startListening}
                     className={`relative flex h-14 w-14 items-center justify-center rounded-2xl shadow-xl transition-all duration-300 active:scale-95 ${
                       isListening
-                        ? "bg-gradient-to-tr from-primary to-rose-600 text-white shadow-primary/40 scale-105"
-                        : "bg-white/10 hover:bg-white/15 border border-white/15 text-white"
+                        ? "bg-primary text-primary-contrast shadow-primary/40 scale-105"
+                        : "bg-background/70 hover:bg-surface-hover border border-border-custom text-on-surface"
                     }`}
                   >
                     {isListening ? (
-                      <Mic className="h-7 w-7 animate-pulse text-white" />
+                      <Mic className="h-7 w-7 animate-pulse text-primary-contrast" />
                     ) : (
-                      <MicOff className="h-6 w-6 text-white/70" />
+                      <MicOff className="h-6 w-6 text-on-surface-variant" />
                     )}
                   </button>
                 </div>
@@ -372,7 +372,7 @@ export function VoiceSearchButton({
                     {[30, 70, 100, 50, 85, 40, 95, 60, 45].map((height, idx) => (
                       <span
                         key={idx}
-                        className="w-1 bg-gradient-to-t from-primary to-rose-400 rounded-full animate-pulse"
+                        className="w-1 bg-gradient-to-t from-primary to-accent rounded-full animate-pulse"
                         style={{
                           height: `${height}%`,
                           animationDelay: `${idx * 110}ms`,
@@ -382,7 +382,7 @@ export function VoiceSearchButton({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-white/50 mt-2">
+                  <p className="text-[11px] text-on-surface-variant mt-2">
                     Tap the mic to start listening
                   </p>
                 )}
@@ -399,7 +399,7 @@ export function VoiceSearchButton({
                       <button
                         type="button"
                         onClick={() => applyTranscript(transcript)}
-                        className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary hover:bg-opacity-90 py-2.5 px-4 text-xs font-bold text-primary-contrast uppercase tracking-wider transition-all shadow-lg shadow-primary/25 active:scale-95"
+                        className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary hover:opacity-90 py-2.5 px-4 text-xs font-bold text-primary-contrast uppercase tracking-wider transition-all shadow-lg shadow-primary/25 active:scale-95"
                       >
                         <span>Search For “{transcript}”</span>
                         <ArrowRight className="h-3.5 w-3.5" />
@@ -407,13 +407,13 @@ export function VoiceSearchButton({
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <p className="text-xs text-white/80 font-medium">
+                      <p className="text-xs text-on-surface font-medium">
                         {isListening
                           ? "Say a movie, TV show, anime, or genre..."
                           : "Speak clearly into your microphone"}
                       </p>
                       {errorMessage && (
-                        <div className="flex items-center justify-center gap-1.5 text-[11px] text-amber-400 pt-1">
+                        <div className="flex items-center justify-center gap-1.5 text-[11px] text-amber-500 pt-1">
                           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                           <span>{errorMessage}</span>
                         </div>
@@ -427,7 +427,7 @@ export function VoiceSearchButton({
                   <button
                     type="button"
                     onClick={startListening}
-                    className="mt-3 flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold text-white/90 hover:bg-white/10 hover:text-white transition-all active:scale-95"
+                    className="mt-3 flex items-center gap-1.5 rounded-xl border border-border-custom bg-background/60 px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-hover transition-all active:scale-95"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
                     <span>Listen Again</span>
@@ -436,8 +436,8 @@ export function VoiceSearchButton({
               </div>
 
               {/* Quick Suggestion Chips */}
-              <div className="border-t border-white/10 pt-3 text-left">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-white/50 flex items-center gap-1 mb-2">
+              <div className="border-t border-border-custom pt-3 text-left">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant flex items-center gap-1 mb-2">
                   <Sparkles className="h-3 w-3 text-primary" />
                   <span>Popular Voice Queries:</span>
                 </span>
@@ -447,7 +447,7 @@ export function VoiceSearchButton({
                       key={prompt}
                       type="button"
                       onClick={() => applyTranscript(prompt)}
-                      className="px-2.5 py-1 rounded-lg border border-white/10 bg-white/5 hover:border-primary/50 hover:bg-primary/10 hover:text-primary text-[11px] font-medium text-white/80 transition-all active:scale-95 whitespace-nowrap"
+                      className="px-2.5 py-1 rounded-lg border border-border-custom bg-background/60 hover:border-primary/50 hover:bg-primary/10 hover:text-primary text-[11px] font-medium text-on-surface-variant transition-all active:scale-95 whitespace-nowrap"
                     >
                       {prompt}
                     </button>

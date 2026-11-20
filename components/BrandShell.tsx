@@ -13,6 +13,7 @@ function BrandAtmosphere() {
       <div className="ambient-orb ambient-orb--a" />
       <div className="ambient-orb ambient-orb--b" />
       <div className="ambient-orb ambient-orb--c" />
+      <div className="zoku-pattern-layer" />
       <div className="ambient-particles">
         {Array.from({ length: 18 }, (_, i) => (
           <span

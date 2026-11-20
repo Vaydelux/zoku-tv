@@ -71,7 +71,7 @@ export function SiteFooter() {
 
   return (
     <footer
-      className={`${cinematicLayout ? "zoku-cinematic-footer" : ""} relative z-10 mt-auto border-t border-white/10 bg-[#05060b]/95 px-4 sm:px-6 lg:px-8 py-8 text-white/70 backdrop-blur-xl transition-colors duration-300`}
+      className={`${cinematicLayout ? "zoku-cinematic-footer" : ""} relative z-10 mt-auto border-t border-border-custom bg-surface/95 px-4 sm:px-6 lg:px-8 py-8 text-on-surface-variant backdrop-blur-xl transition-colors duration-300`}
       data-testid="site-footer"
     >
       <div className="mx-auto w-full space-y-6">
@@ -84,13 +84,13 @@ export function SiteFooter() {
                 href="/home"
                 className="inline-flex items-center rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
               >
-                <BrandMark size="sm" className="text-white" />
+                <BrandMark size="sm" />
               </Link>
-              <span className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] text-white/60">
+              <span className="rounded-md border border-border-custom bg-background/60 px-2 py-0.5 font-mono text-[10px] text-on-surface-variant">
                 Open Web Client
               </span>
             </div>
-            <p className="text-xs leading-relaxed text-white/55 max-w-md">
+            <p className="text-xs leading-relaxed text-on-surface-variant max-w-md">
               A client-side entertainment discovery, watchlist, and playback tracking interface. Browse catalog metadata and launch streams from external third-party embed providers.
             </p>
           </div>
@@ -98,27 +98,27 @@ export function SiteFooter() {
           {/* Column 2: Real Application Routes */}
           <nav
             aria-label="Footer navigation"
-            className="md:col-span-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-white/65"
+            className="md:col-span-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-on-surface-variant"
           >
-            <Link href="/home" className="hover:text-white transition-colors">
+            <Link href="/home" className="hover:text-on-surface transition-colors">
               Home
             </Link>
-            <Link href={cinematicLayout ? "/genres" : "/discover"} className="hover:text-white transition-colors">
+            <Link href={cinematicLayout ? "/genres" : "/discover"} className="hover:text-on-surface transition-colors">
               {cinematicLayout ? "Genres" : "Discover"}
             </Link>
-            <Link href="/search" className="hover:text-white transition-colors">
+            <Link href="/search" className="hover:text-on-surface transition-colors">
               Search
             </Link>
-            <Link href="/watchlist" className="hover:text-white transition-colors">
+            <Link href="/watchlist" className="hover:text-on-surface transition-colors">
               Watchlist
             </Link>
-            <Link href="/watchlist?tab=history" className="hover:text-white transition-colors">
+            <Link href="/watchlist?tab=history" className="hover:text-on-surface transition-colors">
               History
             </Link>
-            <Link href="/profiles" className="hover:text-white transition-colors">
+            <Link href="/profiles" className="hover:text-on-surface transition-colors">
               Profiles
             </Link>
-            <Link href="/settings" className="hover:text-white transition-colors">
+            <Link href="/settings" className="hover:text-on-surface transition-colors">
               Settings
             </Link>
           </nav>
@@ -146,7 +146,7 @@ export function SiteFooter() {
             </span>
 
             <span
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/75"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border-custom bg-surface/60 px-2.5 py-1 text-[11px] font-medium text-on-surface-variant"
               title={
                 isCloudFirebaseConfigured
                   ? "Profiles and library sync with Firebase Authentication & Firestore"
@@ -155,19 +155,19 @@ export function SiteFooter() {
             >
               {isCloudFirebaseConfigured ? (
                 <>
-                  <Cloud className="h-3 w-3 text-sky-400" />
+                  <Cloud className="h-3 w-3 text-primary" />
                   Cloud Sync
                 </>
               ) : (
                 <>
-                  <HardDrive className="h-3 w-3 text-amber-300" />
+                  <HardDrive className="h-3 w-3 text-primary" />
                   Local Storage Mode
                 </>
               )}
             </span>
 
             {currentProfile?.kidMode && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-300">
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-500">
                 <Shield className="h-3 w-3" />
                 Kids Mode Active
               </span>
@@ -176,26 +176,26 @@ export function SiteFooter() {
         </div>
 
         {/* Bottom Row: Transparent Disclaimers & Data Attribution */}
-        <div className="border-t border-white/10 pt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between text-[11px] leading-relaxed text-white/45">
+        <div className="border-t border-border-custom pt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between text-[11px] leading-relaxed text-on-surface-variant">
           <div className="space-y-1 max-w-4xl">
             <p>
-              <strong className="font-semibold text-white/70">
+              <strong className="font-semibold text-on-surface">
                 External Streaming Transparency:
               </strong>{" "}
               Zoku TV does not host, upload, transcode, or store any video or audio files. Playback pages embed unmodified third-party iframes; stream availability, video resolution, audio tracks, and advertisements are controlled solely by those external providers.
             </p>
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="inline-flex items-center gap-1 text-white/65 font-medium">
+              <span className="inline-flex items-center gap-1 text-on-surface font-medium">
                 <Database className="h-3 w-3 text-primary" />
                 Metadata Sources:
               </span>
               <span>
-                Active mode: <strong className="text-white/70">{catalogLabel}</strong>. Movie &amp; TV data provided by{" "}
+                Active mode: <strong className="text-on-surface">{catalogLabel}</strong>. Movie &amp; TV data provided by{" "}
                 <a
                   href="https://www.themoviedb.org/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline decoration-white/25 hover:text-white inline-flex items-center gap-0.5"
+                  className="underline decoration-border-custom hover:text-primary inline-flex items-center gap-0.5"
                 >
                   TMDB <ExternalLink className="h-2.5 w-2.5" />
                 </a>{" "}
@@ -204,7 +204,7 @@ export function SiteFooter() {
                   href="https://anilist.co/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline decoration-white/25 hover:text-white inline-flex items-center gap-0.5"
+                  className="underline decoration-border-custom hover:text-primary inline-flex items-center gap-0.5"
                 >
                   AniList <ExternalLink className="h-2.5 w-2.5" />
                 </a>
@@ -213,7 +213,7 @@ export function SiteFooter() {
             </p>
           </div>
 
-          <div className="shrink-0 lg:text-right text-[11px] text-white/40">
+          <div className="shrink-0 lg:text-right text-[11px] text-on-surface-variant/80">
             <p>Zoku TV · Personal Streaming Portal</p>
             <p>Built with Next.js, TypeScript &amp; Tailwind CSS</p>
           </div>

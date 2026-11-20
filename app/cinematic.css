@@ -540,12 +540,12 @@ html[data-zoku-layout="cinematic"] .zoku-cinematic-detail img {
   color: var(--on-surface-variant);
 }
 
-/* Players stay in a deliberately dark theater surface, irrespective of
-   appearance mode. No iframe, sandbox, autoplay or provider changes. */
+/* Players use a deep theater-calibrated tint derived from the active theme
+   so playback stays comfortable while remaining visually theme-consistent. */
 html[data-zoku-layout="cinematic"] .zoku-cinematic-player {
   padding-top: 0;
-  background: #0c0e12;
-  color: #f3f4f7;
+  background: color-mix(in srgb, var(--background) 90%, #050608 10%);
+  color: var(--on-surface);
 }
 
 html[data-zoku-layout="cinematic"] .zoku-cinematic-player > .site-nav {
@@ -557,7 +557,7 @@ html[data-zoku-layout="cinematic"] .zoku-cinematic-player > div {
 }
 
 html[data-zoku-layout="cinematic"] .zoku-cinematic-player iframe {
-  background: #07090c;
+  background: color-mix(in srgb, var(--background) 78%, #000000 22%);
 }
 
 html[data-zoku-layout="cinematic"] .zoku-cinematic-player [class*="aspect-video"] {

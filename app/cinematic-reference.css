@@ -8,15 +8,21 @@ html[data-zoku-layout="cinematic"] {
   --cinematic-content-width: 840px;
 }
 
-html[data-zoku-layout="cinematic"] body,
-html[data-zoku-layout="cinematic"] .app-page-shell {
-  background: var(--background);
+html[data-zoku-layout="cinematic"] body {
+  background-color: var(--background);
   background-image: none;
 }
 
+html[data-zoku-layout="cinematic"] .app-page-shell {
+  background: transparent;
+}
+
 html[data-zoku-layout="cinematic"] body::before {
-  background: var(--background);
-  background-image: none;
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 95% 58% at 10% -8%, color-mix(in srgb, var(--primary) 16%, transparent) 0%, transparent 60%),
+    radial-gradient(ellipse 85% 52% at 94% 4%, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 56%),
+    linear-gradient(175deg, color-mix(in srgb, var(--background) 92%, var(--primary) 8%) 0%, var(--background) 42%, color-mix(in srgb, var(--background) 94%, var(--surface) 6%) 100%);
 }
 
 html[data-zoku-layout="cinematic"] .site-nav {

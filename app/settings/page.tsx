@@ -82,9 +82,23 @@ import {
   getThemeOption,
   normalizeAppearance,
   normalizeThemeId,
+  THEME_CATEGORIES,
   THEME_OPTIONS,
   type AppearanceMode,
+  type ThemeCategory,
 } from "@/lib/themes";
+import {
+  applyBackgroundPattern,
+  BACKGROUND_PATTERN_OPTIONS,
+  DEFAULT_PATTERN_ID,
+  getPatternOption,
+  type BackgroundPatternId,
+} from "@/lib/background-patterns";
+import {
+  readProfilePatternPreference,
+  writePreAuthThemePreference,
+  writeProfilePatternPreference,
+} from "@/lib/preauth-theme";
 import { usePerfMode } from "@/hooks/usePerfMode";
 import {
   probeGpuCapabilities,
@@ -137,6 +151,8 @@ function SettingsPageContent() {
   const [activeTab, setActiveTab] = useState<SettingsSection>("theme");
   useDocumentTitle("Settings");
   const [localAppearance, setLocalAppearance] = useState<AppearanceMode>(DEFAULT_APPEARANCE);
+  const [localPattern, setLocalPattern] = useState<BackgroundPatternId>(DEFAULT_PATTERN_ID);
+  const [themeCategoryFilter, setThemeCategoryFilter] = useState<"All" | ThemeCategory>("All");
   const [availableGenres, setAvailableGenres] = useState<TMDBGenre[]>([]);
   const [selectedGenreIds, setSelectedGenreIds] = useState<number[]>([]);
   const [genrePreferencesDirty, setGenrePreferencesDirty] = useState(false);
@@ -247,6 +263,7 @@ function SettingsPageContent() {
         setLocalAppearance(
           normalizeAppearance(currentProfile?.appearancePreference ?? DEFAULT_APPEARANCE)
         );
+        setLocalPattern(readProfilePatternPreference(currentProfile?.id));
       } catch (err) {
         console.error("Failed to load settings data:", err);
       }
@@ -297,6 +314,10 @@ function SettingsPageContent() {
         themePreference: normalized,
       });
       applyTheme(normalized, localAppearance);
+      writePreAuthThemePreference(
+        { themeId: normalized, appearance: localAppearance },
+        { markForAuthHandoff: false }
+      );
       notifySuccess(`Applied ${getThemeOption(normalized).name} theme!`);
     } catch (err) {
       console.error(err);
@@ -314,6 +335,10 @@ function SettingsPageContent() {
         appearancePreference: mode,
       });
       applyTheme(currentProfile.themePreference, mode);
+      writePreAuthThemePreference(
+        { themeId: normalizeThemeId(currentProfile.themePreference), appearance: mode },
+        { markForAuthHandoff: false }
+      );
       notifySuccess(`Switched to ${mode === "light" ? "light" : "dark"} mode`);
     } catch (err) {
       console.error(err);
@@ -321,6 +346,14 @@ function SettingsPageContent() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePatternSelect = (patternId: BackgroundPatternId) => {
+    const saved = writeProfilePatternPreference(currentProfile.id, patternId);
+    writePreAuthThemePreference({ patternId: saved }, { markForAuthHandoff: false });
+    applyBackgroundPattern(saved);
+    setLocalPattern(saved);
+    notifySuccess(`Background pattern set to ${getPatternOption(saved).name}`);
   };
 
   const handleIframePreferenceChange = async (mode: "Strict" | "Compatibility") => {
@@ -575,7 +608,7 @@ function SettingsPageContent() {
               }`}
             >
               <Palette className="h-4 w-4" />
-              <span>Appearance & 18 Themes</span>
+              <span>Appearance &amp; {THEME_OPTIONS.length} Themes</span>
             </button>
 
             <button
@@ -686,15 +719,84 @@ function SettingsPageContent() {
 
           {/* Active Tab Panel */}
           <div className="zoku-settings-content glass-panel flex-1 w-full min-w-0 rounded-2xl p-6 sm:p-8 shadow-xl min-h-[420px]">
-            {activeTab === "theme" && (
+            {activeTab === "theme" && (() => {
+              const activeThemeOption = getThemeOption(currentProfile.themePreference);
+              const activeThemeTokens =
+                localAppearance === "light"
+                  ? activeThemeOption.lightTokens
+                  : activeThemeOption.tokens;
+              const activePatternOption = getPatternOption(localPattern);
+              const visibleThemes =
+                themeCategoryFilter === "All"
+                  ? THEME_OPTIONS
+                  : THEME_OPTIONS.filter((t) => t.category === themeCategoryFilter);
+
+              return (
               <div className="space-y-6">
                 <div className="space-y-1">
                   <h2 className="text-base font-semibold text-on-surface">
-                    Appearance & 18-Theme Cinema Canvas
+                    Appearance, {THEME_OPTIONS.length}-Theme Studio &amp; Pattern Canvas
                   </h2>
                   <p className="text-xs text-on-surface-variant">
-                    Pick a palette, then choose light or dark. Gradients tint the page while text stays high-contrast.
+                    Pair any palette with Light or Dark mode and a theme-matched background pattern. Your selection stays synced with the login screen.
                   </p>
+                </div>
+
+                {/* Live Theme & Pattern Canvas Preview */}
+                <div
+                  data-testid="settings-live-theme-preview"
+                  className="relative overflow-hidden rounded-2xl border border-border-custom p-5 shadow-md"
+                  style={{
+                    backgroundColor: activeThemeTokens.background,
+                    backgroundImage:
+                      activePatternOption.id === "none"
+                        ? activeThemeTokens.backgroundGradient
+                        : `${activePatternOption.previewImage}, ${activeThemeTokens.backgroundGradient}`,
+                    backgroundSize:
+                      activePatternOption.id === "none"
+                        ? "cover"
+                        : `${activePatternOption.previewSize}, cover`,
+                  }}
+                >
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-0 top-0 h-1"
+                    style={{ backgroundImage: activeThemeTokens.buttonGradient }}
+                  />
+                  <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
+                        Active Canvas · {activeThemeOption.category} · {localAppearance === "light" ? "Light" : "Dark"}
+                      </p>
+                      <h3 className="text-sm sm:text-base font-display font-bold text-on-surface truncate">
+                        {activeThemeOption.name} + {activePatternOption.name}
+                      </h3>
+                      <p className="text-xs text-on-surface-variant max-w-xl">
+                        {activeThemeOption.hint} — {activePatternOption.hint}.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className="inline-flex h-8 items-center rounded-xl px-3 text-xs font-semibold shadow-sm"
+                        style={{
+                          backgroundImage: activeThemeTokens.buttonGradient,
+                          color: activeThemeTokens.primaryContrast,
+                        }}
+                      >
+                        Primary Accent
+                      </span>
+                      <span
+                        className="inline-flex h-8 items-center rounded-xl border px-3 text-xs font-medium"
+                        style={{
+                          backgroundColor: activeThemeTokens.surface,
+                          borderColor: activeThemeTokens.borderColor,
+                          color: activeThemeTokens.onSurface,
+                        }}
+                      >
+                        Surface Card
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -832,57 +934,168 @@ function SettingsPageContent() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-                  {THEME_OPTIONS.map((theme) => {
-                    const isActive =
-                      normalizeThemeId(currentProfile.themePreference) === theme.id;
-                    const previewTokens =
-                      localAppearance === "light" ? theme.lightTokens : theme.tokens;
-                    return (
-                      <button
-                        key={theme.id}
-                        onClick={() => handleThemeSelect(theme.id)}
-                        disabled={saving}
-                        className={`group flex flex-col items-start p-4 rounded-xl border text-left transition-all relative overflow-hidden min-h-[114px] ${
-                          isActive
-                            ? "border-primary bg-primary/10 ring-1 ring-primary"
-                            : "border-border-custom hover:border-primary bg-background/45 hover:bg-background/70"
-                        }`}
-                      >
-                        <div
-                          className="absolute inset-x-0 top-0 h-2"
-                          style={{ backgroundImage: previewTokens.buttonGradient }}
-                          aria-hidden
-                        />
-                        <div className="flex items-center justify-between w-full gap-2 pt-2">
-                          <span className="text-xs sm:text-sm font-semibold text-on-surface">
-                            {theme.name}
+                {/* Background Pattern Studio */}
+                <div className="space-y-3" data-testid="settings-pattern-section">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
+                        Theme-Matched Background Patterns ({BACKGROUND_PATTERN_OPTIONS.length})
+                      </p>
+                      <p className="text-xs text-on-surface-variant mt-0.5">
+                        Patterns dynamically tint to your active palette and adapt opacity between Light and Dark mode.
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold text-primary">
+                      {activePatternOption.name}
+                    </span>
+                  </div>
+
+                  <div
+                    data-testid="settings-pattern-grid"
+                    className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+                  >
+                    {BACKGROUND_PATTERN_OPTIONS.map((pattern) => {
+                      const isSelected = localPattern === pattern.id;
+                      return (
+                        <button
+                          key={pattern.id}
+                          type="button"
+                          data-testid={`settings-pattern-${pattern.id}`}
+                          onClick={() => handlePatternSelect(pattern.id)}
+                          className={`group flex flex-col items-start rounded-xl border p-2.5 text-left transition-all ${
+                            isSelected
+                              ? "border-primary bg-primary/10 ring-1 ring-primary"
+                              : "border-border-custom bg-background/45 hover:border-primary/50 hover:bg-background/70"
+                          }`}
+                        >
+                          <div
+                            className="relative mb-2.5 h-14 w-full overflow-hidden rounded-lg border border-border-custom bg-background"
+                            style={{
+                              backgroundImage:
+                                pattern.id === "none"
+                                  ? activeThemeTokens.backgroundGradient
+                                  : `${pattern.previewImage}, ${activeThemeTokens.backgroundGradient}`,
+                              backgroundSize:
+                                pattern.id === "none"
+                                  ? "cover"
+                                  : `${pattern.previewSize}, cover`,
+                            }}
+                          >
+                            {isSelected && (
+                              <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-contrast shadow-sm">
+                                <Check className="h-3 w-3" aria-hidden="true" />
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs font-semibold text-on-surface">
+                            {pattern.name}
                           </span>
-                          {isActive && <Check className="h-4 w-4 text-primary shrink-0" />}
-                        </div>
-                        <p className="text-[10px] sm:text-xs text-on-surface-variant mt-1 leading-relaxed line-clamp-2">
-                          {theme.hint}
-                        </p>
-                        <div className="flex gap-1 mt-3 w-full h-3 rounded-md overflow-hidden border border-white/10">
+                          <span className="mt-0.5 text-[10px] text-on-surface-variant line-clamp-2 leading-snug">
+                            {pattern.hint}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Curated Theme Palette Library */}
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
+                      Curated Palettes ({visibleThemes.length} of {THEME_OPTIONS.length})
+                    </p>
+                    <div
+                      role="tablist"
+                      aria-label="Filter themes by collection"
+                      className="flex flex-wrap gap-1.5"
+                    >
+                      {(["All", ...THEME_CATEGORIES] as const).map((cat) => {
+                        const active = themeCategoryFilter === cat;
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            data-testid={`settings-theme-cat-${cat.toLowerCase()}`}
+                            onClick={() => setThemeCategoryFilter(cat)}
+                            className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                              active
+                                ? "bg-primary text-primary-contrast"
+                                : "border border-border-custom bg-background/50 text-on-surface-variant hover:border-primary/40 hover:text-on-surface"
+                            }`}
+                          >
+                            {cat}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div
+                    data-testid="settings-theme-grid"
+                    className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"
+                  >
+                    {visibleThemes.map((theme) => {
+                      const isActive =
+                        normalizeThemeId(currentProfile.themePreference) === theme.id;
+                      const previewTokens =
+                        localAppearance === "light" ? theme.lightTokens : theme.tokens;
+                      return (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          data-testid={`settings-theme-${theme.id}`}
+                          onClick={() => handleThemeSelect(theme.id)}
+                          disabled={saving}
+                          className={`group flex flex-col items-start p-4 rounded-xl border text-left transition-all relative overflow-hidden min-h-[120px] ${
+                            isActive
+                              ? "border-primary bg-primary/10 ring-1 ring-primary"
+                              : "border-border-custom hover:border-primary bg-background/45 hover:bg-background/70"
+                          }`}
+                        >
                           <div
-                            className="flex-[3]"
+                            className="absolute inset-x-0 top-0 h-2"
                             style={{ backgroundImage: previewTokens.buttonGradient }}
+                            aria-hidden
                           />
-                          <div
-                            className="flex-[4]"
-                            style={{ backgroundImage: previewTokens.backgroundGradient }}
-                          />
-                          <div
-                            className="flex-[2]"
-                            style={{ backgroundColor: previewTokens.onSurface }}
-                          />
-                        </div>
-                      </button>
-                    );
-                  })}
+                          <div className="flex items-center justify-between w-full gap-2 pt-2">
+                            <div className="min-w-0">
+                              <span className="block text-xs sm:text-sm font-semibold text-on-surface truncate">
+                                {theme.name}
+                              </span>
+                              <span className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant/80">
+                                {theme.category}
+                              </span>
+                            </div>
+                            {isActive && <Check className="h-4 w-4 text-primary shrink-0" />}
+                          </div>
+                          <p className="text-[10px] sm:text-xs text-on-surface-variant mt-1.5 leading-relaxed line-clamp-2">
+                            {theme.hint}
+                          </p>
+                          <div className="flex gap-1 mt-3 w-full h-3 rounded-md overflow-hidden border border-border-custom">
+                            <div
+                              className="flex-[3]"
+                              style={{ backgroundImage: previewTokens.buttonGradient }}
+                            />
+                            <div
+                              className="flex-[4]"
+                              style={{ backgroundImage: previewTokens.backgroundGradient }}
+                            />
+                            <div
+                              className="flex-[2]"
+                              style={{ backgroundColor: previewTokens.onSurface }}
+                            />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            )}
+              );
+            })()}
 
             {activeTab === "catalog" && (
               <div className="space-y-6">

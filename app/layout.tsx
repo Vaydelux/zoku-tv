@@ -36,7 +36,7 @@ const fontMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Zoku TV - Infinite Streaming Portal",
   description:
-    "Zoku TV is your high-fidelity, customizable dashboard for cinematic discovery and streaming. Explore genres, manage your watchlists, track your history, and customize your experience with 18 dynamic visual themes.",
+    "Zoku TV is your high-fidelity, customizable dashboard for cinematic discovery and streaming. Explore genres, manage your watchlists, track your history, and customize your experience with 24 dynamic visual themes and theme-matched background patterns.",
   applicationName: "Zoku TV",
   manifest: `/manifest.webmanifest?theme=${DEFAULT_THEME_ID}`,
   appleWebApp: {

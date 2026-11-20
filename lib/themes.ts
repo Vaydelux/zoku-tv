@@ -16,9 +16,25 @@ export type ThemeId =
   | "theme-oasis"
   | "theme-platinum"
   | "theme-sage"
-  | "theme-solar";
+  | "theme-solar"
+  | "theme-sakura"
+  | "theme-matcha"
+  | "theme-gilded"
+  | "theme-glacier"
+  | "theme-terracotta"
+  | "theme-indigo";
 
 export type AppearanceMode = "dark" | "light";
+
+export type ThemeCategory = "Cinema" | "Nocturne" | "Botanical" | "Editorial" | "Arcade";
+
+export const THEME_CATEGORIES: ThemeCategory[] = [
+  "Cinema",
+  "Nocturne",
+  "Botanical",
+  "Editorial",
+  "Arcade",
+];
 
 export type ThemeTokens = {
   background: string;
@@ -43,6 +59,7 @@ export type ThemeTokens = {
 export type ThemeOption = {
   id: ThemeId;
   name: string;
+  category: ThemeCategory;
   hint: string;
   desc: string;
   preview: string;
@@ -115,7 +132,7 @@ function contrastOn(color: string): string {
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
   });
   const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return luminance > 0.45 ? "#101218" : "#ffffff";
+  return luminance > 0.33 ? "#101218" : "#ffffff";
 }
 
 /** Gently enrich dark shells while preserving the substantial hue of each theme */
@@ -190,11 +207,15 @@ function toLightTokens(dark: ThemeTokens): ThemeTokens {
     ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3)`
     : dark.primaryGlow;
 
+  const borderColor = rgb
+    ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.2)`
+    : "rgba(17, 18, 24, 0.14)";
+
   return withGradient(
     {
-      background: "#f4f3f8",
+      background: "#f4f4f8",
       surface: "#ffffff",
-      surfaceHover: "#ebe9f2",
+      surfaceHover: "#ecebf3",
       primary: dark.primary,
       primaryContrast,
       primaryGlow: glow,
@@ -202,13 +223,16 @@ function toLightTokens(dark: ThemeTokens): ThemeTokens {
       accentContrast,
       onSurface: "#111218",
       onSurfaceVariant: "rgba(17, 18, 24, 0.72)",
-      borderColor: "rgba(17, 18, 24, 0.14)",
+      borderColor,
     },
     "light"
   );
 }
 
-type ThemeSeed = Omit<ThemeOption, "tokens" | "lightTokens"> & { tokens: SolidTokens };
+type ThemeSeed = Omit<ThemeOption, "tokens" | "lightTokens" | "category"> & {
+  category?: ThemeCategory;
+  tokens: SolidTokens;
+};
 
 const THEME_SEEDS: ThemeSeed[] = [
   {
@@ -234,7 +258,7 @@ const THEME_SEEDS: ThemeSeed[] = [
   {
     id: "theme-sunset",
     name: "Sunset Graphite",
-    hint: "Tangerine &rose horizon",
+    hint: "Tangerine & rose horizon",
     desc: "Warm dusk horizon blending molten tangerine, coral rose, and deep espresso",
     preview: "linear-gradient(135deg, #f97316 0%, #fb7185 55%, #1c100d 100%)",
     tokens: token(
@@ -571,13 +595,167 @@ const THEME_SEEDS: ThemeSeed[] = [
       "rgba(250,204,21,0.24)"
     ),
   },
+  {
+    id: "theme-sakura",
+    name: "Sakura Noir",
+    category: "Editorial",
+    hint: "Lacquer blossom & warm rose",
+    desc: "Kyoto lacquer dark canvas accented with cherry blossom pink and soft blush highlights",
+    preview: "linear-gradient(135deg, #f472b6 0%, #fda4af 55%, #160c13 100%)",
+    tokens: token(
+      "#110a10",
+      "#1c121b",
+      "#291b28",
+      "#f472b6",
+      "#1c0714",
+      "rgba(244,114,182,0.42)",
+      "#fda4af",
+      "#210810",
+      "#fdf2f8",
+      "rgba(244,214,230,0.7)",
+      "rgba(244,114,182,0.24)"
+    ),
+  },
+  {
+    id: "theme-matcha",
+    name: "Kyoto Matcha",
+    category: "Botanical",
+    hint: "Ceremonial matcha & celadon",
+    desc: "Inked cedar slate paired with fresh ceremonial matcha and cool celadon mist",
+    preview: "linear-gradient(135deg, #22c55e 0%, #86efac 55%, #09130d 100%)",
+    tokens: token(
+      "#09100c",
+      "#121d16",
+      "#1b2d22",
+      "#22c55e",
+      "#041b0c",
+      "rgba(34,197,94,0.4)",
+      "#86efac",
+      "#052010",
+      "#f0fdf4",
+      "rgba(196,232,208,0.7)",
+      "rgba(34,197,94,0.24)"
+    ),
+  },
+  {
+    id: "theme-gilded",
+    name: "Noir Gilded",
+    category: "Cinema",
+    hint: "Art-deco charcoal & champagne gold",
+    desc: "Classic theater velvet charcoal trimmed with burnished champagne gold and ivory highlights",
+    preview: "linear-gradient(135deg, #d4a017 0%, #fde047 55%, #12100b 100%)",
+    tokens: token(
+      "#0e0d0a",
+      "#191711",
+      "#27231a",
+      "#d4a017",
+      "#161103",
+      "rgba(212,160,23,0.42)",
+      "#f5d061",
+      "#1a1404",
+      "#faf6ea",
+      "rgba(229,218,189,0.7)",
+      "rgba(212,160,23,0.26)"
+    ),
+  },
+  {
+    id: "theme-glacier",
+    name: "Glacier Ink",
+    category: "Nocturne",
+    hint: "Nordic slate & polar cyan",
+    desc: "Deep Nordic slate-ink horizon illuminated by crisp glacier blue and frost cyan",
+    preview: "linear-gradient(135deg, #38bdf8 0%, #7dd3fc 55%, #09121b 100%)",
+    tokens: token(
+      "#081018",
+      "#101c28",
+      "#192b3d",
+      "#38bdf8",
+      "#041926",
+      "rgba(56,189,248,0.42)",
+      "#7dd3fc",
+      "#051c29",
+      "#f0f9ff",
+      "rgba(195,222,240,0.72)",
+      "rgba(56,189,248,0.24)"
+    ),
+  },
+  {
+    id: "theme-terracotta",
+    name: "Sienna Cinema",
+    category: "Editorial",
+    hint: "Sun-baked clay & warm ochre",
+    desc: "Mediterranean espresso clay accented with sculpted terracotta and warm desert ochre",
+    preview: "linear-gradient(135deg, #ea580c 0%, #fb923c 55%, #190e09 100%)",
+    tokens: token(
+      "#140c09",
+      "#211510",
+      "#311f18",
+      "#ea580c",
+      "#ffffff",
+      "rgba(234,88,12,0.42)",
+      "#fb923c",
+      "#1f0b02",
+      "#fff7ed",
+      "rgba(238,212,196,0.7)",
+      "rgba(234,88,12,0.26)"
+    ),
+  },
+  {
+    id: "theme-indigo",
+    name: "Studio Indigo",
+    category: "Arcade",
+    hint: "Japanese indigo & electric iris",
+    desc: "Deep Japanese indigo ink layered with vibrant studio periwinkle and soft iris glow",
+    preview: "linear-gradient(135deg, #6366f1 0%, #a5b4fc 55%, #0b0d1e 100%)",
+    tokens: token(
+      "#0a0c19",
+      "#13162b",
+      "#1e2342",
+      "#6366f1",
+      "#ffffff",
+      "rgba(99,102,241,0.44)",
+      "#a5b4fc",
+      "#0c0e24",
+      "#eef2ff",
+      "rgba(202,210,242,0.72)",
+      "rgba(99,102,241,0.26)"
+    ),
+  },
 ];
+
+const THEME_CATEGORY_MAP: Record<ThemeId, ThemeCategory> = {
+  "theme-crimson": "Cinema",
+  "theme-gilded": "Cinema",
+  "theme-sunset": "Cinema",
+  "theme-ember": "Cinema",
+  "theme-amber": "Cinema",
+  "theme-moonlight": "Nocturne",
+  "theme-ocean": "Nocturne",
+  "theme-cobalt": "Nocturne",
+  "theme-arctic": "Nocturne",
+  "theme-glacier": "Nocturne",
+  "theme-platinum": "Nocturne",
+  "theme-aurora": "Botanical",
+  "theme-sage": "Botanical",
+  "theme-matcha": "Botanical",
+  "theme-oasis": "Botanical",
+  "theme-rose": "Editorial",
+  "theme-sand": "Editorial",
+  "theme-lavender": "Editorial",
+  "theme-sakura": "Editorial",
+  "theme-terracotta": "Editorial",
+  "theme-neon": "Arcade",
+  "theme-void": "Arcade",
+  "theme-solar": "Arcade",
+  "theme-indigo": "Arcade",
+};
 
 function enrichTheme(seed: ThemeSeed): ThemeOption {
   const dark = withGradient(tuneDarkTokens(seed.tokens), "dark");
   return {
     id: seed.id,
     name: seed.name,
+    category: seed.category ?? THEME_CATEGORY_MAP[seed.id] ?? "Cinema",
     hint: seed.hint,
     desc: seed.desc,
     preview: seed.preview,
@@ -636,6 +814,18 @@ const LEGACY_THEME_IDS: Record<string, ThemeId> = {
   "shadow-sage": "theme-sage",
   "Solar Flare": "theme-solar",
   "solar-flare": "theme-solar",
+  "Sakura Noir": "theme-sakura",
+  "sakura-noir": "theme-sakura",
+  "Kyoto Matcha": "theme-matcha",
+  "kyoto-matcha": "theme-matcha",
+  "Noir Gilded": "theme-gilded",
+  "noir-gilded": "theme-gilded",
+  "Glacier Ink": "theme-glacier",
+  "glacier-ink": "theme-glacier",
+  "Sienna Cinema": "theme-terracotta",
+  "sienna-cinema": "theme-terracotta",
+  "Studio Indigo": "theme-indigo",
+  "studio-indigo": "theme-indigo",
   "theme-emerald": "theme-neon",
   "theme-obsidian": "theme-moonlight",
   "theme-cinecho": "theme-void",

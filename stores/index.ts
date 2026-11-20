@@ -17,11 +17,16 @@ import {
 } from "@/lib/firebase";
 import {
   applyTheme,
-  BRAND_THEME_ID,
   DEFAULT_APPEARANCE,
-  DEFAULT_THEME_ID,
   normalizeAppearance,
 } from "@/lib/themes";
+import { applyBackgroundPattern } from "@/lib/background-patterns";
+import {
+  readPendingLoginThemeHandoff,
+  readPreAuthThemePreference,
+  readProfilePatternPreference,
+  writeProfilePatternPreference,
+} from "@/lib/preauth-theme";
 import { canAddProfile, MAX_PROFILES } from "@/lib/profile-limits";
 import { EMBED_SERVER_CATALOG } from "@/lib/embed";
 import { ANIME_EMBED_SERVER_CATALOG } from "@/lib/anime-embed";
@@ -217,10 +222,17 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ currentProfile: profile });
     if (profile && typeof window !== "undefined") {
       localStorage.setItem(`zoku_active_profile_${get().user?.uid}`, JSON.stringify(profile));
-      applyTheme(
-        profile.themePreference,
-        normalizeAppearance(profile.appearancePreference ?? DEFAULT_APPEARANCE)
-      );
+      const pendingHandoff = readPendingLoginThemeHandoff();
+      if (pendingHandoff) {
+        applyTheme(pendingHandoff.themeId, pendingHandoff.appearance);
+        applyBackgroundPattern(pendingHandoff.patternId);
+      } else {
+        applyTheme(
+          profile.themePreference,
+          normalizeAppearance(profile.appearancePreference ?? DEFAULT_APPEARANCE)
+        );
+        applyBackgroundPattern(readProfilePatternPreference(profile.id));
+      }
     }
   },
 
@@ -240,14 +252,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     try {
       const profileId = "profile_" + Math.random().toString(36).substr(2, 9);
       const now = new Date().toISOString();
+      const preAuth = readPreAuthThemePreference();
       const newProfile: Profile = {
         id: profileId,
         name,
         avatar,
         avatarColor,
         kidMode,
-        themePreference: DEFAULT_THEME_ID,
-        appearancePreference: DEFAULT_APPEARANCE,
+        themePreference: preAuth.themeId,
+        appearancePreference: preAuth.appearance,
         iframeModePreference: "Strict",
         catalogMode: "tmdb",
         homeGenreRailPreferences: [28, 12, 35, 18], // Action, Adventure, Comedy, Drama
@@ -257,6 +270,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
       const docRef = getDocRef(`users/${user.uid}/profiles`, profileId);
       await setDocument(docRef, newProfile);
+      writeProfilePatternPreference(profileId, preAuth.patternId);
       return { success: true };
     } catch (e) {
       console.error("Failed to create profile", e);
@@ -453,7 +467,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           initializing: false,
           profilesReady: true,
         });
-        applyTheme(BRAND_THEME_ID, "dark");
+        const preAuth = readPreAuthThemePreference();
+        applyTheme(preAuth.themeId, preAuth.appearance);
+        applyBackgroundPattern(preAuth.patternId);
       }
     });
 

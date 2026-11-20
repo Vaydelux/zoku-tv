@@ -119,13 +119,122 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: -2;
   pointer-events: none;
   background-color: var(--background);
   background-image: var(--background-gradient);
   background-size: cover;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
+}
+
+/* Dedicated theme-matched surface pattern layer (driven by html[data-bg-pattern]) */
+body::after,
+.zoku-pattern-layer {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  transition: opacity 0.3s ease;
+}
+
+.zoku-pattern-layer {
+  position: absolute;
+  z-index: 0;
+}
+
+html[data-bg-pattern="dot-matrix"] body::after,
+html[data-bg-pattern="dot-matrix"] .zoku-pattern-layer {
+  opacity: 0.72;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--primary) 34%, var(--on-surface) 14%) 1.25px,
+    transparent 0
+  );
+  background-size: 24px 24px;
+}
+
+html[data-bg-pattern="architect-grid"] body::after,
+html[data-bg-pattern="architect-grid"] .zoku-pattern-layer {
+  opacity: 0.68;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--primary) 16%, var(--on-surface) 7%) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--accent) 14%, var(--on-surface) 7%) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+html[data-bg-pattern="diagonal-weave"] body::after,
+html[data-bg-pattern="diagonal-weave"] .zoku-pattern-layer {
+  opacity: 0.65;
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 18%, transparent) 0px,
+    color-mix(in srgb, var(--primary) 18%, transparent) 1px,
+    transparent 1px,
+    transparent 18px
+  );
+}
+
+html[data-bg-pattern="crosshatch"] body::after,
+html[data-bg-pattern="crosshatch"] .zoku-pattern-layer {
+  opacity: 0.62;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--primary) 14%, transparent) 0px,
+      color-mix(in srgb, var(--primary) 14%, transparent) 1px,
+      transparent 1px,
+      transparent 22px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--accent) 12%, transparent) 0px,
+      color-mix(in srgb, var(--accent) 12%, transparent) 1px,
+      transparent 1px,
+      transparent 22px
+    );
+}
+
+html[data-bg-pattern="aurora-rings"] body::after,
+html[data-bg-pattern="aurora-rings"] .zoku-pattern-layer {
+  opacity: 0.68;
+  background-image: repeating-radial-gradient(
+    circle at 50% 18%,
+    color-mix(in srgb, var(--primary) 18%, transparent) 0px,
+    color-mix(in srgb, var(--primary) 18%, transparent) 1px,
+    transparent 1px,
+    transparent 42px
+  );
+}
+
+html[data-bg-pattern="micro-lattice"] body::after,
+html[data-bg-pattern="micro-lattice"] .zoku-pattern-layer {
+  opacity: 0.72;
+  background-image:
+    radial-gradient(circle at 0 0, color-mix(in srgb, var(--primary) 28%, transparent) 1.5px, transparent 1.6px),
+    radial-gradient(circle at 14px 14px, color-mix(in srgb, var(--accent) 24%, transparent) 1.5px, transparent 1.6px);
+  background-size: 28px 28px;
+}
+
+html[data-bg-pattern="scanlines"] body::after,
+html[data-bg-pattern="scanlines"] .zoku-pattern-layer {
+  opacity: 0.6;
+  background-image: repeating-linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--on-surface) 11%, var(--primary) 9%) 0px,
+    color-mix(in srgb, var(--on-surface) 11%, var(--primary) 9%) 1px,
+    transparent 1px,
+    transparent 7px
+  );
+}
+
+html.appearance-light[data-bg-pattern]:not([data-bg-pattern="none"]) body::after,
+html.appearance-light[data-bg-pattern]:not([data-bg-pattern="none"]) .zoku-pattern-layer {
+  opacity: 0.52;
 }
 
 /* Smooth GPU-composited route transition (transform + opacity only) */
