@@ -13,9 +13,11 @@
   --color-on-surface-variant: var(--on-surface-variant);
   --color-border-custom: var(--border-color);
   
-  --font-sans: var(--font-sans), sans-serif;
-  --font-display: var(--font-display), sans-serif;
-  --font-mono: var(--font-mono), monospace;
+  /* The browser may load web fonts at runtime; reliable system fallbacks
+     must work even when Google Fonts is blocked or temporarily unavailable. */
+  --font-sans: "DM Sans", "Segoe UI", Arial, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Segoe UI", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
 
   --animate-fade-in: fade-in 0.3s ease-out;
   --animate-scale-up: scale-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
