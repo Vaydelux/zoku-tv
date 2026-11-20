@@ -7,6 +7,8 @@ export type TmdbRequestScope =
   | { kind: "person"; media: "all"; id: number; path: string };
 
 const POSITIVE_ID = /^[1-9]\d{0,9}$/;
+// TMDB season 0 is valid and represents specials.
+const NONNEGATIVE_SEASON = /^(?:0|[1-9]\d{0,9})$/;
 
 export const ALLOWED_APPEND_TOKENS = new Set([
   "credits",
