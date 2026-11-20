@@ -76,7 +76,9 @@ async function checkPolicyGuards() {
   assert.match(optedOut.headers.get("set-cookie") || "", /Max-Age=0/i, "Disabling must clear cookie");
   evidence.push({ check: "adult preference opt-in, opt-out, same-origin and default locked", result: "pass" });
 
-  await assertApi("/api/tmdb/person/1", {}, 404, "TMDB arbitrary operation blocked");
+  // /person/:id is now an intentionally supported TMDB detail route. Probe
+  // an unlisted operation to test the proxy allowlist without calling TMDB.
+  await assertApi("/api/tmdb/account/1", {}, 404, "TMDB arbitrary operation blocked");
   await assertApi("/api/tmdb/discover/movie?page=501", {}, 400, "TMDB out-of-range pagination rejected");
   await assertApi("/api/anilist", {
     method: "POST", headers: { "Content-Type": "application/json" },
