@@ -248,7 +248,7 @@ async function runBrowserChecks() {
         };
       });
       assert.equal(navInfo.display, "grid", "Settings sections must be a grid");
-      assert.equal(navInfo.count, 8, "All settings sections must remain accessible");
+      assert.equal(navInfo.count, 9, "All nine settings sections must remain accessible");
       assert.ok(navInfo.scrollWidth <= navInfo.width + 2 && navInfo.allVisible,
         "Settings nav must not require horizontal scrolling: " + JSON.stringify(navInfo));
       await assertNoHorizontalOverflow(page, "Settings " + viewport.width);
