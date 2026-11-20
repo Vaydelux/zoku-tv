@@ -76,7 +76,9 @@ async function checkPolicyGuards() {
   assert.match(optedOut.headers.get("set-cookie") || "", /Max-Age=0/i, "Disabling must clear cookie");
   evidence.push({ check: "adult preference opt-in, opt-out, same-origin and default locked", result: "pass" });
 
-  await assertApi("/api/tmdb/person/1", {}, 404, "TMDB arbitrary operation blocked");
+  // /person/:id is now an intentionally supported TMDB detail route. Probe
+  // an unlisted operation to test the proxy allowlist without calling TMDB.
+  await assertApi("/api/tmdb/account/1", {}, 404, "TMDB arbitrary operation blocked");
   await assertApi("/api/tmdb/discover/movie?page=501", {}, 400, "TMDB out-of-range pagination rejected");
   await assertApi("/api/anilist", {
     method: "POST", headers: { "Content-Type": "application/json" },
@@ -246,7 +248,7 @@ async function runBrowserChecks() {
         };
       });
       assert.equal(navInfo.display, "grid", "Settings sections must be a grid");
-      assert.equal(navInfo.count, 8, "All settings sections must remain accessible");
+      assert.equal(navInfo.count, 9, "All nine settings sections must remain accessible");
       assert.ok(navInfo.scrollWidth <= navInfo.width + 2 && navInfo.allVisible,
         "Settings nav must not require horizontal scrolling: " + JSON.stringify(navInfo));
       await assertNoHorizontalOverflow(page, "Settings " + viewport.width);

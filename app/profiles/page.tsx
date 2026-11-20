@@ -227,6 +227,9 @@ function ProfilesPageContent() {
       await deleteProfile(id);
       setConfirmDeleteProfile(null);
       showToast(`Profile "${name}" deleted.`, "success");
+    } catch (error) {
+      console.error("Profile deletion was not completed:", error);
+      showToast("Could not fully delete this profile. Check your connection and retry.", "error");
     } finally {
       setDeletingProfileId(null);
     }

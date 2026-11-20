@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import "./cinematic.css";
 import "./cinematic-reference.css";
@@ -11,27 +10,6 @@ import { TVSpatialNavProvider } from "@/components/TVSpatialNavProvider";
 import { DEFAULT_THEME_ID } from "@/lib/themes";
 import { getPwaIconUrl } from "@/lib/pwa-brand";
 import { INLINE_FETCH_AND_EXTENSION_GUARD_SCRIPT } from "@/lib/runtime-guards";
-
-const fontDisplay = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-  variable: "--font-display",
-  display: "swap",
-});
-
-const fontSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const fontMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-mono",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Zoku TV - Infinite Streaming Portal",
@@ -83,13 +61,20 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fontDisplay.variable} ${fontSans.variable} ${fontMono.variable}`}
+      
       data-theme="theme-crimson"
       data-scroll-behavior="smooth"
       data-zoku-layout={process.env.NEXT_PUBLIC_ZOKU_LAYOUT === "classic" ? "classic" : "cinematic"}
       suppressHydrationWarning
     >
       <head>
+        {/* Runtime stylesheet loading keeps builds independent of Google Fonts availability. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: INLINE_FETCH_AND_EXTENSION_GUARD_SCRIPT,

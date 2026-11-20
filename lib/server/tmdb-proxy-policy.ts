@@ -7,6 +7,8 @@ export type TmdbRequestScope =
   | { kind: "person"; media: "all"; id: number; path: string };
 
 const POSITIVE_ID = /^[1-9]\d{0,9}$/;
+// TMDB season 0 is valid and represents specials.
+const NONNEGATIVE_SEASON = /^(?:0|[1-9]\d{0,9})$/;
 
 export const ALLOWED_APPEND_TOKENS = new Set([
   "credits",
@@ -50,7 +52,7 @@ export function parseTmdbScope(segments: string[]): TmdbRequestScope | null {
     if (segments.length === 3 && ["credits", "videos", "similar", "recommendations"].includes(segments[2])) {
       return { kind: "child", media: segments[0], id, path };
     }
-    if (segments[0] === "tv" && segments.length === 4 && segments[2] === "season" && POSITIVE_ID.test(segments[3])) {
+    if (segments[0] === "tv" && segments.length === 4 && segments[2] === "season" && NONNEGATIVE_SEASON.test(segments[3])) {
       return { kind: "child", media: "tv", id, path };
     }
   }

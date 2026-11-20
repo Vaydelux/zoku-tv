@@ -320,7 +320,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   deleteProfile: async (profileId) => {
     const { user, currentProfile } = get();
-    if (!user) return;
+    if (!user) throw new Error("Sign in before deleting a profile.");
     try {
       await purgeProfileData(user.uid, profileId);
       clearLocalContinueWatching(profileId);
@@ -335,6 +335,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       }
     } catch (e) {
       console.error("Failed to delete profile", e);
+      throw e;
     }
   },
 

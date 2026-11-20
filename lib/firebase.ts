@@ -630,17 +630,17 @@ export async function purgeProfileData(userId: string, profileId: string) {
     "watchHistory",
     "episodeProgress",
     "searchHistory",
+    "serverConfig",
+    "collections",
   ];
 
   if (realDb) {
     await Promise.all(
       subcollections.map(async (sub) => {
-        try {
-          const snap = await getDocs(collection(realDb!, `${basePath}/${sub}`));
-          await Promise.all(snap.docs.map((d: any) => deleteDoc(d.ref)));
-        } catch (err) {
-          console.warn(`Failed to purge cloud subcollection ${sub}:`, err);
-        }
+        // Propagate Firestore failures. Never delete the parent and report
+        // success while inaccessible child documents remain orphaned.
+        const snap = await getDocs(collection(realDb!, `${basePath}/${sub}`));
+        await Promise.all(snap.docs.map((d: any) => deleteDoc(d.ref)));
       })
     );
   } else {

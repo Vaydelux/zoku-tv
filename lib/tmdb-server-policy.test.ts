@@ -8,6 +8,9 @@ import { tmdbProxyCache } from "./server/api-cache";
 test("TMDB proxy endpoint allowlist rejects arbitrary paths and invalid pagination", () => {
   assert.equal(parseTmdbScope(["discover", "movie"])?.media, "movie");
   assert.equal(parseTmdbScope(["tv", "21", "season", "2"])?.kind, "child");
+  assert.equal(parseTmdbScope(["tv", "21", "season", "0"])?.kind, "child");
+  assert.equal(parseTmdbScope(["tv", "21", "season", "00"]), null);
+  assert.equal(parseTmdbScope(["tv", "21", "season", "-1"]), null);
   assert.equal(parseTmdbScope(["movie", "42", "credits"])?.kind, "child");
   assert.equal(parseTmdbScope(["person", "1"])?.kind, "person");
   assert.equal(parseTmdbScope(["collection", "10"])?.kind, "collection");

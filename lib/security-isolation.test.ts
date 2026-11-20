@@ -97,6 +97,15 @@ describe("Security, Credential Hashing, & Profile Isolation (Phase 1)", () => {
       tmdbId: 200,
       title: "Beta Movie",
     });
+    await setDocument(getDocRef(`users/${uid}/profiles/${p1}/serverConfig`, "active"), {
+      version: 1,
+    });
+    await setDocument(getDocRef(`users/${uid}/profiles/${p1}/collections`, "favorites"), {
+      name: "Favorites",
+    });
+    await setDocument(getDocRef(`users/${uid}/profiles/${p2}/collections`, "my-list"), {
+      name: "Sibling collection",
+    });
 
     localStorage.setItem(`zoku_search_history_${uid}_${p1}`, JSON.stringify(["dune"]));
     localStorage.setItem(`zoku_search_history_${uid}_${p2}`, JSON.stringify(["arcane"]));
@@ -116,6 +125,9 @@ describe("Security, Credential Hashing, & Profile Isolation (Phase 1)", () => {
     assert.equal(p1WatchlistSnap.exists(), false);
     assert.equal(p1ContinueSnap.exists(), false);
     assert.equal(p2WatchlistSnap.exists(), true);
+    assert.equal((await getDocument(getDocRef(`users/${uid}/profiles/${p1}/serverConfig`, "active"))).exists(), false);
+    assert.equal((await getDocument(getDocRef(`users/${uid}/profiles/${p1}/collections`, "favorites"))).exists(), false);
+    assert.equal((await getDocument(getDocRef(`users/${uid}/profiles/${p2}/collections`, "my-list"))).exists(), true);
     assert.equal(localStorage.getItem(`zoku_search_history_${uid}_${p1}`), null);
     assert.equal(localStorage.getItem(`zoku_search_history_${uid}_${p2}`), '["arcane"]');
   });
