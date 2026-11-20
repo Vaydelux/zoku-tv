@@ -1,183 +1,134 @@
-const CACHE_NAME = "zoku-tv-shell-v4";
-const IMAGE_CACHE_NAME = "zoku-tv-images-v4";
-const ACTIVE_CACHES = [CACHE_NAME, IMAGE_CACHE_NAME];
+// Only cache public, static resources. Personalized HTML, auth and API responses
+// must never be persisted in CacheStorage (including for offline navigation).
+const SHELL_CACHE_NAME = "zoku-tv-public-v5";
+const IMAGE_CACHE_NAME = "zoku-tv-images-v5";
+const ACTIVE_CACHES = [SHELL_CACHE_NAME, IMAGE_CACHE_NAME];
 const MAX_IMAGE_ENTRIES = 120;
-
-const ALLOWED_IMAGE_HOSTS = new Set(["image.tmdb.org", "s4.anilist.co"]);
-
-const ASSETS_TO_CACHE = [
+const PUBLIC_IMAGE_HOSTS = new Set(["image.tmdb.org", "s4.anilist.co"]);
+const PRECACHE_URLS = [
   "/manifest.webmanifest",
   "/api/pwa-icon?size=192&theme=theme-crimson",
   "/api/pwa-icon?size=512&theme=theme-crimson",
 ];
 
-async function trimCache(cacheName, maxEntries) {
-  try {
-    const cache = await caches.open(cacheName);
-    const keys = await cache.keys();
-    if (keys.length > maxEntries) {
-      const excess = keys.slice(0, keys.length - maxEntries);
-      await Promise.all(excess.map((key) => cache.delete(key)));
-    }
-  } catch {
-    // Ignore cache trim errors
+function cacheable(response) {
+  if (!response || response.status !== 200) return false;
+  const policy = response.headers.get("Cache-Control") || "";
+  return !/(?:^|,)\s*(?:no-store|private)\b/i.test(policy) &&
+    !response.headers.has("Set-Cookie");
+}
+
+async function trimImages() {
+  const cache = await caches.open(IMAGE_CACHE_NAME);
+  const entries = await cache.keys();
+  if (entries.length > MAX_IMAGE_ENTRIES) {
+    await Promise.all(entries.slice(0, entries.length - MAX_IMAGE_ENTRIES).map((entry) => cache.delete(entry)));
   }
 }
 
-// Install Event
+async function cacheFirstImage(request) {
+  const cache = await caches.open(IMAGE_CACHE_NAME);
+  const saved = await cache.match(request);
+  if (saved) return saved;
+  const response = await fetch(request);
+  if (cacheable(response)) {
+    try {
+      await cache.put(request, response.clone());
+      await trimImages();
+    } catch {
+      // CacheStorage quota failures must never break image loading.
+    }
+  }
+  return response;
+}
+
+async function networkFirstPublicAsset(request) {
+  try {
+    const response = await fetch(request);
+    if (cacheable(response)) {
+      try {
+        const cache = await caches.open(SHELL_CACHE_NAME);
+        await cache.put(request, response.clone());
+      } catch {
+        // Never turn a successful network response into an error.
+      }
+    }
+    return response;
+  } catch {
+    return (await caches.match(request)) || Response.error();
+  }
+}
+
 self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => cache.addAll(ASSETS_TO_CACHE))
-      .catch((err) => {
-        console.warn("Service Worker pre-caching failed on install:", err);
+    caches.open(SHELL_CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .catch(() => {
+        // Offline or missing public icons: allow installation and retry online.
       })
   );
 });
 
-// Activate Event - Clean up stale caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((cacheNames) =>
-        Promise.all(
-          cacheNames.map((name) => {
-            if (!ACTIVE_CACHES.includes(name)) {
-              return caches.delete(name);
-            }
-            return Promise.resolve(false);
-          })
-        )
-      )
+    caches.keys()
+      .then((names) => Promise.all(
+        names.filter((name) => name.startsWith("zoku-tv-") && !ACTIVE_CACHES.includes(name))
+          .map((name) => caches.delete(name))
+      ))
       .then(() => self.clients.claim())
   );
 });
 
-// Support explicit cache clearing from Settings / Diagnostics
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "CLEAR_CACHES") {
+  if (event.data?.type === "CLEAR_CACHES") {
     event.waitUntil(
-      caches.keys().then((names) => Promise.all(names.map((n) => caches.delete(n))))
+      caches.keys().then((names) => Promise.all(
+        names.filter((name) => name.startsWith("zoku-tv-")).map((name) => caches.delete(name))
+      ))
     );
   }
 });
 
-// Fetch Event - Strict public-only caching strategy
 self.addEventListener("fetch", (event) => {
   const { request } = event;
-
-  // Only handle GET requests
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  const isSameOrigin = url.origin === self.location.origin;
+  const sameOrigin = url.origin === self.location.origin;
 
-  // 1. Public poster/backdrop CDNs (Cache First with bounded eviction)
-  if (!isSameOrigin) {
-    if (ALLOWED_IMAGE_HOSTS.has(url.hostname)) {
-      event.respondWith(
-        caches.open(IMAGE_CACHE_NAME).then((cache) =>
-          cache.match(request).then((cachedResponse) => {
-            const fetchPromise = fetch(request)
-              .then((networkResponse) => {
-                if (networkResponse && networkResponse.status === 200) {
-                  cache.put(request, networkResponse.clone());
-                  void trimCache(IMAGE_CACHE_NAME, MAX_IMAGE_ENTRIES);
-                }
-                return networkResponse;
-              })
-              .catch(() => null);
+  // Never serve a previous account's/profile's HTML from an offline cache.
+  // The explicit no-store fallback is safe even when the network is down.
+  if (sameOrigin && request.mode === "navigate") {
+    event.respondWith(
+      fetch(request).catch(() => new Response(
+        "Offline: reconnect to load Zoku TV. Account and profile pages are not saved for offline access.",
+        { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } }
+      ))
+    );
+    return;
+  }
 
-            return cachedResponse || fetchPromise || Response.error();
-          })
-        )
-      );
+  if (sameOrigin) {
+    // Next.js RSC payloads, API responses, session data and build chunks are never SW-cached.
+    if (url.pathname.startsWith("/_next/") ||
+        url.pathname.startsWith("/api/") && url.pathname !== "/api/pwa-icon" ||
+        request.headers.get("RSC") === "1" ||
+        url.searchParams.has("_rsc")) return;
+
+    if (url.pathname === "/manifest.webmanifest" || url.pathname === "/api/pwa-icon") {
+      event.respondWith(networkFirstPublicAsset(request));
+      return;
     }
-    // Never intercept or cache cross-origin APIs, Firebase Auth/Firestore, or third-party embed streams
+    const staticImage = /^\/(?:avatars|assets)\/.+\.(?:png|jpe?g|gif|svg|webp|ico)$/i.test(url.pathname);
+    if (staticImage) event.respondWith(cacheFirstImage(request));
     return;
   }
 
-  // 2. Never intercept Next.js build/HMR chunks, RSC flight payloads, or non-icon API routes
-  if (
-    url.pathname.startsWith("/_next/") ||
-    request.headers.get("RSC") === "1" ||
-    url.searchParams.has("_rsc") ||
-    (url.pathname.startsWith("/api/") && url.pathname !== "/api/pwa-icon")
-  ) {
-    return;
-  }
-
-  // 3. PWA manifest and themed icons (Network First with cache fallback)
-  if (url.pathname === "/manifest.webmanifest" || url.pathname === "/api/pwa-icon") {
-    event.respondWith(
-      fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
-
-  // 4. Same-origin static image assets (Stale-While-Revalidate)
-  if (url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|ico)$/i)) {
-    event.respondWith(
-      caches.open(IMAGE_CACHE_NAME).then((cache) =>
-        cache.match(request).then((cachedResponse) => {
-          const fetchPromise = fetch(request)
-            .then((networkResponse) => {
-              if (networkResponse && networkResponse.status === 200) {
-                cache.put(request, networkResponse.clone());
-              }
-              return networkResponse;
-            })
-            .catch(() => null);
-
-          return cachedResponse || fetchPromise || Response.error();
-        })
-      )
-    );
-    return;
-  }
-
-  // 5. Same-origin navigation requests only (Network First with honest offline fallback)
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() =>
-          caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) return cachedResponse;
-            return caches.match("/home").then(
-              (homeCached) =>
-                homeCached ||
-                new Response(
-                  "Offline: Zoku TV cannot reach the network and this route is not cached locally.",
-                  {
-                    status: 503,
-                    headers: { "Content-Type": "text/plain; charset=utf-8" },
-                  }
-                )
-            );
-          })
-        )
-    );
+  // Only established public poster CDNs may use the image cache.
+  if (url.protocol === "https:" && PUBLIC_IMAGE_HOSTS.has(url.hostname) &&
+      request.destination === "image") {
+    event.respondWith(cacheFirstImage(request));
   }
 });
