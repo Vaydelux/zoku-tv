@@ -12,43 +12,54 @@
   --color-on-surface: var(--on-surface);
   --color-on-surface-variant: var(--on-surface-variant);
   --color-border-custom: var(--border-color);
-  
-  /* The browser may load web fonts at runtime; reliable system fallbacks
-     must work even when Google Fonts is blocked or temporarily unavailable. */
-  --font-sans: "DM Sans", "Segoe UI", Arial, sans-serif;
-  --font-display: "Plus Jakarta Sans", "Segoe UI", Arial, sans-serif;
+
+  --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
 
-  --animate-fade-in: fade-in 0.3s ease-out;
-  --animate-scale-up: scale-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  --animate-slide-up: slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-fade-in: fade-in 0.24s ease-out;
+  --animate-scale-up: scale-up 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-up: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scale-up {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes slide-up {
-  from { transform: translateY(10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-/* Subtle 30s Ken Burns zoom & pan for detail page backdrop banners */
+/* Subtle slow cinema pan on title detail backdrops */
 @keyframes zoku-ken-burns {
   0% {
-    transform: scale(1.04) translate3d(-1.5%, -0.6%, 0);
-  }
-  50% {
-    transform: scale(1.1) translate3d(0.6%, -1.1%, 0);
+    transform: scale(1.02) translate3d(-0.8%, -0.3%, 0);
   }
   100% {
-    transform: scale(1.14) translate3d(1.75%, 0.9%, 0);
+    transform: scale(1.07) translate3d(0.8%, 0.4%, 0);
   }
 }
 
@@ -56,39 +67,33 @@
   will-change: transform;
   transform-origin: center center;
   backface-visibility: hidden;
-  animation: zoku-ken-burns 30s ease-in-out infinite alternate;
+  animation: zoku-ken-burns 32s ease-in-out infinite alternate;
 }
 
-/* Default token values — Crimson Cinema dark (overridden at runtime by applyTheme) */
+/* True Theater Obsidian default tokens (overridden at runtime by applyTheme) */
 :root,
 [data-theme="theme-crimson"] {
-  --background: #0e0a10;
-  --surface: #18121c;
-  --surface-hover: #251b2b;
-  --primary: #e11d48;
+  --background: #0b0b0f;
+  --surface: #14141a;
+  --surface-hover: #1c1c24;
+  --primary: #e50914;
   --primary-contrast: #ffffff;
-  --primary-glow: rgba(225, 29, 72, 0.42);
-  --accent: #fb7185;
-  --accent-contrast: #19040a;
-  --on-surface: #f8f5f7;
-  --on-surface-variant: rgba(244, 230, 236, 0.68);
-  --border-color: rgba(244, 63, 94, 0.22);
-  --shadow-glow: 0 10px 30px color-mix(in srgb, #e11d48 34%, transparent);
-  --shadow-elevated: 0 16px 42px rgba(0, 0, 0, 0.52);
-  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.44), 0 2px 8px rgba(0, 0, 0, 0.28);
-  --shadow-card-hover: 0 24px 52px color-mix(in srgb, #e11d48 40%, transparent), 0 14px 32px rgba(0, 0, 0, 0.52);
-  --background-gradient:
-    radial-gradient(ellipse 115% 78% at 8% -12%, color-mix(in srgb, #e11d48 30%, transparent) 0%, transparent 62%),
-    radial-gradient(ellipse 95% 68% at 96% 6%, color-mix(in srgb, #fb7185 24%, transparent) 0%, transparent 58%),
-    radial-gradient(ellipse 90% 64% at 50% 108%, color-mix(in srgb, #e11d48 20%, #18121c) 0%, transparent 64%),
-    linear-gradient(165deg, color-mix(in srgb, #0e0a10 82%, #e11d48 18%) 0%, #0e0a10 46%, color-mix(in srgb, #0e0a10 80%, #fb7185 20%) 100%);
-  --surface-gradient:
-    linear-gradient(145deg, color-mix(in srgb, #18121c 88%, #e11d48 12%) 0%, color-mix(in srgb, #18121c 94%, #0e0a10 6%) 55%, color-mix(in srgb, #251b2b 85%, #fb7185 15%) 100%);
-  --button-gradient:
-    linear-gradient(135deg, #e11d48 0%, color-mix(in srgb, #e11d48 65%, #fb7185 35%) 100%);
-  --orb-a: radial-gradient(circle, color-mix(in srgb, #e11d48 48%, transparent) 0%, transparent 70%);
-  --orb-b: radial-gradient(circle, color-mix(in srgb, #fb7185 42%, transparent) 0%, transparent 70%);
-  --orb-c: radial-gradient(circle, color-mix(in srgb, #e11d48 32%, #fb7185 28%) 0%, transparent 72%);
+  --primary-glow: rgba(229, 9, 20, 0.28);
+  --accent: #e50914;
+  --accent-contrast: #ffffff;
+  --on-surface: #f5f5f7;
+  --on-surface-variant: #a1a1aa;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --shadow-glow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --shadow-elevated: 0 18px 44px rgba(0, 0, 0, 0.65);
+  --shadow-card: 0 6px 18px rgba(0, 0, 0, 0.42);
+  --shadow-card-hover: 0 18px 40px rgba(0, 0, 0, 0.72);
+  --background-gradient: none;
+  --surface-gradient: none;
+  --button-gradient: none;
+  --orb-a: none;
+  --orb-b: none;
+  --orb-c: none;
 }
 
 html {
@@ -100,15 +105,21 @@ html {
   padding: 0;
   overflow-x: clip;
   overflow-y: visible;
+  color-scheme: dark;
+}
+
+html.appearance-light {
+  color-scheme: light;
 }
 
 body {
   background-color: var(--background);
   color: var(--on-surface);
   font-family: var(--font-sans), sans-serif;
-  transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    background-color 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease;
   height: auto;
   min-height: 100dvh;
   margin: 0;
@@ -116,21 +127,7 @@ body {
   overflow: visible;
 }
 
-/* Dedicated GPU-composited atmospheric background layer (avoids background-attachment:fixed CPU repaints on 32-bit TV WebViews) */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  pointer-events: none;
-  background-color: var(--background);
-  background-image: var(--background-gradient);
-  background-size: cover;
-  transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
-}
-
-/* Dedicated theme-matched surface pattern layer (driven by html[data-bg-pattern]) */
+/* Optional subtle user-selected background pattern (off by default) */
 body::after,
 .zoku-pattern-layer {
   content: "";
@@ -139,9 +136,7 @@ body::after,
   z-index: -1;
   pointer-events: none;
   opacity: 0;
-  transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease;
 }
 
 .zoku-pattern-layer {
@@ -151,10 +146,10 @@ body::after,
 
 html[data-bg-pattern="dot-matrix"] body::after,
 html[data-bg-pattern="dot-matrix"] .zoku-pattern-layer {
-  opacity: 0.72;
+  opacity: 0.22;
   background-image: radial-gradient(
     circle at 1px 1px,
-    color-mix(in srgb, var(--primary) 34%, var(--on-surface) 14%) 1.25px,
+    color-mix(in srgb, var(--on-surface) 22%, transparent) 1px,
     transparent 0
   );
   background-size: 24px 24px;
@@ -162,20 +157,20 @@ html[data-bg-pattern="dot-matrix"] .zoku-pattern-layer {
 
 html[data-bg-pattern="architect-grid"] body::after,
 html[data-bg-pattern="architect-grid"] .zoku-pattern-layer {
-  opacity: 0.68;
+  opacity: 0.18;
   background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--primary) 16%, var(--on-surface) 7%) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--accent) 14%, var(--on-surface) 7%) 1px, transparent 1px);
+    linear-gradient(to right, color-mix(in srgb, var(--on-surface) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--on-surface) 10%, transparent) 1px, transparent 1px);
   background-size: 44px 44px;
 }
 
 html[data-bg-pattern="diagonal-weave"] body::after,
 html[data-bg-pattern="diagonal-weave"] .zoku-pattern-layer {
-  opacity: 0.65;
+  opacity: 0.18;
   background-image: repeating-linear-gradient(
     135deg,
-    color-mix(in srgb, var(--primary) 18%, transparent) 0px,
-    color-mix(in srgb, var(--primary) 18%, transparent) 1px,
+    color-mix(in srgb, var(--on-surface) 9%, transparent) 0px,
+    color-mix(in srgb, var(--on-surface) 9%, transparent) 1px,
     transparent 1px,
     transparent 18px
   );
@@ -183,97 +178,79 @@ html[data-bg-pattern="diagonal-weave"] .zoku-pattern-layer {
 
 html[data-bg-pattern="crosshatch"] body::after,
 html[data-bg-pattern="crosshatch"] .zoku-pattern-layer {
-  opacity: 0.62;
+  opacity: 0.16;
   background-image:
-    repeating-linear-gradient(
-      45deg,
-      color-mix(in srgb, var(--primary) 14%, transparent) 0px,
-      color-mix(in srgb, var(--primary) 14%, transparent) 1px,
-      transparent 1px,
-      transparent 22px
-    ),
-    repeating-linear-gradient(
-      -45deg,
-      color-mix(in srgb, var(--accent) 12%, transparent) 0px,
-      color-mix(in srgb, var(--accent) 12%, transparent) 1px,
-      transparent 1px,
-      transparent 22px
-    );
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--on-surface) 8%, transparent) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--on-surface) 8%, transparent) 0 1px, transparent 1px 22px);
 }
 
 html[data-bg-pattern="aurora-rings"] body::after,
 html[data-bg-pattern="aurora-rings"] .zoku-pattern-layer {
-  opacity: 0.68;
+  opacity: 0.16;
   background-image: repeating-radial-gradient(
     circle at 50% 18%,
-    color-mix(in srgb, var(--primary) 18%, transparent) 0px,
-    color-mix(in srgb, var(--primary) 18%, transparent) 1px,
-    transparent 1px,
-    transparent 42px
+    color-mix(in srgb, var(--on-surface) 9%, transparent) 0 1px,
+    transparent 1px 42px
   );
 }
 
 html[data-bg-pattern="micro-lattice"] body::after,
 html[data-bg-pattern="micro-lattice"] .zoku-pattern-layer {
-  opacity: 0.72;
+  opacity: 0.2;
   background-image:
-    radial-gradient(circle at 0 0, color-mix(in srgb, var(--primary) 28%, transparent) 1.5px, transparent 1.6px),
-    radial-gradient(circle at 14px 14px, color-mix(in srgb, var(--accent) 24%, transparent) 1.5px, transparent 1.6px);
+    radial-gradient(circle at 0 0, color-mix(in srgb, var(--on-surface) 14%, transparent) 1.25px, transparent 1.35px),
+    radial-gradient(circle at 14px 14px, color-mix(in srgb, var(--on-surface) 10%, transparent) 1.25px, transparent 1.35px);
   background-size: 28px 28px;
 }
 
 html[data-bg-pattern="scanlines"] body::after,
 html[data-bg-pattern="scanlines"] .zoku-pattern-layer {
-  opacity: 0.6;
+  opacity: 0.18;
   background-image: repeating-linear-gradient(
     0deg,
-    color-mix(in srgb, var(--on-surface) 11%, var(--primary) 9%) 0px,
-    color-mix(in srgb, var(--on-surface) 11%, var(--primary) 9%) 1px,
-    transparent 1px,
-    transparent 7px
+    color-mix(in srgb, var(--on-surface) 8%, transparent) 0 1px,
+    transparent 1px 6px
   );
 }
 
-html.appearance-light[data-bg-pattern]:not([data-bg-pattern="none"]) body::after,
-html.appearance-light[data-bg-pattern]:not([data-bg-pattern="none"]) .zoku-pattern-layer {
-  opacity: 0.52;
-}
-
-/* Smooth GPU-composited route transition (transform + opacity only) */
+/* Smooth route transition */
 .page-route-transition {
-  animation: page-route-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: page-route-enter 0.18s cubic-bezier(0.22, 1, 0.36, 1);
   backface-visibility: hidden;
 }
 
 @keyframes page-route-enter {
   from {
-    opacity: 0.92;
-    transform: translate3d(0, 6px, 0);
+    opacity: 0.94;
   }
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
   }
 }
 
-/* Unified page shell that preserves the login-style atmospheric gradient background across all pages */
 .app-page-shell {
   position: relative;
-  min-height: 100vh;
+  min-height: 100dvh;
   color: var(--on-surface);
-  background: transparent;
+  background-color: var(--background);
 }
 
-/* Ensure content shells stay readable over gradients */
-.appearance-light .glass-panel {
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  background-image: var(--surface-gradient);
+.splash-shell {
+  position: relative;
+  display: flex;
+  min-height: 100dvh;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: var(--background);
+  color: var(--on-surface);
 }
 
 @layer components {
   .bg-primary {
+    background-color: var(--primary);
     color: var(--primary-contrast);
-    background-image: var(--button-gradient);
   }
 
   .text-readable {
@@ -285,94 +262,69 @@ html.appearance-light[data-bg-pattern]:not([data-bg-pattern="none"]) .zoku-patte
   }
 }
 
-.glass-panel {
-  background-color: color-mix(in srgb, var(--surface) 78%, transparent);
-  background-image: var(--surface-gradient);
-  backdrop-filter: blur(22px);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-elevated);
-}
-
-/* Elevated theme-reactive card / panel surface */
+/* Elevated obsidian surfaces — flat, disciplined, zero glassmorphism blur or glowing borders */
+.glass-panel,
 .theme-panel {
-  background-color: color-mix(in srgb, var(--surface) 88%, transparent);
-  background-image: var(--surface-gradient);
-  backdrop-filter: blur(18px);
+  background-color: var(--surface);
   color: var(--on-surface);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-card);
 }
 
-/* Full-width rails opt in via w-full; max-w-7xl containers preserve desktop reading measure */
-
-/* Visible, theme-reactive horizontal & vertical scrollbars for all scrollable containers */
-.custom-scrollbar,
-.rail-scroll-track,
+/* Hidden scrollbars for horizontal cinematic rails and chip tracks */
 .no-scrollbar,
-[class*="overflow-x-auto"],
-[class*="overflow-y-auto"] {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--primary) 65%, var(--on-surface-variant))
-    color-mix(in srgb, var(--on-surface) 8%, transparent);
+.rail-scroll-track {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.custom-scrollbar::-webkit-scrollbar,
-.rail-scroll-track::-webkit-scrollbar,
 .no-scrollbar::-webkit-scrollbar,
-[class*="overflow-x-auto"]::-webkit-scrollbar,
-[class*="overflow-y-auto"]::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.rail-scroll-track::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track,
-.rail-scroll-track::-webkit-scrollbar-track,
-.no-scrollbar::-webkit-scrollbar-track,
-[class*="overflow-x-auto"]::-webkit-scrollbar-track,
-[class*="overflow-y-auto"]::-webkit-scrollbar-track {
-  background: color-mix(in srgb, var(--on-surface) 8%, transparent);
+/* Clean subtle vertical scrollbars strictly for drawers & floating menus */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
   border-radius: 9999px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb,
-.rail-scroll-track::-webkit-scrollbar-thumb,
-.no-scrollbar::-webkit-scrollbar-thumb,
-[class*="overflow-x-auto"]::-webkit-scrollbar-thumb,
-[class*="overflow-y-auto"]::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--primary) 60%, var(--on-surface-variant));
-  border-radius: 9999px;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover,
-.rail-scroll-track::-webkit-scrollbar-thumb:hover,
-.no-scrollbar::-webkit-scrollbar-thumb:hover,
-[class*="overflow-x-auto"]::-webkit-scrollbar-thumb:hover,
-[class*="overflow-y-auto"]::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
-}
-
-/* Readable text on filled primary surfaces across all themes */
-.bg-primary {
-  color: var(--primary-contrast);
-  background-image: var(--button-gradient);
-}
-
-/* Unified Zoku floating menus, dropdown triggers, and option rows */
+/* Floating menus & popovers */
 @keyframes zoku-menu-enter {
   from {
     opacity: 0;
-    transform: scale(0.97);
+    transform: translateY(3px) scale(0.985);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
 .zoku-floating-menu {
-  background-color: color-mix(in srgb, var(--surface) 98%, var(--background));
-  border-color: color-mix(in srgb, var(--border-color) 90%, transparent);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45), 0 4px 14px rgba(0, 0, 0, 0.24);
+  background-color: var(--surface);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-elevated);
   overscroll-behavior: contain;
   isolation: isolate;
   animation: zoku-menu-enter 0.14s cubic-bezier(0.16, 1, 0.3, 1);
@@ -380,19 +332,13 @@ html.appearance-light[data-bg-pattern]:not([data-bg-pattern="none"]) .zoku-patte
 
 .appearance-light .zoku-floating-menu {
   background-color: var(--surface);
-  border-color: color-mix(in srgb, var(--on-surface) 14%, transparent);
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14), 0 4px 12px rgba(15, 23, 42, 0.08);
+  border-color: rgba(17, 18, 24, 0.12);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
 }
 
 .zoku-dropdown-trigger,
 .zoku-menu-item {
   box-shadow: none;
-}
-
-.zoku-dropdown-trigger:hover,
-.zoku-menu-item:hover {
-  box-shadow: none !important;
-  transform: none !important;
 }
 
 .zoku-server-select {
@@ -404,329 +350,108 @@ html.appearance-light[data-bg-pattern]:not([data-bg-pattern="none"]) .zoku-patte
   min-width: 0;
 }
 
-/* Global buttons & interactive controls: pointer cursor + hover elevation */
-button,
-input[type="button"],
-input[type="submit"],
-input[type="reset"],
-input[type="checkbox"],
-input[type="radio"],
-input[type="range"],
-select,
+/* Interactive cursor ergonomics (never overrides theater idle-cursor hiding) */
+button:not(:disabled),
+input[type="button"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="reset"]:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+input[type="range"]:not(:disabled),
+select:not(:disabled),
 summary,
 a[href],
 label[for],
-[role="button"],
-[role="option"],
-[role="tab"],
-[role="menuitem"],
-[role="switch"],
-[role="status"],
-.poster-card,
-.rail-nav-btn,
-.zoku-dropdown-trigger,
-.zoku-menu-item {
-  cursor: pointer !important;
-  transition:
-    box-shadow 0.22s ease,
-    transform 0.22s ease,
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    opacity 0.2s ease;
+[role="button"]:not([aria-disabled="true"]),
+[role="option"]:not([aria-disabled="true"]),
+[role="tab"]:not([aria-disabled="true"]),
+[role="menuitem"]:not([aria-disabled="true"]),
+[role="switch"]:not([aria-disabled="true"]) {
+  cursor: pointer;
 }
 
-button:not(:disabled) *,
-a[href] *,
-[role="button"]:not([aria-disabled="true"]) *,
-[role="option"]:not([aria-disabled="true"]) *,
-[role="tab"]:not([aria-disabled="true"]) *,
-[role="menuitem"]:not([aria-disabled="true"]) *,
-[role="switch"]:not([aria-disabled="true"]) *,
-[role="status"] * {
-  cursor: pointer !important;
+button:disabled,
+input:disabled,
+select:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
 }
 
-/* Scope primary glow strictly to primary CTA buttons so dropdowns, menu rows, and utility icons stay clean */
-button.bg-primary:hover:not(:disabled),
-a.bg-primary:hover,
-input[type="submit"].bg-primary:hover:not(:disabled) {
-  box-shadow: var(--shadow-glow);
+/* Theater idle-cursor hide wins over every nested interactive control */
+.theater-cursor-hidden,
+.theater-cursor-hidden * {
+  cursor: none !important;
 }
 
-button[role="option"]:hover,
-button[role="menuitem"]:hover,
-button[role="tab"]:hover,
-.zoku-header-icon:hover {
-  box-shadow: none;
-  transform: none;
-}
-
-/* Poster / title cards — brand-tinted depth + GPU layer promotion */
-.poster-card {
-  box-shadow: var(--shadow-card);
-  backface-visibility: hidden;
-  transform: translate3d(0, 0, 0);
-  transition:
-    box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.18s ease;
-}
-
-.poster-card:hover {
-  box-shadow: var(--shadow-card-hover);
-}
-
-/* Hero scrims — seamlessly blend hero media into the theme gradient background */
+/* Hero directional scrims: deep bottom + left gradient into obsidian canvas */
 .hero-media-scrim {
   position: absolute;
   inset: 0;
+  pointer-events: none;
   background:
-    linear-gradient(to top, color-mix(in srgb, var(--background) 96%, transparent) 0%, color-mix(in srgb, var(--background) 68%, transparent) 40%, transparent 74%),
-    linear-gradient(to right, color-mix(in srgb, var(--background) 90%, transparent) 0%, color-mix(in srgb, var(--background) 38%, transparent) 44%, transparent 74%),
-    linear-gradient(to bottom, color-mix(in srgb, var(--background) 42%, transparent), transparent 36%);
+    linear-gradient(
+      to top,
+      var(--background) 8%,
+      color-mix(in srgb, var(--background) 62%, transparent) 38%,
+      transparent 68%
+    ),
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--background) 92%, transparent) 0%,
+      color-mix(in srgb, var(--background) 48%, transparent) 38%,
+      transparent 72%
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--background) 72%, transparent) 0%,
+      transparent 24%
+    );
 }
 
 .appearance-light .hero-media-scrim {
   background:
-    linear-gradient(to top, color-mix(in srgb, var(--background) 96%, transparent) 0%, color-mix(in srgb, var(--background) 84%, transparent) 28%, transparent 58%),
-    linear-gradient(to right, color-mix(in srgb, var(--surface) 84%, transparent) 0%, color-mix(in srgb, var(--surface) 35%, transparent) 38%, transparent 68%),
-    linear-gradient(to bottom, color-mix(in srgb, var(--background) 25%, transparent), transparent 32%);
+    linear-gradient(
+      to top,
+      var(--background) 10%,
+      color-mix(in srgb, var(--background) 78%, transparent) 34%,
+      transparent 64%
+    ),
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--background) 90%, transparent) 0%,
+      color-mix(in srgb, var(--background) 42%, transparent) 40%,
+      transparent 74%
+    );
 }
 
-.hero-meta-chip {
-  background: color-mix(in srgb, var(--surface) 74%, transparent);
-  color: var(--on-surface);
-  border: 1px solid var(--border-color);
-  backdrop-filter: blur(12px);
-}
-
-.appearance-light .hero-meta-chip {
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  box-shadow: var(--shadow-card);
-}
-
-.hero-copy {
-  color: var(--on-surface);
-}
-
-.appearance-light .hero-copy {
-  text-shadow: none;
-}
-
-.appearance-light .hero-copy .hero-overview {
-  color: rgba(18, 18, 24, 0.78);
-}
-
-.appearance-light .site-nav {
-  background: color-mix(in srgb, var(--surface) 90%, transparent);
-}
-
-.appearance-light .ambient-orb {
-  opacity: 0.34;
-}
-
-.appearance-light .ambient-dot {
-  opacity: 0.25;
-  background: color-mix(in srgb, var(--primary) 45%, var(--on-surface));
-}
-
-/* Rail navigation buttons — stationary vertical anchor to prevent hover oscillation */
-.rail-nav-btn,
-.appearance-light .rail-nav-btn {
-  top: 50%;
-  translate: none !important;
-  transform: translateY(-50%) !important;
-  background-color: color-mix(in srgb, var(--surface) 92%, transparent);
-  background-image: var(--surface-gradient);
-  color: var(--on-surface);
-  border-color: var(--border-color);
-  box-shadow: var(--shadow-card);
-  transition:
-    opacity 0.2s ease,
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.appearance-light .rail-nav-btn {
-  background-color: color-mix(in srgb, var(--surface) 96%, transparent);
-  border-color: rgba(18, 18, 24, 0.16);
-}
-
-.rail-nav-btn:hover:not(:disabled),
-.appearance-light .rail-nav-btn:hover:not(:disabled),
-.rail-nav-btn:focus-visible,
-.appearance-light .rail-nav-btn:focus-visible {
-  translate: none !important;
-  transform: translateY(-50%) !important;
-  background-color: var(--surface);
-  color: var(--primary);
-  border-color: var(--primary);
-  box-shadow: var(--shadow-glow);
-}
-
-button:disabled,
-button:disabled *,
-input[type="button"]:disabled,
-input[type="submit"]:disabled,
-input[type="reset"]:disabled,
-[aria-disabled="true"],
-[aria-disabled="true"] * {
-  cursor: not-allowed !important;
-}
-
-/* Theme-reactive ambient atmosphere orbs (shared by Login/BrandShell and all in-app pages) */
-.ambient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(68px);
-  opacity: 0.56;
-  will-change: transform;
-  animation: ambient-drift 26s ease-in-out infinite alternate;
-}
-
-.ambient-orb--a {
-  top: -14%;
-  left: -8%;
-  width: min(58vw, 480px);
-  height: min(58vw, 480px);
-  background: var(--orb-a);
-}
-
-.ambient-orb--b {
-  top: 28%;
-  right: -10%;
-  width: min(52vw, 430px);
-  height: min(52vw, 430px);
-  background: var(--orb-b);
-  animation-duration: 32s;
-  animation-delay: -8s;
-}
-
-.ambient-orb--c {
-  bottom: -18%;
-  left: 24%;
-  width: min(64vw, 540px);
-  height: min(64vw, 540px);
-  background: var(--orb-c);
-  animation-duration: 38s;
-  animation-delay: -14s;
-}
-
-.splash-shell {
-  position: relative;
-  display: flex;
-  min-height: 100vh;
-  width: 100vw;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background-color: var(--background);
-  background-image: var(--background-gradient);
-  background-size: cover;
-  color: var(--on-surface);
-}
-
-.ambient-particles {
-  position: absolute;
-  inset: 0;
-}
-
-.ambient-dot {
-  --i: 0;
-  position: absolute;
-  left: calc(4% + (var(--i) * 4.1%));
-  top: calc(8% + ((var(--i) * 17) % 78) * 1%);
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--primary) 55%, var(--on-surface));
-  opacity: 0.4;
-  animation: ambient-float calc(12s + (var(--i) * 0.45s)) ease-in-out infinite;
-  animation-delay: calc(var(--i) * -0.55s);
-}
-
-@keyframes ambient-drift {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to { transform: translate3d(4%, 6%, 0) scale(1.08); }
-}
-
-@keyframes ambient-float {
-  0%, 100% { transform: translateY(0); opacity: 0.22; }
-  50% { transform: translateY(-18px); opacity: 0.6; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ambient-orb,
-  .ambient-dot {
-    animation: none;
-  }
-}
-
-/* Smooth horizontal rail edge fades & arrow scroll transitions */
-.rail-edge-fade-left {
-  position: absolute;
-  inset-block: 0;
-  left: 0;
-  z-index: 20;
-  width: clamp(2.25rem, 5.5vw, 4.75rem);
-  pointer-events: none;
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--background) 92%, transparent) 0%,
-    color-mix(in srgb, var(--background) 65%, transparent) 48%,
-    transparent 100%
-  );
-  transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.rail-edge-fade-right {
-  position: absolute;
-  inset-block: 0;
-  right: 0;
-  z-index: 20;
-  width: clamp(2.25rem, 5.5vw, 4.75rem);
-  pointer-events: none;
-  background: linear-gradient(
-    to left,
-    color-mix(in srgb, var(--background) 92%, transparent) 0%,
-    color-mix(in srgb, var(--background) 65%, transparent) 48%,
-    transparent 100%
-  );
-  transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
+/* Horizontal rail drag & touch physics */
 .rail-scroll-track {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
-  transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
-  cursor: grab;
+  scroll-snap-type: x mandatory;
 }
 
 .rail-scroll-track[data-dragging="true"] {
-  cursor: grabbing !important;
-  user-select: none !important;
+  cursor: grabbing;
+  user-select: none;
+  scroll-snap-type: none;
 }
 
-.rail-scroll-track[data-dragging="true"] .poster-card {
+.rail-scroll-track[data-dragging="true"] a,
+.rail-scroll-track[data-dragging="true"] button {
   pointer-events: none;
 }
 
 .rail-card-slot {
-  backface-visibility: hidden;
-  transform: translate3d(0, 0, 0);
-  will-change: transform, opacity;
+  scroll-snap-align: start;
+  flex-shrink: 0;
 }
 
 .rail-scroll-track[data-scrolling] .rail-card-slot {
   pointer-events: none;
 }
 
-/* Standardized Keyboard / 10-Foot TV Focus Ring System (font variables come from Next.js layout.tsx) */
-
+/* Accessible keyboard & 10-foot TV focus rings */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
@@ -742,94 +467,33 @@ html[data-tv-mode="true"] [tabindex]:focus {
   outline-offset: 2px;
 }
 
-.zoku-dropdown-trigger:focus-visible,
-.zoku-menu-item:focus-visible,
-.site-nav button:focus-visible,
-.site-nav a:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-  box-shadow: none !important;
-  transform: none !important;
-}
-
 .poster-card[data-tv-focusable="true"]:focus-visible,
 .rail-card-slot [data-tv-focusable="true"]:focus-visible,
 .zoku-genre-tile[data-tv-focusable="true"]:focus-visible,
 html[data-tv-mode="true"] .poster-card[data-tv-focusable="true"]:focus,
 html[data-tv-mode="true"] .rail-card-slot [data-tv-focusable="true"]:focus {
-  outline: 3px solid var(--primary);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 30%, transparent), var(--shadow-glow);
-  transform: translate3d(0, -4px, 0) scale(1.03);
+  outline: 2px solid var(--on-surface);
+  outline-offset: 2px;
   z-index: 25;
 }
 
-/* Android TV System WebView, 32-Bit Browsers, Downloader by AFTVnews, & 60fps Butter Mode Optimizations */
-html[data-tv-webview="true"] .ambient-orb,
-html[data-perf-mode="60fps"] .ambient-orb {
-  animation: none !important;
-  filter: none !important;
-  opacity: 0.28;
-}
-
-html[data-tv-webview="true"] .ambient-particles,
-html[data-perf-mode="60fps"] .ambient-particles,
-html[data-tv-webview="true"] .ambient-dot,
-html[data-perf-mode="60fps"] .ambient-dot {
-  display: none !important;
-  animation: none !important;
-}
-
-html[data-tv-webview="true"] .glass-panel,
-html[data-tv-webview="true"] .theme-panel,
-html[data-tv-webview="true"] .site-nav,
-html[data-perf-mode="60fps"] .glass-panel,
-html[data-perf-mode="60fps"] .theme-panel,
-html[data-perf-mode="60fps"] .site-nav,
-html[data-perf-mode="60fps"] .poster-card [class*="backdrop-blur"] {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-html[data-perf-mode="60fps"] .site-nav {
-  background-color: color-mix(in srgb, var(--background) 96%, var(--surface));
-}
-
-/* GPU Hardware Acceleration Flags for 32-bit Android TV & Downloader */
-html[data-gpu-force-compositing="true"] .rail-card-slot,
-html[data-gpu-force-compositing="true"] .poster-card,
-html[data-gpu-force-compositing="true"] .rail-scroll-track,
-html[data-gpu-force-compositing="true"] .hero-media-scrim {
-  transform: translate3d(0, 0, 0);
-  will-change: transform;
-  backface-visibility: hidden;
-}
-
-html[data-gpu-bypass-backdrop="true"] .glass-panel,
-html[data-gpu-bypass-backdrop="true"] .theme-panel,
-html[data-gpu-bypass-backdrop="true"] .site-nav,
+/* Android TV / 60fps safeguards */
+html[data-tv-webview="true"] [class*="backdrop-blur"],
+html[data-perf-mode="60fps"] [class*="backdrop-blur"],
 html[data-gpu-bypass-backdrop="true"] [class*="backdrop-blur"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
+html[data-gpu-force-compositing="true"] .rail-card-slot,
+html[data-gpu-force-compositing="true"] .rail-scroll-track,
+html[data-gpu-force-compositing="true"] .hero-media-scrim {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
 html[data-gpu-containment="true"] .rail-card-slot {
-  contain: layout paint;
-}
-
-html[data-gpu-containment="true"] .rail-section {
-  contain: content;
-}
-
-html[data-gpu-reduced-overdraw="true"] .ambient-orb,
-html[data-gpu-reduced-overdraw="true"] .ambient-particles,
-html[data-gpu-reduced-overdraw="true"] .ambient-dot {
-  display: none !important;
-  animation: none !important;
-}
-
-html[data-gpu-limit-texture="true"] .poster-card img {
-  image-rendering: -webkit-optimize-contrast;
+  contain: layout style;
 }
 
 .safe-area-bottom {
@@ -849,13 +513,8 @@ html[data-gpu-limit-texture="true"] .poster-card img {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .rail-scroll-track[data-scrolling="right"] .rail-card-slot,
-  .rail-scroll-track[data-scrolling="left"] .rail-card-slot {
-    animation: none !important;
-  }
   .zoku-detail-backdrop .zoku-detail-backdrop-media {
     animation: none !important;
-    will-change: auto;
     transform: none;
   }
 }

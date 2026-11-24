@@ -59,7 +59,7 @@ export function AutoNextOverlay({
       role="status"
       aria-live="polite"
       data-testid="auto-next-overlay"
-      className="fixed bottom-4 right-4 z-50 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-border-custom bg-surface/95 p-4 text-on-surface shadow-2xl backdrop-blur-xl"
+      className="fixed bottom-4 right-4 z-50 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-white/12 bg-[#14141A] p-4 text-[#F5F5F7] shadow-2xl"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-0.5">
@@ -131,7 +131,7 @@ export function WatchShortcutsPopover({
       role="dialog"
       aria-label="Keyboard shortcuts"
       data-testid="watch-shortcuts-popover"
-      className="fixed bottom-4 left-4 z-50 w-[min(19rem,calc(100vw-2rem))] rounded-2xl border border-border-custom bg-surface/95 p-4 text-on-surface shadow-2xl backdrop-blur-xl"
+      className="fixed bottom-4 left-4 z-50 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-white/12 bg-[#14141A] p-4 text-[#F5F5F7] shadow-2xl"
     >
       <div className="flex items-center justify-between mb-3">
         <span className="inline-flex items-center gap-2 text-xs font-semibold text-on-surface">

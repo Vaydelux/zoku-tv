@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { Bookmark, BookmarkCheck, CheckCircle2, Film, ImageOff, Play, Star } from "lucide-react";
+import React, { useCallback, useRef, useState } from "react";
+import { Bookmark, BookmarkCheck, CheckCircle2, Film, ImageOff, Play } from "lucide-react";
+import { computeCardTransformOrigin, type CardTransformOrigin } from "@/lib/rail-edge-origin";
 
 export interface CinematicMediaCardProps {
   title: string;
@@ -25,9 +26,11 @@ export interface CinematicMediaCardProps {
 }
 
 /**
- * The image link and the two secondary buttons are independent siblings.
- * This is keyboard/touch/TV accessible, unlike nested buttons in old cards.
- * No additional catalog request, cache or content-policy decisions live here.
+ * Artwork-first 2:3 cinematic poster card.
+ * - Unobstructed poster art at rest (only progress bar & subtle New mark).
+ * - Viewport/rail edge-aware hover scale (grows inward, never breaks row alignment).
+ * - Single clean bottom action tray inside directional gradient scrim on hover/focus.
+ * - Independent accessible sibling buttons (never nested interactive nodes).
  */
 export function CinematicMediaCard({
   title,
@@ -49,23 +52,59 @@ export function CinematicMediaCard({
   onToggleWatchlist,
   onToggleWatched,
 }: CinematicMediaCardProps) {
+  const cardRef = useRef<HTMLElement>(null);
   const [failedImage, setFailedImage] = useState<string | null>(null);
+  const [transformOrigin, setTransformOrigin] = useState<CardTransformOrigin>("center center");
+
   const imageAvailable = Boolean(imageUrl && imageUrl !== failedImage);
-  const progress = typeof progressPercent === "number" && Number.isFinite(progressPercent)
-    ? Math.max(0, Math.min(100, progressPercent))
-    : null;
+  const progress =
+    typeof progressPercent === "number" && Number.isFinite(progressPercent)
+      ? Math.max(0, Math.min(100, progressPercent))
+      : null;
+
+  const updateEdgeOrigin = useCallback(() => {
+    const el = cardRef.current;
+    if (!el || typeof window === "undefined") return;
+    const cardRect = el.getBoundingClientRect();
+    const scrollParent = el.closest(".rail-scroll-track");
+    const containerRect = scrollParent
+      ? scrollParent.getBoundingClientRect()
+      : { left: 0, right: window.innerWidth, width: window.innerWidth };
+    setTransformOrigin(computeCardTransformOrigin(cardRect, containerRect));
+  }, []);
+
+  const handleEnter = () => {
+    updateEdgeOrigin();
+    onPrefetch?.();
+  };
+
+  const metaParts: string[] = [];
+  if (year && year !== "N/A") metaParts.push(year);
+  if (rating && rating !== "N/A") metaParts.push(`★ ${rating}`);
+  else if (mediaLabel) metaParts.push(mediaLabel);
+  if (episodes) metaParts.push(`${episodes} EP`);
 
   return (
     <article
-      className={`cinematic-poster-card group/card relative min-w-0 shrink-0 ${fullWidth ? "w-full" : "w-[31vw] min-w-[112px] max-w-[210px] sm:w-[190px] lg:w-[200px]"}`}
+      ref={cardRef}
+      className={`cinematic-poster-card group/card relative min-w-0 shrink-0 ${
+        fullWidth
+          ? "w-full"
+          : "w-[36vw] min-w-[132px] max-w-[196px] sm:w-[172px] md:w-[184px] lg:w-[196px]"
+      }`}
       aria-label={title}
-      onPointerEnter={onPrefetch}
-      onFocus={onPrefetch}
+      onPointerEnter={handleEnter}
+      onFocus={handleEnter}
     >
-      <div className="cinematic-poster-art relative aspect-[2/3] overflow-hidden rounded-xl bg-surface border border-border-custom">
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface text-on-surface-variant">
-          <ImageOff className="h-8 w-8 opacity-35" aria-hidden="true" />
+      <div
+        style={{ transformOrigin }}
+        className="cinematic-poster-art relative aspect-[2/3] overflow-hidden rounded-lg bg-surface"
+      >
+        {/* Fallback placeholder when image is unavailable */}
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface px-3 text-center text-on-surface-variant">
+          <ImageOff className="h-7 w-7 opacity-30" aria-hidden="true" />
         </div>
+
         {imageAvailable && (
           <img
             key={imageUrl}
@@ -75,19 +114,25 @@ export function CinematicMediaCard({
             decoding="async"
             draggable={false}
             onError={() => setFailedImage(imageUrl!)}
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover/card:scale-[1.035] group-focus-within/card:scale-[1.035]"
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           />
         )}
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-2/5 bg-gradient-to-t from-black/75 via-black/20 to-transparent" aria-hidden="true" />
+        {/* Subtle New release marker */}
         {recent && (
-          <span data-testid="recent-release-tag" className="pointer-events-none absolute top-2 left-2 z-20 rounded-md bg-primary px-1.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary-contrast">New</span>
+          <span
+            data-testid="recent-release-tag"
+            className="pointer-events-none absolute top-2 left-2 z-20 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-contrast"
+          >
+            New
+          </span>
         )}
 
+        {/* Primary clickable artwork layer (draggable inside horizontal rails) */}
         <button
           type="button"
           data-tv-focusable="true"
-          className="cinematic-poster-open absolute inset-0 z-10 cursor-pointer rounded-xl focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-primary focus-visible:outline-offset-[-3px]"
+          className="cinematic-poster-open absolute inset-0 z-10 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-on-surface focus-visible:outline-offset-[-2px]"
           onClick={onOpen}
           aria-label={`Open ${title} details`}
           title={overview || title}
@@ -95,89 +140,116 @@ export function CinematicMediaCard({
           <span className="sr-only">Open {title} details</span>
         </button>
 
-        {/* The reference keeps its primary Play affordance centered over
-            the artwork, with the bookmark as a separate top-right action. */}
-        {onPlay && (
-          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+        {/* Directional hover scrim + disciplined bottom action bar */}
+        <div
+          className="cinematic-hover-scrim pointer-events-none absolute inset-0 z-20 flex flex-col justify-end p-2.5"
+          style={{
+            background:
+              "linear-gradient(to top, rgba(11,11,15,0.96) 6%, rgba(11,11,15,0.68) 46%, transparent 82%)",
+          }}
+        >
+          {overview && (
+            <p className="mb-2 line-clamp-2 text-[11px] leading-snug text-[#F5F5F7]/85">
+              {overview}
+            </p>
+          )}
+
+          <div className="pointer-events-auto flex items-center gap-1.5">
+            {onPlay && (
+              <button
+                type="button"
+                onClick={onPlay}
+                aria-label={`Play ${title}`}
+                data-tv-focusable="true"
+                className="cinematic-poster-action inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-contrast transition-opacity hover:opacity-90"
+              >
+                <Play className="h-3.5 w-3.5 fill-current ml-0.5" aria-hidden="true" />
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={onPlay}
-              aria-label={`Play ${title}`}
               data-tv-focusable="true"
-              className="cinematic-poster-action pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-contrast shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              data-testid="resting-quick-add-btn"
+              aria-pressed={saved}
+              aria-label={saved ? `Remove ${title} from Watchlist` : `Add ${title} to Watchlist`}
+              title={saved ? "In My List" : "Add to My List"}
+              onClick={onToggleWatchlist}
+              className={`cinematic-poster-action inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                saved
+                  ? "border-primary bg-primary text-primary-contrast"
+                  : "border-white/25 bg-[#14141A]/90 text-[#F5F5F7] hover:border-white hover:bg-[#1C1C24]"
+              }`}
             >
-              <Play className="h-5 w-5 fill-current" aria-hidden="true" />
+              {saved ? (
+                <BookmarkCheck className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <Bookmark className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+            </button>
+
+            {onQuickTrailer && (
+              <button
+                type="button"
+                data-tv-focusable="true"
+                data-testid="card-quick-trailer-btn"
+                aria-label={`Watch trailer for ${title}`}
+                title={`Trailer: ${title}`}
+                onClick={onQuickTrailer}
+                className="cinematic-poster-action inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#14141A]/90 text-[#F5F5F7] transition-colors hover:border-white hover:bg-[#1C1C24]"
+              >
+                <Film className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              data-tv-focusable="true"
+              aria-pressed={watched}
+              aria-label={watched ? `Mark ${title} as not watched` : `Mark ${title} as watched`}
+              title={watched ? "Watched" : "Mark as watched"}
+              onClick={onToggleWatched}
+              className={`cinematic-poster-action zoku-watched-toggle ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                watched
+                  ? "border-emerald-500/70 bg-emerald-500/20 text-emerald-400"
+                  : "border-white/25 bg-[#14141A]/90 text-[#F5F5F7] hover:border-white hover:bg-[#1C1C24]"
+              }`}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
-        )}
-        <div className="absolute right-2 top-2 z-20 flex flex-col gap-1.5">
-          <button
-            type="button"
-            data-tv-focusable="true"
-            data-testid="resting-quick-add-btn"
-            aria-pressed={saved}
-            aria-label={saved ? `Remove ${title} from Watchlist` : `Add ${title} to Watchlist`}
-            onClick={onToggleWatchlist}
-            className={`cinematic-poster-action flex h-11 w-11 items-center justify-center rounded-full border border-white/25 text-white shadow-sm transition-colors ${saved ? "bg-primary border-primary text-primary-contrast" : "bg-black/70 hover:bg-primary hover:text-primary-contrast"}`}
-          >
-            {saved ? <BookmarkCheck className="h-4 w-4" aria-hidden="true" /> : <Bookmark className="h-4 w-4" aria-hidden="true" />}
-          </button>
-          {onQuickTrailer && (
-            <button
-              type="button"
-              data-tv-focusable="true"
-              data-testid="card-quick-trailer-btn"
-              aria-label={`Watch trailer for ${title}`}
-              title={`Watch trailer for ${title}`}
-              onClick={onQuickTrailer}
-              className="cinematic-poster-action flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/70 text-white shadow-sm transition-colors hover:bg-primary hover:text-primary-contrast"
-            >
-              <Film className="h-4 w-4" aria-hidden="true" />
-            </button>
-          )}
-        </div>
-        <div className="absolute right-2 bottom-2 z-20">
-          <button
-            type="button"
-            data-tv-focusable="true"
-            aria-pressed={watched}
-            aria-label={watched ? `Mark ${title} as not watched` : `Mark ${title} as watched`}
-            onClick={onToggleWatched}
-            className={`cinematic-poster-action zoku-watched-toggle flex h-11 w-11 items-center justify-center rounded-full border border-white/25 text-white shadow-sm transition-colors ${watched ? "bg-primary border-primary text-primary-contrast" : "bg-black/70 hover:bg-primary hover:text-primary-contrast"}`}
-          >
-            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-          </button>
         </div>
 
-        <div className="pointer-events-none absolute bottom-2 left-2 right-14 z-20 flex min-w-0 items-center gap-1 text-xs font-semibold text-white drop-shadow-sm">
-          {watched ? <span className="max-w-full truncate rounded bg-black/75 px-2 py-1">Watched</span>
-          : progress !== null && progress > 0 ? <span className="max-w-full truncate rounded bg-black/75 px-2 py-1">Resume · {progress}%</span>
-          : null}
-        </div>
-
+        {/* Thin bottom playback progress track */}
         {progress !== null && progress > 0 && (
-          <div data-testid="card-play-progress-bar" role="progressbar" aria-label={`${title} playback progress`}
-            aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-1 overflow-hidden bg-white/35">
-            <div className="h-full bg-primary transition-[width] duration-300" style={{ width: `${progress}%` }} />
+          <div
+            data-testid="card-play-progress-bar"
+            role="progressbar"
+            aria-label={`${title} playback progress`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress}
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-[3px] overflow-hidden bg-white/25"
+          >
+            <div
+              className="h-full bg-primary transition-[width] duration-300"
+              style={{ width: `${progress}%` }}
+            />
           </div>
         )}
       </div>
 
+      {/* Quiet editorial caption below poster */}
       <div className="min-w-0 px-0.5 pt-2">
-        <h3 className="line-clamp-2 min-h-[2.25rem] text-[13px] font-semibold leading-[1.2rem] text-on-surface sm:text-sm">{title}</h3>
-        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-on-surface-variant">
-          {rating !== "N/A" && <>
-            <span className="inline-flex items-center gap-0.5 font-semibold text-on-surface">
-              <Star className="h-3 w-3 fill-primary text-primary" aria-hidden="true" /> {rating}
-            </span>
-            <span aria-hidden="true">·</span>
-          </>}
-          <span>{year}</span>
-          <span aria-hidden="true">·</span>
-          <span className="truncate">{mediaLabel}</span>
-          {episodes ? <><span aria-hidden="true">·</span><span>{episodes} EP</span></> : null}
-        </div>
+        <h3 className="truncate text-[13px] font-medium leading-snug text-on-surface sm:text-sm">
+          {title}
+        </h3>
+        {metaParts.length > 0 && (
+          <p className="mt-0.5 truncate text-[11px] text-on-surface-variant tabular-nums">
+            {metaParts.join(" · ")}
+            {watched ? " · Watched" : ""}
+          </p>
+        )}
       </div>
     </article>
   );

@@ -2,35 +2,33 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { Play, Plus, Check, Star, Info, CheckCircle2 } from "lucide-react";
+import { Play, Plus, Check, Star, Info } from "lucide-react";
 import { TMDBTitle } from "@/lib/tmdb";
-import { useWatchlistStore, useWatchHistoryStore } from "@/stores";
+import { useWatchlistStore } from "@/stores";
 
-const DEFAULT_INTERVAL = 6000;
-const FALLBACK_BACKDROP =
-  "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1920";
+const DEFAULT_INTERVAL = 7500;
 
 interface HeroCarouselProps {
   slides: TMDBTitle[];
   loading?: boolean;
 }
 
-function getBackdropUrl(backdropPath: string | null | undefined) {
-  return backdropPath
-    ? `https://image.tmdb.org/t/p/original${backdropPath}`
-    : FALLBACK_BACKDROP;
+function getBackdropUrl(backdropPath: string | null | undefined): string | null {
+  if (!backdropPath) return null;
+  return backdropPath.startsWith("http")
+    ? backdropPath
+    : `https://image.tmdb.org/t/p/original${backdropPath}`;
 }
 
 export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
   const router = useRouter();
   const { addItem, removeItem, hasItem } = useWatchlistStore();
-  const { isCompleted, toggleCompleted } = useWatchHistoryStore();
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [isTabHidden, setIsTabHidden] = useState(false);
+  const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
   const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const slideCount = slides.length;
@@ -69,7 +67,6 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
 
   useEffect(() => {
     if (slideCount <= 1 || isPaused || reducedMotion || isTabHidden) return;
-
     const id = setInterval(goNext, DEFAULT_INTERVAL);
     return () => clearInterval(id);
   }, [slideCount, isPaused, reducedMotion, isTabHidden, activeIndex, goNext]);
@@ -77,9 +74,10 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
   useEffect(() => {
     if (slideCount <= 1) return;
     const next = slides[(activeIndex + 1) % slideCount];
-    if (next?.backdrop_path) {
+    const url = getBackdropUrl(next?.backdrop_path || next?.poster_path);
+    if (url) {
       const img = new Image();
-      img.src = getBackdropUrl(next.backdrop_path);
+      img.src = url;
     }
   }, [activeIndex, slides, slideCount]);
 
@@ -92,7 +90,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
   const pauseBriefly = () => {
     setIsPaused(true);
     if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
-    resumeTimeoutRef.current = setTimeout(() => setIsPaused(false), 8000);
+    resumeTimeoutRef.current = setTimeout(() => setIsPaused(false), 9000);
   };
 
   const handleDotClick = (index: number) => {
@@ -102,12 +100,14 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
 
   if (!loading && slideCount === 0) return null;
 
-  const heroName = current?.title || current?.name || "Untitled Masterpiece";
-  const heroMediaType = current?.media_type || "movie";
-  const heroRating = current?.vote_average ? current.vote_average.toFixed(1) : "N/A";
-  const heroYear = (current?.release_date || current?.first_air_date || "").split("-")[0];
+  const heroName = current?.title || current?.name || "";
+  const heroMediaType = current?.media_type === "tv" ? "tv" : "movie";
+  const heroRating =
+    current?.vote_average && current.vote_average > 0
+      ? current.vote_average.toFixed(1)
+      : null;
+  const heroYear = (current?.release_date || current?.first_air_date || "").slice(0, 4);
   const isInWatchlist = current ? hasItem(heroMediaType, current.id) : false;
-  const isInHistoryCompleted = current ? isCompleted(heroMediaType, current.id) : false;
 
   const handleWatchlistToggle = () => {
     if (!current) return;
@@ -126,26 +126,9 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
     }
   };
 
-  const handleHistoryToggle = () => {
-    if (!current) return;
-    void toggleCompleted({
-      media_type: heroMediaType,
-      tmdbId: current.id,
-      season: heroMediaType === "tv" ? 1 : null,
-      episode: heroMediaType === "tv" ? 1 : null,
-      title: heroName,
-      overview: current.overview ?? null,
-      vote_average: current.vote_average ?? null,
-      poster_path: current.poster_path ?? null,
-      backdrop_path: current.backdrop_path ?? null,
-    });
-  };
-
-  const transitionDuration = reducedMotion ? 0 : 0.8;
-
   return (
     <section
-      className="zoku-hero relative isolate w-full"
+      className="zoku-hero relative isolate w-full overflow-hidden bg-background"
       aria-roledescription="carousel"
       aria-label="Featured titles"
       onMouseEnter={() => setIsPaused(true)}
@@ -159,125 +142,143 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
         }
       }}
     >
-      <div className="pointer-events-none absolute inset-0 overflow-hidden bg-background">
-        <AnimatePresence initial={false}>
-          {current && (
-            <motion.div
-              key={current.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: transitionDuration, ease: "easeInOut" }}
-              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-              style={{ backgroundImage: `url('${getBackdropUrl(current.backdrop_path)}')` }}
-              aria-hidden
-            />
-          )}
-        </AnimatePresence>
-        <div className="hero-media-scrim" aria-hidden />
+      {/* Full-bleed artwork canvas */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0B0B0F]" aria-hidden="true">
+        {slides.map((slide, idx) => {
+          const url = getBackdropUrl(slide.backdrop_path || slide.poster_path);
+          const isCurrent = idx === activeIndex;
+          const canRenderImg = Boolean(url && !failedImages[slide.id]);
+
+          return (
+            <div
+              key={slide.id}
+              className={`absolute inset-0 transition-opacity duration-700 ease-out ${
+                isCurrent ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {canRenderImg ? (
+                <img
+                  src={url!}
+                  alt=""
+                  fetchPriority={idx === 0 ? "high" : "auto"}
+                  loading={idx === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                  draggable={false}
+                  onError={() =>
+                    setFailedImages((prev) => ({ ...prev, [slide.id]: true }))
+                  }
+                  className="h-full w-full object-cover object-[center_20%] sm:object-center"
+                />
+              ) : (
+                <div className="h-full w-full bg-[linear-gradient(135deg,#1A1A24_0%,#111118_48%,#0B0B0F_100%)]" />
+              )}
+            </div>
+          );
+        })}
+
+        {/* Bottom + left directional cinema scrims */}
+        <div className="hero-media-scrim" aria-hidden="true" />
       </div>
 
-      <div className="zoku-hero-content relative z-[1] mx-auto flex w-full min-h-[clamp(320px,50dvh,680px)] flex-col justify-end px-4 pb-12 pt-14 sm:px-6 sm:pb-12 sm:pt-24 lg:px-8 lg:pb-14">
+      {/* Editorial Billboard Foreground */}
+      <div className="zoku-hero-content relative z-[1] mx-auto flex w-full flex-col justify-end">
         {loading && !current ? (
-          <div className="flex w-full max-w-3xl flex-col gap-4 animate-pulse">
-            <div className="h-6 w-40 rounded-full bg-surface" />
-            <div className="h-12 w-full max-w-xl rounded-xl bg-surface" />
-            <div className="h-16 w-full max-w-2xl rounded-xl bg-surface" />
-            <div className="flex gap-3">
-              <div className="h-10 w-32 rounded-xl bg-surface" />
-              <div className="h-10 w-32 rounded-xl bg-surface" />
+          <div className="flex w-full max-w-xl flex-col gap-4 animate-pulse">
+            <div className="h-3.5 w-32 rounded bg-surface" />
+            <div className="h-12 w-full max-w-md rounded-lg bg-surface" />
+            <div className="h-14 w-full max-w-lg rounded-lg bg-surface" />
+            <div className="flex gap-3 pt-1">
+              <div className="h-11 w-28 rounded-lg bg-surface" />
+              <div className="h-11 w-32 rounded-lg bg-surface" />
             </div>
           </div>
         ) : current ? (
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={current.id}
-              initial={{ opacity: 0, y: reducedMotion ? 0 : 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: reducedMotion ? 0 : -8 }}
-              transition={{ duration: reducedMotion ? 0 : 0.45, ease: "easeOut" }}
-              className="hero-copy flex w-full max-w-3xl flex-col items-start gap-2.5 sm:gap-4"
+          <div
+            key={current.id}
+            className="hero-copy flex w-full flex-col items-start gap-3 sm:gap-3.5 animate-[fade-in_0.35s_ease-out]"
+          >
+            {/* Quiet single-line metadata row — zero badge pills */}
+            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-on-surface-variant">
+              {heroRating && (
+                <>
+                  <span className="inline-flex items-center gap-1 font-semibold text-on-surface tabular-nums">
+                    <Star className="h-3.5 w-3.5 fill-primary text-primary" aria-hidden="true" />
+                    {heroRating}
+                  </span>
+                  <span aria-hidden="true">·</span>
+                </>
+              )}
+              {heroYear && (
+                <>
+                  <span className="tabular-nums">{heroYear}</span>
+                  <span aria-hidden="true">·</span>
+                </>
+              )}
+              <span>{heroMediaType === "tv" ? "Series" : "Film"}</span>
+            </div>
+
+            <h1
+              className="font-display font-bold tracking-tight text-on-surface line-clamp-2"
+              aria-live="polite"
             >
-              <div className="hero-meta-chip flex flex-wrap items-center gap-2 text-[11px] text-on-surface-variant">
-                <span className="rounded-full border border-primary/40 bg-primary/15 px-2.5 py-0.5 font-bold text-primary">Featured</span>
-                <span className="rounded-full border border-border-custom/70 bg-surface/60 px-2.5 py-0.5 font-semibold text-on-surface">
-                  {heroMediaType === "tv" ? "Series" : "Movie"}
-                </span>
-              </div>
+              {heroName}
+            </h1>
 
-              <h1
-                className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight text-on-surface leading-[1.08] line-clamp-2 sm:line-clamp-none"
-                aria-live="polite"
-              >
-                {heroName}
-              </h1>
-
-              <div className="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
-                <span className="flex items-center gap-1 font-semibold text-on-surface">
-                  <Star className="h-4 w-4 fill-primary text-primary" aria-hidden="true" />
-                  {heroRating}
-                </span>
-                {heroYear && <><span aria-hidden="true">·</span><span>{heroYear}</span></>}
-                <span aria-hidden="true">·</span>
-                <span>{heroMediaType === "tv" ? "TV Series" : "Movie"}</span>
-              </div>
-
-              <p className="hero-overview text-xs sm:text-sm text-on-surface-variant max-w-2xl line-clamp-2 sm:line-clamp-3 md:line-clamp-4 leading-relaxed">
+            {current.overview && (
+              <p className="hero-overview max-w-xl text-sm leading-relaxed text-on-surface/80 line-clamp-2 sm:line-clamp-3">
                 {current.overview}
               </p>
+            )}
 
-              <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 pt-1 sm:pt-2">
-                <button
-                  onClick={() => router.push(`/watch/${heroMediaType}/${current.id}`)}
-                  className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-primary py-2 px-4 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-primary-contrast active:scale-95 transition-all duration-300"
-                >
-                  <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current shrink-0" />
-                  <span>Play</span>
-                </button>
+            <div className="flex flex-wrap items-center gap-2.5 pt-2">
+              <button
+                type="button"
+                data-tv-focusable="true"
+                onClick={() => router.push(`/watch/${heroMediaType}/${current.id}`)}
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-contrast transition-opacity hover:opacity-90 active:scale-[0.98]"
+              >
+                <Play className="h-4 w-4 fill-current shrink-0" aria-hidden="true" />
+                <span>Play</span>
+              </button>
 
-                <button
-                  onClick={() => router.push(`/title/${heroMediaType}/${current.id}`)}
-                  className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-surface hover:bg-surface-hover border border-border-custom py-2 px-4 sm:py-3 sm:px-6 text-xs md:text-sm font-semibold text-on-surface hover:text-primary active:scale-95 transition-all duration-300"
-                >
-                  <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                  <span>More info</span>
-                </button>
+              <button
+                type="button"
+                data-tv-focusable="true"
+                onClick={() => router.push(`/title/${heroMediaType}/${current.id}`)}
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/15 bg-[#14141A]/90 px-5 py-2.5 text-sm font-semibold text-[#F5F5F7] transition-colors hover:bg-[#1C1C24] hover:border-white/25 active:scale-[0.98]"
+              >
+                <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>More Info</span>
+              </button>
 
-                <button
-                  onClick={handleWatchlistToggle}
-                  aria-pressed={isInWatchlist}
-                  className={`p-2 sm:p-3 rounded-xl border transition-all duration-300 ${
-                    isInWatchlist
-                      ? "bg-primary/20 border-primary text-primary"
-                      : "bg-surface border-border-custom hover:border-primary text-on-surface"
-                  }`}
-                  title="Add/Remove Watchlist"
-                  aria-label={isInWatchlist ? "Remove from watchlist" : "Add to watchlist"}
-                >
-                  {isInWatchlist ? <Check className="h-4 w-4 sm:h-5 sm:w-5" /> : <Plus className="h-4 w-4 sm:h-5 sm:w-5" />}
-                </button>
-
-                {process.env.NEXT_PUBLIC_ZOKU_LAYOUT === "classic" && <button
-                  onClick={handleHistoryToggle}
-                  className={`flex items-center gap-1.5 rounded-xl border py-2 px-3 sm:py-3 sm:px-4 text-xs font-semibold transition-all duration-300 ${
-                    isInHistoryCompleted
-                      ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-400"
-                      : "bg-surface border-border-custom hover:border-primary text-on-surface-variant hover:text-on-surface"
-                  }`}
-                  title={isInHistoryCompleted ? "Completed in Watch History" : "Mark as Watched (Add to Watch History)"}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                  <span>{isInHistoryCompleted ? "Watched" : "Mark watched"}</span>
-                </button>}
-              </div>
-            </motion.div>
-          </AnimatePresence>
+              <button
+                type="button"
+                data-tv-focusable="true"
+                onClick={handleWatchlistToggle}
+                aria-pressed={isInWatchlist}
+                aria-label={isInWatchlist ? "Remove from watchlist" : "Add to watchlist"}
+                title={isInWatchlist ? "In My List" : "Add to My List"}
+                className={`inline-flex h-11 w-11 items-center justify-center rounded-lg border transition-colors active:scale-[0.98] ${
+                  isInWatchlist
+                    ? "border-primary bg-primary/15 text-primary"
+                    : "border-white/15 bg-[#14141A]/90 text-[#F5F5F7] hover:bg-[#1C1C24] hover:border-white/25"
+                }`}
+              >
+                {isInWatchlist ? (
+                  <Check className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <Plus className="h-5 w-5" aria-hidden="true" />
+                )}
+              </button>
+            </div>
+          </div>
         ) : null}
       </div>
 
+      {/* Minimalist slide progress bars */}
       {slideCount > 1 && (
         <div
-          className="absolute bottom-5 right-4 z-[3] flex items-center gap-1.5 sm:bottom-8 sm:right-8 sm:gap-2"
+          className="absolute bottom-3 left-[var(--cinematic-gutter)] z-[3] flex items-center gap-1"
           role="tablist"
           aria-label="Carousel slides"
         >
@@ -289,17 +290,10 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
               aria-selected={index === activeIndex}
               aria-label={`Go to slide ${index + 1}: ${slide.title || slide.name}`}
               onClick={() => handleDotClick(index)}
-              className={`rounded-full transition-all duration-300 ${
-                index === activeIndex
-                  ? "h-2 w-6 sm:w-8 bg-primary"
-                  : "h-2 w-2 bg-on-surface/40 hover:bg-on-surface/70"
-              }`}
             />
           ))}
         </div>
       )}
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-16 bg-gradient-to-t from-background to-transparent sm:h-24" />
     </section>
   );
 }

@@ -29,7 +29,7 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
   );
 
   const prefetchedRef = useRef(false);
-  const name = title.title || title.name || "Untitled Masterpiece";
+  const name = title.title || title.name || "Untitled";
   const rawImagePath = resolvedBackdrop || title.backdrop_path || title.poster_path;
   const imagePath = rawImagePath
     ? rawImagePath.startsWith("http")

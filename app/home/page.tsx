@@ -445,29 +445,42 @@ export default function HomePage() {
         <HeroCarousel slides={heroSlides} loading={loadingTrending} />
       )}
 
-      {/* Reference-style understated browse controls, original filter tools retained. */}
+      {/* Responsive inline browse bar beneath hero */}
       <HomeBrowseShell
         cinematic={cinematicLayout}
         catalogMode={catalogMode}
         onCatalogChange={handleCatalogToggle}
         hasHero={loadingTrending || (catalogMode === "anime" ? animeHero.length > 0 : heroSlides.length > 0)}
+        isKidMode={isKidMode}
+        filterChips={filterChips}
+        selectedFilter={selectedRailFilter}
+        onSelectFilter={setSelectedRailFilter}
+        sortSlot={
+          selectedRailFilter !== "history" ? (
+            <RailSortDropdown
+              value={railSort}
+              onChange={(nextSort) => setRailSort(nextSort)}
+              ariaLabel="Sort all rails"
+              testId="all-rails-sort-dropdown"
+            />
+          ) : null
+        }
       >
       <div className="relative z-20 mx-auto -mt-3 sm:-mt-4 w-full px-3 sm:px-6 lg:px-8">
-        <div className="glass-panel rounded-2xl p-2.5 sm:p-4 shadow-xl">
+        <div className="glass-panel rounded-2xl p-2.5 sm:p-4">
           <div className="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
-            {/* Dual Catalog Switcher + Settings Theme Shortcut + Live Profile Telemetry */}
             <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-3 shrink-0">
               <div
                 role="group"
                 aria-label="Catalog mode switcher"
-                className="inline-flex flex-1 xs:flex-initial items-center rounded-xl border border-border-custom bg-background/70 p-1 backdrop-blur-md"
+                className="inline-flex flex-1 xs:flex-initial items-center rounded-xl border border-border-custom bg-background p-1"
               >
                 <button
                   type="button"
                   onClick={() => handleCatalogToggle("tmdb")}
                   className={`inline-flex flex-1 xs:flex-initial items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                     catalogMode === "tmdb"
-                      ? "bg-primary text-primary-contrast shadow-sm"
+                      ? "bg-primary text-primary-contrast"
                       : "text-on-surface-variant hover:text-on-surface"
                   }`}
                 >
@@ -479,7 +492,7 @@ export default function HomePage() {
                   onClick={() => handleCatalogToggle("anime")}
                   className={`inline-flex flex-1 xs:flex-initial items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                     catalogMode === "anime"
-                      ? "bg-primary text-primary-contrast shadow-sm"
+                      ? "bg-primary text-primary-contrast"
                       : "text-on-surface-variant hover:text-on-surface"
                   }`}
                 >
@@ -498,7 +511,6 @@ export default function HomePage() {
                 </span>
               )}
 
-              {/* Settings Theme & Appearance Shortcut */}
               <div className="flex items-center gap-1.5 shrink-0">
                 <Link
                   href="/settings?section=theme"
@@ -528,7 +540,6 @@ export default function HomePage() {
                 </button>
               </div>
 
-              {/* Real Profile Archive Counters (Responsive across mobile & desktop) */}
               <div className="flex items-center gap-1.5 sm:gap-2 font-mono text-[10px] sm:text-[11px] text-on-surface-variant tabular-nums">
                 <button
                   type="button"
@@ -538,7 +549,7 @@ export default function HomePage() {
                   className={`inline-flex items-center gap-1 rounded-lg border px-2 sm:px-2.5 py-1 transition-colors cursor-pointer ${
                     selectedRailFilter === "history"
                       ? "border-primary bg-primary text-primary-contrast"
-                      : "border-border-custom bg-background/60 hover:border-primary/50"
+                      : "border-border-custom bg-background hover:border-primary/50"
                   }`}
                 >
                   <History className={`h-3 w-3 shrink-0 ${selectedRailFilter === "history" ? "text-primary-contrast" : "text-primary"}`} />
@@ -549,7 +560,7 @@ export default function HomePage() {
                 </button>
                 <Link
                   href="/watchlist"
-                  className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background/60 px-2 sm:px-2.5 py-1 hover:border-primary/50 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background px-2 sm:px-2.5 py-1 hover:border-primary/50 transition-colors cursor-pointer"
                 >
                   <Bookmark className="h-3 w-3 shrink-0 text-primary" />
                   <strong className="text-on-surface">{catalogWatchlist.length}</strong>{" "}
@@ -558,11 +569,10 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Category Rail Filter Track & All Rails Sort Dropdown */}
             <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
               <div
                 data-testid="command-deck-rail-filters"
-                className="custom-scrollbar flex flex-1 max-w-full items-center gap-1.5 overflow-x-auto touch-pan-x pt-0.5 pb-1.5 px-0.5 scroll-smooth"
+                className="no-scrollbar flex flex-1 max-w-full items-center gap-1.5 overflow-x-auto touch-pan-x pt-0.5 pb-1 px-0.5 scroll-smooth"
               >
                 {filterChips.map((chip) => {
                   const active = selectedRailFilter === chip.id;
@@ -572,10 +582,10 @@ export default function HomePage() {
                       type="button"
                       onClick={() => setSelectedRailFilter(chip.id)}
                       data-testid={`deck-rail-filter-${chip.id}`}
-                      className={`shrink-0 rounded-full md:rounded-lg border px-3 md:px-2.5 py-1 text-[11px] sm:text-xs font-semibold md:font-medium transition-all whitespace-nowrap active:scale-95 cursor-pointer ${
+                      className={`shrink-0 rounded-full border px-3 py-1 text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
                         active
-                          ? "border-primary bg-primary text-primary-contrast shadow-sm shadow-primary/20"
-                          : "border-border-custom bg-background/55 text-on-surface-variant hover:border-primary/50 hover:text-on-surface"
+                          ? "border-primary bg-primary text-primary-contrast"
+                          : "border-border-custom bg-background text-on-surface-variant hover:border-primary/50 hover:text-on-surface"
                       }`}
                     >
                       {chip.label}
@@ -585,7 +595,7 @@ export default function HomePage() {
               </div>
 
               {selectedRailFilter !== "history" && (
-                <div className="shrink-0 pb-1">
+                <div className="shrink-0">
                   <RailSortDropdown
                     value={railSort}
                     onChange={(nextSort) => setRailSort(nextSort)}
@@ -600,12 +610,12 @@ export default function HomePage() {
       </div>
       </HomeBrowseShell>
 
-      <section className="zoku-home-rails relative z-10 bg-transparent pt-2 sm:pt-4 space-y-2 md:space-y-3 pb-16">
+      <section className="zoku-home-rails relative z-10 bg-transparent pt-2 space-y-2 pb-16">
         {isOffline && (
-          <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
-            <div className="glass-panel rounded-2xl border border-amber-500/30 p-5 space-y-2 shadow-xl">
+          <div className="mx-auto w-full px-[var(--cinematic-gutter)]">
+            <div className="rounded-xl border border-amber-500/30 bg-surface p-4 space-y-1.5">
               <div className="flex items-center gap-2 text-amber-400">
-                <AlertTriangle className="h-5 w-5" />
+                <AlertTriangle className="h-4 w-4" />
                 <h2 className="text-xs font-semibold uppercase tracking-wider">Offline Mode Active</h2>
               </div>
               <p className="text-xs text-on-surface-variant max-w-2xl leading-relaxed">

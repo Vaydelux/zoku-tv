@@ -238,21 +238,21 @@ const THEME_SEEDS: ThemeSeed[] = [
   {
     id: "theme-crimson",
     name: "Crimson Cinema",
-    hint: "Velvet crimson & ruby",
-    desc: "Signature theatrical obsidian bathed in deep crimson and ruby spotlight gradients",
-    preview: "linear-gradient(135deg, #e11d48 0%, #fb7185 50%, #190b14 100%)",
+    hint: "Obsidian theater & crimson",
+    desc: "True theater obsidian dark canvas with restrained cinema crimson accents",
+    preview: "linear-gradient(135deg, #E50914 0%, #B20710 55%, #0B0B0F 100%)",
     tokens: token(
-      "#0e0a10",
-      "#18121c",
-      "#251b2b",
-      "#e11d48",
-      "#ffffff",
-      "rgba(225,29,72,0.42)",
-      "#fb7185",
-      "#19040a",
-      "#f8f5f7",
-      "rgba(244,230,236,0.68)",
-      "rgba(244,63,94,0.22)"
+      "#0B0B0F",
+      "#14141A",
+      "#1C1C24",
+      "#E50914",
+      "#FFFFFF",
+      "rgba(229,9,20,0.28)",
+      "#E50914",
+      "#FFFFFF",
+      "#F5F5F7",
+      "#A1A1AA",
+      "rgba(255,255,255,0.08)"
     ),
   },
   {
@@ -904,38 +904,32 @@ export function applyTheme(
   }
 
   if (mode === "light") {
-    root.style.setProperty(
-      "--shadow-glow",
-      `0 12px 32px color-mix(in srgb, ${tokens.primary} 38%, transparent)`
-    );
+    root.style.setProperty("--shadow-glow", "0 6px 18px rgba(17, 18, 24, 0.14)");
     root.style.setProperty(
       "--shadow-elevated",
-      "0 14px 36px rgba(20, 20, 24, 0.14)"
+      "0 14px 36px rgba(17, 18, 24, 0.12)"
     );
     root.style.setProperty(
       "--shadow-card",
-      "0 6px 18px rgba(20, 20, 24, 0.1), 0 2px 6px rgba(20, 20, 24, 0.06)"
+      "0 4px 14px rgba(17, 18, 24, 0.08)"
     );
     root.style.setProperty(
       "--shadow-card-hover",
-      `0 22px 48px color-mix(in srgb, ${tokens.primary} 32%, transparent), 0 12px 28px rgba(20, 20, 24, 0.16)`
+      "0 14px 32px rgba(17, 18, 24, 0.16)"
     );
   } else {
-    root.style.setProperty(
-      "--shadow-glow",
-      `0 10px 30px color-mix(in srgb, ${tokens.primary} 34%, transparent)`
-    );
+    root.style.setProperty("--shadow-glow", "0 6px 20px rgba(0, 0, 0, 0.45)");
     root.style.setProperty(
       "--shadow-elevated",
-      "0 16px 42px rgba(0, 0, 0, 0.52)"
+      "0 18px 44px rgba(0, 0, 0, 0.65)"
     );
     root.style.setProperty(
       "--shadow-card",
-      "0 8px 24px rgba(0, 0, 0, 0.44), 0 2px 8px rgba(0, 0, 0, 0.28)"
+      "0 6px 18px rgba(0, 0, 0, 0.42)"
     );
     root.style.setProperty(
       "--shadow-card-hover",
-      `0 24px 52px color-mix(in srgb, ${tokens.primary} 40%, transparent), 0 14px 32px rgba(0, 0, 0, 0.52)`
+      "0 18px 40px rgba(0, 0, 0, 0.72)"
     );
   }
 
@@ -945,7 +939,7 @@ export function applyTheme(
 
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute("content", mode === "light" ? tokens.background : tokens.primary);
+    meta.setAttribute("content", tokens.background);
   }
 
   void import("@/lib/pwa-brand").then(({ applyPwaBranding }) => applyPwaBranding(id));

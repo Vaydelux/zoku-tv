@@ -16,9 +16,6 @@ function plainDescription(html?: string | null): string {
     .trim();
 }
 
-/** Shared visual contract with the TMDB featured hero. Keeps AniList's real
- * IDs and Zoku's server-controlled content filtering completely unchanged.
- */
 export function CinematicAnimeHero({
   slides,
   loading,
@@ -31,6 +28,7 @@ export function CinematicAnimeHero({
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
   const current = slides[Math.min(active, Math.max(slides.length - 1, 0))];
 
   useEffect(() => {
@@ -49,19 +47,23 @@ export function CinematicAnimeHero({
     if (slides.length < 2 || paused || reducedMotion) return;
     const id = window.setInterval(() => {
       if (!document.hidden) setActive((index) => (index + 1) % slides.length);
-    }, 7000);
+    }, 7500);
     return () => window.clearInterval(id);
   }, [slides.length, paused, reducedMotion]);
 
   if (loading && !current) {
-    return <div className="zoku-anime-hero min-h-[70svh] animate-pulse bg-surface" aria-label="Loading featured anime" />;
+    return (
+      <div
+        className="zoku-anime-hero animate-pulse bg-surface"
+        aria-label="Loading featured anime"
+      />
+    );
   }
   if (!current) return null;
 
   const title = getAnimeDisplayTitle(current);
   const poster = getAnimePoster(current);
-  const backdrop = current.bannerImage || poster;
-  const rating = current.averageScore ? (current.averageScore / 10).toFixed(1) : "N/A";
+  const rating = current.averageScore ? (current.averageScore / 10).toFixed(1) : null;
   const year = current.seasonYear || current.startDate?.year;
   const saved = hasItem("anime", current.id);
   const synopsis = plainDescription(current.description);
@@ -92,69 +94,128 @@ export function CinematicAnimeHero({
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPaused(false);
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setPaused(false);
+        }
       }}
     >
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        {slides.map((slide, index) => (
-          <div
-            key={slide.id}
-            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-500 ${index === active ? "opacity-100" : "opacity-0"}`}
-            style={{
-              backgroundImage: slide.bannerImage || getAnimePoster(slide)
-                ? `url("${slide.bannerImage || getAnimePoster(slide)}")`
-                : undefined,
-            }}
-          />
-        ))}
-        <div className="hero-media-scrim absolute inset-0" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0B0B0F]" aria-hidden="true">
+        {slides.map((slide, index) => {
+          const url = slide.bannerImage || getAnimePoster(slide);
+          const canRenderImg = Boolean(url && !failedImages[slide.id]);
+          return (
+            <div
+              key={slide.id}
+              className={`absolute inset-0 transition-opacity duration-700 ease-out ${
+                index === active ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {canRenderImg ? (
+                <img
+                  src={url!}
+                  alt=""
+                  fetchPriority={index === 0 ? "high" : "auto"}
+                  loading={index === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                  draggable={false}
+                  referrerPolicy="no-referrer"
+                  onError={() =>
+                    setFailedImages((prev) => ({ ...prev, [slide.id]: true }))
+                  }
+                  className="h-full w-full object-cover object-center"
+                />
+              ) : (
+                <div className="h-full w-full bg-[linear-gradient(135deg,#1A1A24_0%,#111118_48%,#0B0B0F_100%)]" />
+              )}
+            </div>
+          );
+        })}
+        <div className="hero-media-scrim" aria-hidden="true" />
       </div>
 
-      <div className="zoku-anime-hero-content zoku-hero-content relative z-[1] mx-auto flex w-full flex-col items-start justify-end px-4 pb-12 pt-14 sm:px-6 lg:px-8">
-        <div className="hero-copy flex w-full max-w-[590px] flex-col items-start gap-3">
-          <div className="hero-meta-chip flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-full border border-primary/40 bg-primary/15 px-2.5 py-0.5 font-semibold text-primary">Featured</span>
-            <span className="rounded-full border border-border-custom bg-surface/60 px-2.5 py-0.5 font-semibold text-on-surface">Anime</span>
+      <div className="zoku-anime-hero-content zoku-hero-content relative z-[1] mx-auto flex w-full flex-col items-start justify-end">
+        <div
+          key={current.id}
+          className="hero-copy flex w-full flex-col items-start gap-3 sm:gap-3.5 animate-[fade-in_0.35s_ease-out]"
+        >
+          <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-on-surface-variant">
+            {rating && (
+              <>
+                <span className="inline-flex items-center gap-1 font-semibold text-on-surface tabular-nums">
+                  <Star className="h-3.5 w-3.5 fill-primary text-primary" aria-hidden="true" />
+                  {rating}
+                </span>
+                <span aria-hidden="true">·</span>
+              </>
+            )}
+            {year && (
+              <>
+                <span className="tabular-nums">{year}</span>
+                <span aria-hidden="true">·</span>
+              </>
+            )}
+            <span>Anime</span>
+            {hasEpisodes && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="tabular-nums">{current.episodes} Episodes</span>
+              </>
+            )}
           </div>
-          <h1 className="line-clamp-2 font-display text-3xl font-bold leading-[1.06] tracking-tight text-on-surface sm:text-5xl">
+
+          <h1 className="font-display font-bold tracking-tight text-on-surface line-clamp-2">
             {title}
           </h1>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
-            {rating !== "N/A" && (
-              <span className="inline-flex items-center gap-1 font-semibold text-on-surface">
-                <Star className="h-4 w-4 fill-primary text-primary" aria-hidden="true" />
-                {rating}
-              </span>
-            )}
-            {year && <><span aria-hidden="true">·</span><span>{year}</span></>}
-            {hasEpisodes && <><span aria-hidden="true">·</span><span>{current.episodes} episodes</span></>}
-          </div>
-          {synopsis && <p className="hero-overview line-clamp-3 max-w-xl text-sm leading-relaxed text-on-surface-variant">{synopsis}</p>}
-          <div className="mt-2 flex flex-wrap items-center gap-2.5">
+
+          {synopsis && (
+            <p className="hero-overview max-w-xl text-sm leading-relaxed text-on-surface/80 line-clamp-2 sm:line-clamp-3">
+              {synopsis}
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2.5 pt-2">
             <button
               type="button"
-              onClick={() => router.push(hasEpisodes ? `/watch/anime/${current.id}/1/1` : `/anime/${current.id}`)}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-contrast"
+              data-tv-focusable="true"
+              onClick={() =>
+                router.push(
+                  hasEpisodes ? `/watch/anime/${current.id}/1/1` : `/anime/${current.id}`
+                )
+              }
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-contrast transition-opacity hover:opacity-90 active:scale-[0.98]"
             >
-              <Play className="h-4 w-4 fill-current" aria-hidden="true" />
-              {hasEpisodes ? "Play" : "Explore"}
+              <Play className="h-4 w-4 fill-current shrink-0" aria-hidden="true" />
+              <span>{hasEpisodes ? "Play" : "Explore"}</span>
             </button>
+
             <button
               type="button"
+              data-tv-focusable="true"
               onClick={() => router.push(`/anime/${current.id}`)}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border-custom bg-surface px-5 py-2.5 text-sm font-semibold text-on-surface"
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/15 bg-[#14141A]/90 px-5 py-2.5 text-sm font-semibold text-[#F5F5F7] transition-colors hover:bg-[#1C1C24] hover:border-white/25 active:scale-[0.98]"
             >
-              <Info className="h-4 w-4" aria-hidden="true" />
-              More info
+              <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>More Info</span>
             </button>
+
             <button
               type="button"
+              data-tv-focusable="true"
               onClick={toggleSaved}
               aria-pressed={saved}
               aria-label={saved ? `Remove ${title} from Watchlist` : `Add ${title} to Watchlist`}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border-custom bg-surface text-on-surface"
+              title={saved ? "In My List" : "Add to My List"}
+              className={`inline-flex h-11 w-11 items-center justify-center rounded-lg border transition-colors active:scale-[0.98] ${
+                saved
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-white/15 bg-[#14141A]/90 text-[#F5F5F7] hover:bg-[#1C1C24] hover:border-white/25"
+              }`}
             >
-              {saved ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+              {saved ? (
+                <Check className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <Plus className="h-5 w-5" aria-hidden="true" />
+              )}
             </button>
           </div>
         </div>
@@ -162,7 +223,7 @@ export function CinematicAnimeHero({
 
       {slides.length > 1 && (
         <div
-          className="absolute bottom-5 right-4 z-[3] flex items-center gap-1.5 sm:bottom-6 sm:right-[var(--cinematic-gutter)] sm:gap-2"
+          className="absolute bottom-3 left-[var(--cinematic-gutter)] z-[3] flex items-center gap-1"
           aria-label="Carousel slides"
           role="tablist"
         >
@@ -173,14 +234,14 @@ export function CinematicAnimeHero({
               role="tab"
               aria-selected={index === active}
               aria-label={`Show featured anime ${index + 1}: ${getAnimeDisplayTitle(slide)}`}
-              onClick={() => { setActive(index); setPaused(true); }}
-              className={`h-2 rounded-full transition-[width,background-color] duration-200 ${index === active ? "w-6 sm:w-8 bg-primary" : "w-2 bg-on-surface/40 hover:bg-on-surface/70"}`}
+              onClick={() => {
+                setActive(index);
+                setPaused(true);
+              }}
             />
           ))}
         </div>
       )}
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-16 bg-gradient-to-t from-background to-transparent sm:h-24" />
     </section>
   );
 }

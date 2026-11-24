@@ -50,6 +50,7 @@ export function Navbar() {
   const { is60FpsActive, togglePerfMode, isAutoDetectedTvOr32Bit } = usePerfMode();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isStatusPopoverOpen, setIsStatusPopoverOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const isOnline = useOnlineStatus();
   const [searchQuery, setSearchQuery] = useState("");
   const [showNavAutocomplete, setShowNavAutocomplete] = useState(false);
@@ -61,6 +62,15 @@ export function Navbar() {
       setIsStatusPopoverOpen(false);
     }
   }, [isOnline]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 24);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,14 +116,23 @@ export function Navbar() {
     void updateProfile(currentProfile.id, { appearancePreference: appearance === "dark" ? "light" : "dark" });
   };
   const networkStatus = getNavbarNetworkStatus(isOnline);
+  const isHeroOverlayRoute = cinematicLayout && pathname === "/home";
 
   return (
     <>
     <header
-      className={`site-nav sticky top-0 z-40 w-full border-b ${networkStatus.navBorderClass} bg-background/90 backdrop-blur-md transition-colors duration-300`}
+      className={`site-nav ${
+        isHeroOverlayRoute
+          ? `fixed top-0 inset-x-0 z-40 transition-colors duration-200 ${
+              isScrolled
+                ? `border-b ${networkStatus.navBorderClass} bg-background/95`
+                : "border-b border-transparent bg-gradient-to-b from-background/90 via-background/45 to-transparent"
+            }`
+          : `sticky top-0 z-40 w-full border-b ${networkStatus.navBorderClass} bg-background/95 transition-colors duration-200`
+      }`}
     >
-      <div className="mx-auto w-full px-3 sm:px-6 lg:px-8">
-        <div className="flex h-[52px] sm:h-16 items-center justify-between gap-2 sm:gap-4">
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-[var(--cinematic-gutter)]">
+        <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4">
           
           {/* Logo & Main Nav */}
           <div className="flex min-w-0 items-center gap-4 lg:gap-8">
@@ -241,9 +260,9 @@ export function Navbar() {
             </button>
             )}
 
-            {/* Search Bar with Voice Input & Real-time Autocomplete */}
+            {/* Search icon in cinematic layout */}
             {cinematicLayout ? (
-              <Link href="/search" aria-label="Search titles" data-tv-focusable="true" className="zoku-header-icon inline-flex h-10 w-10 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-hover hover:text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+              <Link href="/search" aria-label="Search titles" data-tv-focusable="true" className="zoku-header-icon inline-flex h-10 w-10 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface hover:text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
                 <Search className="h-[19px] w-[19px]" aria-hidden="true" />
               </Link>
             ) : (
@@ -261,7 +280,7 @@ export function Navbar() {
                     setShowNavAutocomplete(true);
                   }
                 }}
-                className="w-48 md:w-56 lg:w-64 rounded-full border border-border-custom bg-surface/85 py-1.5 pl-4 pr-16 text-xs text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary backdrop-blur-md transition-all duration-300"
+                className="w-48 md:w-56 lg:w-64 rounded-full border border-border-custom bg-surface py-1.5 pl-4 pr-16 text-xs text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors duration-200"
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
                 <VoiceSearchButton
@@ -311,15 +330,6 @@ export function Navbar() {
                 }}
               />
             </form>
-            )}
-
-            {cinematicLayout && (
-              <button type="button" onClick={toggleAppearance}
-                aria-label={appearance === "dark" ? "Use light appearance" : "Use dark appearance"}
-                title={appearance === "dark" ? "Use light appearance" : "Use dark appearance"}
-                className="zoku-header-icon inline-flex h-10 w-10 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-hover hover:text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-                {appearance === "dark" ? <Sun className="h-[19px] w-[19px]" /> : <Moon className="h-[19px] w-[19px]" />}
-              </button>
             )}
 
             {/* Mobile Voice & Search Buttons */}
@@ -425,7 +435,25 @@ export function Navbar() {
                   )}
 
                   {cinematicLayout && (
-                    <div className="py-1.5 border-b border-border-custom/70">
+                    <div className="py-1.5 border-b border-border-custom/70 space-y-0.5">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={toggleAppearance}
+                        className="zoku-menu-item flex min-h-[38px] w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-hover transition-colors"
+                      >
+                        <span className="inline-flex items-center gap-2.5">
+                          {appearance === "dark" ? (
+                            <Sun className="h-4 w-4 text-primary" aria-hidden="true" />
+                          ) : (
+                            <Moon className="h-4 w-4 text-primary" aria-hidden="true" />
+                          )}
+                          <span>Appearance</span>
+                        </span>
+                        <span className="font-mono text-[11px] uppercase text-on-surface-variant">
+                          {appearance}
+                        </span>
+                      </button>
                       <button
                         type="button"
                         role="menuitem"

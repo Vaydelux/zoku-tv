@@ -257,7 +257,7 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
     );
   }
 
-  const name = details.title || details.name || "Untitled Masterpiece";
+  const name = details.title || details.name || "Untitled";
   const backdropUrl = details.backdrop_path
     ? `https://image.tmdb.org/t/p/original${details.backdrop_path}`
     : null;

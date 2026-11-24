@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./cinematic.css";
-import "./cinematic-reference.css";
-import "./cinematic-fidelity.css";
 import { ClientInitializer } from "@/components/ClientInitializer";
 import { AuthGate } from "@/components/AuthGate";
 import { SiteChrome } from "@/components/SiteChrome";
@@ -49,7 +47,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#e11d48",
+  themeColor: "#0B0B0F",
   colorScheme: "dark",
 };
 

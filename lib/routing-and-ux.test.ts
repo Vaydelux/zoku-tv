@@ -179,8 +179,13 @@ test("library backup JSON: export + import merge and replace modes", () => {
   assert.equal(unrelated.ok, false);
 });
 
-test("watch shortcuts: resolves all 6 actions and suppresses modifier combos and inputs", () => {
-  assert.equal(WATCH_SHORTCUT_DEFINITIONS.length, 6);
+test("watch shortcuts: resolves all actions and suppresses modifier combos and inputs", () => {
+  assert.equal(WATCH_SHORTCUT_DEFINITIONS.length, 9);
+  assert.equal(resolveWatchShortcutAction({ key: "f" }), "toggle_fullscreen");
+  assert.equal(resolveWatchShortcutAction({ key: "F" }), "toggle_fullscreen");
+  assert.equal(resolveWatchShortcutAction({ key: "t" }), "toggle_theater");
+  assert.equal(resolveWatchShortcutAction({ key: "e" }), "toggle_drawer");
+  assert.equal(resolveWatchShortcutAction({ key: "Escape" }), "escape");
   assert.equal(resolveWatchShortcutAction({ key: "n" }), "next_episode");
   assert.equal(resolveWatchShortcutAction({ key: "N" }), "next_episode");
   assert.equal(resolveWatchShortcutAction({ key: "p" }), "prev_episode");

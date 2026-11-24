@@ -182,13 +182,13 @@ function GenresPageContent() {
                     key={genre.id}
                     href={url}
                     data-tv-focusable="true"
-                    className="zoku-genre-tile group relative flex min-h-[116px] flex-col justify-end overflow-hidden rounded-xl border border-border-custom p-4 text-on-surface transition-transform focus-visible:outline focus-visible:outline-3 focus-visible:outline-primary"
+                    className="zoku-genre-tile group relative flex min-h-[108px] flex-col justify-end overflow-hidden rounded-xl p-4 text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                     aria-label={`Browse ${genre.name} ${type === "anime" ? "anime" : type === "tv" ? "TV shows" : "movies"}`}
                   >
-                    <Icon className="pointer-events-none absolute right-4 top-4 h-8 w-8 opacity-25 transition-transform group-hover:scale-110" aria-hidden="true" />
-                    <span className="relative z-10 text-base font-bold">{genre.name}</span>
-                    <span className="relative z-10 mt-1 text-[10px] font-semibold uppercase tracking-widest opacity-70">
-                      {type === "anime" ? "Anime" : type === "tv" ? "TV series" : "Movies"}
+                    <Icon className="pointer-events-none absolute right-4 top-4 h-7 w-7 text-on-surface-variant opacity-35 transition-colors group-hover:text-primary group-hover:opacity-75" aria-hidden="true" />
+                    <span className="relative z-10 text-base font-semibold tracking-tight">{genre.name}</span>
+                    <span className="relative z-10 mt-1 text-[10px] font-medium uppercase tracking-widest text-on-surface-variant">
+                      {type === "anime" ? "Anime" : type === "tv" ? "TV Series" : "Movies"}
                     </span>
                   </Link>
                 );
