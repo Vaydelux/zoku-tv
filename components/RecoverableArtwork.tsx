@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ImgHTMLAttributes, type ReactNode } from "react";
+import React, { useEffect, useState, type ImgHTMLAttributes, type ReactNode } from "react";
 
 type ArtworkProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "onError" | "onLoad"> & {
   src: string;
