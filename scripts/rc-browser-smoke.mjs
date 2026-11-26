@@ -103,7 +103,7 @@ const movie = {
 const series = {
   id: 102, name: "Demo Series", media_type: "tv",
   overview: "A test-only series used to qualify the UI.",
-  poster_path: null, backdrop_path: null, adult: false,
+  poster_path: "/rc-series-poster.jpg", backdrop_path: null, adult: false,
   genre_ids: [16, 35], first_air_date: "2025-02-03", vote_average: 8.1,
 };
 const anime = {
@@ -181,10 +181,22 @@ async function runBrowserChecks() {
     });
     await installIsolatedCatalog(ctx);
     let posterFailures = 0;
+    let coldStartBlockCDN = true;
+    let coldFallbackHits = 0;
+    const fixtureSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="60"><rect width="40" height="60" fill="#2563eb"/></svg>';
+    const imageResponse = { status: 200, contentType: "image/svg+xml", headers: { "Cache-Control": "no-store" }, body: fixtureSvg };
+    await ctx.route(/\/_next\/image\?/, async (route) => {
+      const target = new URL(route.request().url()).searchParams.get("url") || "";
+      if (!target.includes("rc-movie-poster.jpg")) return route.fallback();
+      coldFallbackHits++;
+      await route.fulfill(imageResponse);
+    });
+    await ctx.route("https://image.tmdb.org/t/p/**/rc-series-poster.jpg", (route) => route.fulfill(imageResponse));
     let failNextPoster = false;
     let recoveredPosterRequests = 0;
     await ctx.route("https://image.tmdb.org/t/p/**/rc-movie-poster.jpg", async (route) => {
       const isCardPoster = new URL(route.request().url()).pathname.includes("/w500/");
+      if (coldStartBlockCDN && isCardPoster) return route.abort("failed");
       if (failNextPoster && isCardPoster) {
         failNextPoster = false;
         posterFailures++;
@@ -223,6 +235,13 @@ async function runBrowserChecks() {
     await page.locator('.zoku-hero').getByRole("heading", { name: "Demo Movie" }).waitFor({ timeout: 20_000 });
     evidence.push({ check: "local-only sign-in and profile selection", result: "pass" });
     evidence.push({ check: "featured hero survives missing TMDB backdrop", result: "pass" });
+    // No refresh or settings visit: first Home render must recover blocked CDN artwork.
+    const movieRail = page.getByRole("region", { name: "Trending now", exact: true });
+    await movieRail.locator("img").first().waitFor();
+    await page.waitForFunction(() => [...document.querySelectorAll('section[aria-label="Trending now"] .cinematic-poster-card img')].some((img) => img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0 && img.src.includes("/_next/image?") && img.loading === "eager"));
+    assert.ok(coldFallbackHits > 0, "Cold Home must exercise the same-origin artwork fallback");
+    coldStartBlockCDN = false;
+    evidence.push({ check: "Cold Home first-render poster decode with blocked CDN and no reload", result: "pass" });
 
     const viewports = [
       { width: 390, height: 844, label: "phone" },

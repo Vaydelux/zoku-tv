@@ -1,7 +1,7 @@
 // Only cache public, static resources. Personalized HTML, auth and API responses
 // must never be persisted in CacheStorage (including for offline navigation).
-const SHELL_CACHE_NAME = "zoku-tv-public-v6";
-const IMAGE_CACHE_NAME = "zoku-tv-images-v6";
+const SHELL_CACHE_NAME = "zoku-tv-public-v7";
+const IMAGE_CACHE_NAME = "zoku-tv-images-v7";
 const ACTIVE_CACHES = [SHELL_CACHE_NAME, IMAGE_CACHE_NAME];
 const MAX_IMAGE_ENTRIES = 120;
 const PUBLIC_IMAGE_HOSTS = new Set(["image.tmdb.org", "s4.anilist.co"]);
@@ -137,6 +137,10 @@ self.addEventListener("fetch", (event) => {
     if (staticImage) event.respondWith(cacheFirstImage(request));
     return;
   }
+
+  // Native no-CORS <img> responses are opaque and cannot pass cacheable().
+  // Leave them on the browser HTTP cache, without service-worker interception.
+  if (request.mode === "no-cors") return;
 
   // Only established public poster CDNs may use the image cache.
   if (url.protocol === "https:" && PUBLIC_IMAGE_HOSTS.has(url.hostname) &&

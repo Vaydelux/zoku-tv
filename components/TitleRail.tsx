@@ -20,6 +20,7 @@ interface TitleRailProps {
   mediaType?: "movie" | "tv";
   genreId?: number;
   showSortDropdown?: boolean;
+  prioritizeArtwork?: boolean;
 }
 
 export function TitleRail({
@@ -27,6 +28,7 @@ export function TitleRail({
   items,
   mediaType,
   showSortDropdown = true,
+  prioritizeArtwork = false,
 }: TitleRailProps) {
   const globalRailSort = useRailFilterStore((state) => state.railSort);
   const watchlistItems = useWatchlistStore((state) => state.items);
@@ -150,7 +152,7 @@ export function TitleRail({
                 key={stableKey}
                 className="rail-card-slot relative z-0 flex-shrink-0 hover:z-20 focus-within:z-20"
               >
-                <TitleCard title={item} mediaType={mediaType} />
+                <TitleCard title={item} mediaType={mediaType} prioritizeArtwork={prioritizeArtwork && idx < 4} />
               </div>
             );
           })}

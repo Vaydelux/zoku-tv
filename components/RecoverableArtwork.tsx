@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, type ImgHTMLAttributes, type ReactNode } from "react";
+import { tmdbArtworkFallback } from "@/lib/artwork-delivery";
 
 type ArtworkProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "onError" | "onLoad"> & {
   src: string;
@@ -39,5 +40,8 @@ function ArtworkAttempt({ src, fallback = null, ...props }: ArtworkProps) {
   }, [failed]);
 
   if (failed) return <>{fallback}</>;
-  return <img {...props} key={attempt} src={src} onError={() => setFailed(true)} />;
+  // First retry stays on the CDN; the last attempt uses the verified same-origin
+  // image route when a browser or network cannot reach the public CDN directly.
+  const deliveredSrc = attempt >= RETRY_DELAYS_MS.length ? tmdbArtworkFallback(src) ?? src : src;
+  return <img {...props} key={attempt} src={deliveredSrc} onError={() => setFailed(true)} />;
 }

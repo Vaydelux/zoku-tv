@@ -27,6 +27,7 @@ export interface CinematicMediaCardProps {
   saved: boolean;
   progressPercent?: number | null;
   fullWidth?: boolean;
+  prioritizeArtwork?: boolean;
   onOpen: () => void;
   onPlay?: () => void;
   onQuickTrailer?: () => void;
@@ -55,6 +56,7 @@ export function CinematicMediaCard({
   saved,
   progressPercent,
   fullWidth = false,
+  prioritizeArtwork = false,
   onOpen,
   onPlay,
   onQuickTrailer,
@@ -119,7 +121,8 @@ export function CinematicMediaCard({
           <RecoverableArtwork
             src={imageUrl!}
             alt=""
-            loading="lazy"
+            loading={prioritizeArtwork ? "eager" : "lazy"}
+            fetchPriority={prioritizeArtwork ? "high" : "auto"}
             decoding="async"
             draggable={false}
             className="pointer-events-none absolute inset-0 h-full w-full object-cover"

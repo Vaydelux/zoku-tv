@@ -548,10 +548,10 @@ export default function HomePage() {
             ) : (
               <div className="space-y-2">
                 {(selectedRailFilter === "all" || selectedRailFilter === "movies") && (
-                  <TitleRail title="Trending now" items={trendingMovies} mediaType="movie" showSortDropdown={false} />
+                  <TitleRail title="Trending now" items={trendingMovies} mediaType="movie" showSortDropdown={false} prioritizeArtwork />
                 )}
                 {(selectedRailFilter === "all" || selectedRailFilter === "tv") && (
-                  <TitleRail title="Trending series" items={trendingTV} mediaType="tv" showSortDropdown={false} />
+                  <TitleRail title="Trending series" items={trendingTV} mediaType="tv" showSortDropdown={false} prioritizeArtwork={trendingMovies.length === 0} />
                 )}
                 {loadingGenreRails ? (
                   <div className="h-32 bg-surface animate-pulse mx-4 rounded-xl" />

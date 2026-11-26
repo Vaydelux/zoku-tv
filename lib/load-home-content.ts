@@ -4,7 +4,7 @@ import { filterRestrictedTmdbTitles, syncAdultFilterState } from "@/lib/adult-co
 export type GenreRail = { genre: TMDBGenre; titles: TMDBTitle[] };
 
 const HERO_SLIDE_COUNT = 6;
-const TRENDING_CACHE_KEY = "zoku_home_tmdb_trending_v1";
+const TRENDING_CACHE_KEY = "zoku_home_tmdb_trending_v2";
 const GENRE_CATALOG_CACHE_KEY = "zoku_home_tmdb_genre_catalog_v2";
 const GENRE_ITEM_CACHE_PREFIX = "zoku_home_tmdb_genre_rail_v2_";
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -85,21 +85,28 @@ export async function loadHomeTrending(): Promise<{
     trendingTV: filterRestrictedTmdbTitles(cached.trendingTV),
   };
 
-  const [trendingAll, movies, tv] = await Promise.all([
+  const feeds = await Promise.allSettled([
     getTrending("all", "week"),
     getTrending("movie", "day"),
     getTrending("tv", "day"),
   ]);
-
-  const heroSlides = pickFeaturedHeroSlides(movies, trendingAll);
-
-  const result = {
-    heroSlides,
-    trendingMovies: movies,
-    trendingTV: tv,
-  };
-  writeSessionCache(TRENDING_CACHE_KEY, result);
+  const result = combineHomeTrendingFeeds(feeds);
+  // Never keep a transient partial/empty feed for ten minutes.
+  if (feeds.every((feed) => feed.status === "fulfilled") &&
+      result.trendingMovies.length + result.trendingTV.length > 0) {
+    writeSessionCache(TRENDING_CACHE_KEY, result);
+  }
   return result;
+}
+
+/** A failed independent endpoint must not discard the other policy-filtered feeds. */
+export function combineHomeTrendingFeeds(feeds: readonly PromiseSettledResult<TMDBTitle[]>[]) {
+  if (feeds.every((feed) => feed.status === "rejected")) throw new Error("Trending catalog temporarily unavailable");
+  const [all, movie, tv] = feeds;
+  const trendingAll = all?.status === "fulfilled" ? all.value : [];
+  const trendingMovies = movie?.status === "fulfilled" ? movie.value : trendingAll.filter((item) => item.media_type === "movie");
+  const trendingTV = tv?.status === "fulfilled" ? tv.value : trendingAll.filter((item) => item.media_type === "tv");
+  return { heroSlides: pickFeaturedHeroSlides(trendingMovies, [...trendingAll, ...trendingTV]), trendingMovies, trendingTV };
 }
 
 interface CachedGenreCatalog {

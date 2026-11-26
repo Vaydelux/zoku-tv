@@ -17,7 +17,7 @@ interface HeroCarouselProps {
 
 function resolveImageUrl(
   path: string | null | undefined,
-  size: "original" | "w500" = "original"
+  size: "original" | "w500" | "w1280" = "w1280"
 ): string | null {
   if (!path) return null;
   if (path.startsWith("http") || path.startsWith("data:")) return path;
@@ -25,7 +25,7 @@ function resolveImageUrl(
 }
 
 function getBackdropUrl(backdropPath: string | null | undefined): string | null {
-  return resolveImageUrl(backdropPath, "original");
+  return resolveImageUrl(backdropPath, "w1280");
 }
 
 export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
@@ -167,8 +167,8 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
                 <RecoverableArtwork
                   src={url!}
                   alt=""
-                  fetchPriority={idx === 0 ? "high" : "auto"}
-                  loading={idx === 0 ? "eager" : "lazy"}
+                  fetchPriority={isCurrent ? "high" : "auto"}
+                  loading={isCurrent ? "eager" : "lazy"}
                   decoding="async"
                   draggable={false}
                   fallback={<div className="h-full w-full bg-background" style={{ backgroundImage: "var(--background-gradient)" }} />}
