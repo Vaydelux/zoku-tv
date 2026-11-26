@@ -7,7 +7,7 @@ import { AmbientBackground } from "@/components/AmbientBackground";
 import { showZokuMobileNav } from "@/lib/design-navigation";
 import { SiteFooter } from "@/components/SiteFooter";
 import { QuickTrailerHost } from "@/components/QuickTrailerHost";
-import { useCommandPaletteStore } from "@/stores";
+import { useCommandPaletteStore, useQuickInspectorStore } from "@/stores";
 import { shouldIgnoreShortcutTarget } from "@/lib/watch-shortcuts";
 import { isBrandRoute } from "@/lib/auth-routes";
 
@@ -16,12 +16,17 @@ const CommandPalette = dynamic(
   { ssr: false }
 );
 
+const QuickInspectorDrawer = dynamic(
+  () => import("@/components/QuickInspectorDrawer").then((mod) => mod.QuickInspectorDrawer),
+  { ssr: false }
+);
+
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const cinematicLayout = process.env.NEXT_PUBLIC_ZOKU_LAYOUT !== "classic";
   const paletteOpen = useCommandPaletteStore((s) => s.open);
   const togglePalette = useCommandPaletteStore((s) => s.toggle);
   const setPaletteOpen = useCommandPaletteStore((s) => s.setOpen);
+  const inspectorOpen = useQuickInspectorStore((s) => s.open);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -47,7 +52,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   }, [pathname, togglePalette, setPaletteOpen]);
 
   return (
-    <div className={`relative z-[1] flex min-h-dvh flex-col ${cinematicLayout && showZokuMobileNav(pathname) ? "zoku-has-mobile-nav" : ""}`}>
+    <div className={`relative z-[1] flex min-h-dvh flex-col ${showZokuMobileNav(pathname) ? "zoku-has-mobile-nav" : ""}`}>
       <AmbientBackground />
       <div
         key={pathname}
@@ -57,6 +62,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       </div>
       <SiteFooter />
       {paletteOpen && <CommandPalette />}
+      {inspectorOpen && <QuickInspectorDrawer />}
       <QuickTrailerHost />
     </div>
   );

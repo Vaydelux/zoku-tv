@@ -53,12 +53,38 @@ function LoginPageContent() {
 
   return (
     <BrandShell>
+      {/* Top Floating Brand Dynamic Island Pill */}
+      <div className="pointer-events-none fixed inset-x-0 top-3 sm:top-5 z-30 flex justify-center px-4">
+        <div
+          data-testid="auth-storage-mode-badge"
+          className="dynamic-island-capsule pointer-events-auto inline-flex h-9 items-center gap-2 rounded-full px-3.5 text-[11px] font-semibold text-white"
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              isCloudFirebaseConfigured ? "bg-emerald-400" : "bg-sky-400"
+            }`}
+          />
+          {isCloudFirebaseConfigured ? (
+            <>
+              <Cloud className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
+              <span>Cloud Sync Enabled</span>
+            </>
+          ) : (
+            <>
+              <HardDrive className="h-3.5 w-3.5 text-sky-300" aria-hidden="true" />
+              <span>Local Device Mode</span>
+            </>
+          )}
+        </div>
+      </div>
+
       <AuthThemePicker />
-      <div className="flex min-h-[100dvh] items-center justify-center px-4 pt-16 pb-10 sm:px-6 sm:py-12 lg:px-8">
-        <div className="glass-panel relative z-10 w-full max-w-md overflow-hidden rounded-2xl p-6 sm:p-8 shadow-2xl animate-slide-up">
+
+      <div className="flex min-h-[100dvh] items-center justify-center px-4 pt-20 pb-10 sm:px-6 sm:py-16 lg:px-8">
+        <div className="liquid-glass-elevated relative z-10 w-full max-w-md overflow-hidden rounded-[30px] p-6 sm:p-8 animate-slide-up">
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-1"
+            className="pointer-events-none absolute inset-x-8 top-0 h-[2px] rounded-full opacity-90"
             style={{ backgroundImage: "var(--button-gradient)" }}
           />
           <div className="flex flex-col items-center text-center">
@@ -66,25 +92,8 @@ function LoginPageContent() {
               <BrandMark size="lg" />
             </Link>
 
-            <div
-              data-testid="auth-storage-mode-badge"
-              className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-on-surface-variant"
-            >
-              {isCloudFirebaseConfigured ? (
-                <>
-                  <Cloud className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
-                  <span>Cloud sync enabled</span>
-                </>
-              ) : (
-                <>
-                  <HardDrive className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-                  <span>Local device mode</span>
-                </>
-              )}
-            </div>
-
-            <h1 className="text-2xl font-display font-bold tracking-tight text-on-surface">
-              Welcome back
+            <h1 className="text-2xl sm:text-[28px] font-display font-bold tracking-tight text-on-surface">
+              Welcome Back
             </h1>
             <p className="mt-1.5 text-sm text-on-surface-variant max-w-xs leading-relaxed">
               Sign in to access your profiles, watchlist, and streaming servers.
@@ -94,7 +103,7 @@ function LoginPageContent() {
           {error && (
             <div
               role="alert"
-              className="mt-5 flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/25 p-3 text-xs font-medium text-red-500 animate-fade-in"
+              className="mt-5 flex items-center gap-2 rounded-2xl bg-red-500/12 border border-red-500/30 p-3.5 text-xs font-medium text-red-400 animate-fade-in"
             >
               <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span>{error}</span>
@@ -105,12 +114,12 @@ function LoginPageContent() {
             <div>
               <label
                 htmlFor="login-email"
-                className="block text-xs font-medium text-on-surface-variant mb-1.5"
+                className="block text-xs font-semibold text-on-surface-variant mb-1.5"
               >
                 Email address
               </label>
               <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-on-surface-variant">
+                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-on-surface-variant">
                   <Mail className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <input
@@ -121,7 +130,7 @@ function LoginPageContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full min-h-[44px] rounded-xl border border-border-custom bg-background/70 py-2.5 pl-10 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
+                  className="w-full min-h-[48px] rounded-2xl border border-[var(--glass-border-strong)] bg-[var(--glass-bg-subtle)] py-2.5 pl-11 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
                 />
               </div>
             </div>
@@ -129,12 +138,12 @@ function LoginPageContent() {
             <div>
               <label
                 htmlFor="login-password"
-                className="block text-xs font-medium text-on-surface-variant mb-1.5"
+                className="block text-xs font-semibold text-on-surface-variant mb-1.5"
               >
                 Password
               </label>
               <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-on-surface-variant">
+                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-on-surface-variant">
                   <Lock className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <input
@@ -145,7 +154,7 @@ function LoginPageContent() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full min-h-[44px] rounded-xl border border-border-custom bg-background/70 py-2.5 pl-10 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
+                  className="w-full min-h-[48px] rounded-2xl border border-[var(--glass-border-strong)] bg-[var(--glass-bg-subtle)] py-2.5 pl-11 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
                 />
               </div>
             </div>
@@ -153,7 +162,7 @@ function LoginPageContent() {
             <button
               type="submit"
               disabled={loading}
-              className="group w-full min-h-[44px] flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 px-4 text-sm font-semibold text-primary-contrast hover:brightness-110 active:scale-[0.99] transition-all disabled:opacity-50"
+              className="liquid-glass-cta group w-full min-h-[48px] flex items-center justify-center gap-2 rounded-full py-2.5 px-5 text-sm font-semibold disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -171,10 +180,10 @@ function LoginPageContent() {
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border-custom" />
+              <div className="w-full border-t border-[var(--glass-border)]" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-surface px-3 text-on-surface-variant">
+              <span className="rounded-full bg-[var(--glass-bg-elevated)] px-3 py-0.5 text-on-surface-variant">
                 Or continue with
               </span>
             </div>
@@ -184,7 +193,7 @@ function LoginPageContent() {
             type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full min-h-[44px] flex items-center justify-center gap-3 rounded-xl border border-border-custom bg-background/60 hover:bg-surface-hover py-2.5 px-4 text-sm text-on-surface font-semibold transition-colors active:scale-[0.99] disabled:opacity-50"
+            className="liquid-glass-pill w-full min-h-[48px] flex items-center justify-center gap-3 rounded-full py-2.5 px-4 text-sm text-on-surface font-semibold disabled:opacity-50"
           >
             {loading ? <Spinner className="h-4 w-4" /> : <GoogleAuthBadge className="h-4 w-4" />}
             <span>

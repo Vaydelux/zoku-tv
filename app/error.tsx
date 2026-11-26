@@ -17,13 +17,13 @@ export default function AppError({
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-background text-on-surface flex items-center justify-center px-4 py-16">
-      <div className="w-full max-w-lg rounded-2xl border border-border-custom bg-surface p-6 sm:p-8 text-center space-y-5 shadow-xl">
+    <div className="min-h-screen bg-transparent text-on-surface flex items-center justify-center px-4 py-16">
+      <div className="liquid-glass-elevated w-full max-w-lg rounded-[30px] p-6 sm:p-8 text-center space-y-5">
         <div className="flex flex-col items-center gap-3">
           <Link href="/home" aria-label="Zoku TV Home">
             <BrandMark size="sm" />
           </Link>
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15 text-primary">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary border border-primary/25">
             <AlertTriangle className="h-5 w-5" aria-hidden="true" />
           </div>
         </div>

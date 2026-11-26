@@ -24,6 +24,7 @@ import {
   useCommandPaletteStore,
   useSessionStore,
 } from "@/stores";
+import { THEME_OPTIONS } from "@/lib/themes";
 import { searchMulti, type TMDBTitle } from "@/lib/tmdb";
 import {
   searchAnime,
@@ -207,8 +208,8 @@ export function CommandPalette() {
       {
         id: "act-settings",
         group: "Actions",
-        title: "Settings & 18 Themes",
-        subtitle: "Themes, profiles, Kids Mode, and diagnostics",
+        title: `Settings & ${THEME_OPTIONS.length} Liquid Glass Themes`,
+        subtitle: "Themes, Light/Dark glass, profiles, Kids Mode, and diagnostics",
         icon: "settings",
         onSelect: () => navigate("/settings"),
       },
@@ -324,7 +325,7 @@ export function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-end sm:items-start justify-center sm:pt-[11vh] bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+      className="fixed inset-0 z-[90] flex items-end sm:items-start justify-center sm:pt-[11vh] bg-black/55 backdrop-blur-md p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Quick jump command palette"
@@ -333,16 +334,16 @@ export function CommandPalette() {
         if (e.target === e.currentTarget) setOpen(false);
       }}
     >
-      <div className="w-full max-w-2xl overflow-hidden rounded-t-3xl sm:rounded-2xl border border-border-custom bg-surface shadow-2xl flex flex-col max-h-[82dvh]">
+      <div className="liquid-glass-elevated w-full max-w-2xl overflow-hidden rounded-t-[30px] sm:rounded-[28px] flex flex-col max-h-[82dvh] animate-scale-up">
         {/* Search Input Row */}
-        <div className="flex items-center gap-3 border-b border-border-custom focus-within:border-primary/60 transition-colors px-4 py-3.5">
+        <div className="flex items-center gap-3 border-b border-[var(--glass-border)] focus-within:border-primary/60 transition-colors px-5 py-4">
           <Search className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search movies, TV shows, anime, or jump anywhere..."
+            placeholder="Spotlight Search: movies, TV shows, anime, or jump anywhere..."
             aria-label="Search titles or commands"
             className="flex-1 bg-transparent text-sm sm:text-base text-on-surface placeholder:text-on-surface-variant !outline-none focus:!outline-none focus-visible:!outline-none !ring-0"
           />
@@ -354,7 +355,7 @@ export function CommandPalette() {
             onClick={() => setOpen(false)}
             aria-label="Close command palette"
             data-tv-focusable="true"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant hover:bg-background hover:text-on-surface transition-colors"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] text-on-surface-variant hover:text-on-surface transition-colors"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>

@@ -10,6 +10,8 @@ import {
   type PerfModePreference,
 } from "@/lib/tv-navigation";
 
+export type { PerfModePreference };
+
 export function detectHardwareLowSpecOrTv(): {
   isLowSpecOrTv: boolean;
   isTvBrowser: boolean;

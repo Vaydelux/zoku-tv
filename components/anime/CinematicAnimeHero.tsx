@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Info, Play, Plus, Star } from "lucide-react";
+import { Check, Info, Play, Plus, SlidersHorizontal, Star } from "lucide-react";
 import type { AniListMedia } from "@/lib/anilist";
 import { getAnimeDisplayTitle, getAnimePoster } from "@/lib/anilist";
-import { useWatchlistStore } from "@/stores";
+import { useWatchlistStore, useQuickInspectorStore } from "@/stores";
 
 function plainDescription(html?: string | null): string {
   return (html || "")
@@ -99,7 +99,7 @@ export function CinematicAnimeHero({
         }
       }}
     >
-      <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0B0B0F]" aria-hidden="true">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden bg-background" aria-hidden="true">
         {slides.map((slide, index) => {
           const url = slide.bannerImage || getAnimePoster(slide);
           const canRenderImg = Boolean(url && !failedImages[slide.id]);
@@ -125,7 +125,10 @@ export function CinematicAnimeHero({
                   className="h-full w-full object-cover object-center"
                 />
               ) : (
-                <div className="h-full w-full bg-[linear-gradient(135deg,#1A1A24_0%,#111118_48%,#0B0B0F_100%)]" />
+                <div
+                  className="h-full w-full bg-background"
+                  style={{ backgroundImage: "var(--background-gradient)" }}
+                />
               )}
             </div>
           );
@@ -136,44 +139,41 @@ export function CinematicAnimeHero({
       <div className="zoku-anime-hero-content zoku-hero-content relative z-[1] mx-auto flex w-full flex-col items-start justify-end">
         <div
           key={current.id}
-          className="hero-copy flex w-full flex-col items-start gap-3 sm:gap-3.5 animate-[fade-in_0.35s_ease-out]"
+          className="hero-copy flex w-full flex-col items-start gap-3 sm:gap-4 animate-[fade-in_0.35s_ease-out]"
         >
-          <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-on-surface-variant">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
             {rating && (
-              <>
-                <span className="inline-flex items-center gap-1 font-semibold text-on-surface tabular-nums">
-                  <Star className="h-3.5 w-3.5 fill-primary text-primary" aria-hidden="true" />
-                  {rating}
-                </span>
-                <span aria-hidden="true">·</span>
-              </>
+              <span className="liquid-glass-pill inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold text-on-surface tabular-nums">
+                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />
+                {rating}
+              </span>
             )}
             {year && (
-              <>
-                <span className="tabular-nums">{year}</span>
-                <span aria-hidden="true">·</span>
-              </>
+              <span className="liquid-glass-pill rounded-full px-3 py-1 font-mono text-[11px] text-on-surface-variant tabular-nums">
+                {year}
+              </span>
             )}
-            <span>Anime</span>
+            <span className="liquid-glass-pill rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
+              Anime
+            </span>
             {hasEpisodes && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span className="tabular-nums">{current.episodes} Episodes</span>
-              </>
+              <span className="liquid-glass-pill rounded-full px-3 py-1 font-mono text-[11px] text-on-surface-variant tabular-nums">
+                {current.episodes} EP
+              </span>
             )}
           </div>
 
-          <h1 className="font-display font-bold tracking-tight text-on-surface line-clamp-2">
+          <h1 className="font-display font-bold tracking-tight text-on-surface line-clamp-2 drop-shadow-[0_2px_18px_rgba(0,0,0,0.32)]">
             {title}
           </h1>
 
           {synopsis && (
-            <p className="hero-overview max-w-xl text-sm leading-relaxed text-on-surface/80 line-clamp-2 sm:line-clamp-3">
+            <p className="hero-overview max-w-xl text-sm leading-relaxed text-on-surface/85 line-clamp-2 sm:line-clamp-3">
               {synopsis}
             </p>
           )}
 
-          <div className="flex flex-wrap items-center gap-2.5 pt-2">
+          <div className="flex flex-wrap items-center gap-2.5 pt-1">
             <button
               type="button"
               data-tv-focusable="true"
@@ -182,20 +182,42 @@ export function CinematicAnimeHero({
                   hasEpisodes ? `/watch/anime/${current.id}/1/1` : `/anime/${current.id}`
                 )
               }
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-contrast transition-opacity hover:opacity-90 active:scale-[0.98]"
+              className="liquid-glass-cta inline-flex min-h-11 items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold"
             >
               <Play className="h-4 w-4 fill-current shrink-0" aria-hidden="true" />
-              <span>{hasEpisodes ? "Play" : "Explore"}</span>
+              <span>{hasEpisodes ? "Play Now" : "Explore"}</span>
+            </button>
+
+            <button
+              type="button"
+              data-tv-focusable="true"
+              onClick={() =>
+                useQuickInspectorStore.getState().openInspector({
+                  mediaType: "anime",
+                  id: current.id,
+                  title,
+                  posterUrl: poster,
+                  backdropUrl: current.bannerImage || poster,
+                  year: year ? String(year) : undefined,
+                  rating: rating ?? undefined,
+                  overview: synopsis,
+                  episodes: current.episodes,
+                })
+              }
+              className="liquid-glass-pill inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-on-surface"
+            >
+              <SlidersHorizontal className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <span>Inspect</span>
             </button>
 
             <button
               type="button"
               data-tv-focusable="true"
               onClick={() => router.push(`/anime/${current.id}`)}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/15 bg-[#14141A]/90 px-5 py-2.5 text-sm font-semibold text-[#F5F5F7] transition-colors hover:bg-[#1C1C24] hover:border-white/25 active:scale-[0.98]"
+              className="liquid-glass-pill inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-on-surface"
             >
               <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>More Info</span>
+              <span className="hidden sm:inline">More Info</span>
             </button>
 
             <button
@@ -205,10 +227,8 @@ export function CinematicAnimeHero({
               aria-pressed={saved}
               aria-label={saved ? `Remove ${title} from Watchlist` : `Add ${title} to Watchlist`}
               title={saved ? "In My List" : "Add to My List"}
-              className={`inline-flex h-11 w-11 items-center justify-center rounded-lg border transition-colors active:scale-[0.98] ${
-                saved
-                  ? "border-primary bg-primary/15 text-primary"
-                  : "border-white/15 bg-[#14141A]/90 text-[#F5F5F7] hover:bg-[#1C1C24] hover:border-white/25"
+              className={`liquid-glass-pill inline-flex h-11 w-11 items-center justify-center rounded-full ${
+                saved ? "!border-primary !bg-primary/20 text-primary" : "text-on-surface"
               }`}
             >
               {saved ? (

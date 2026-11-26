@@ -59,3 +59,14 @@ test("reference-style poster play overlay is a separate accessible action", () =
   assert.match(html, /aria-label="Add Example Movie to Watchlist"/);
   assert.match(html, /aria-label="Mark Example Movie as watched"/);
 });
+
+test("quick inspect button renders as an independent accessible glass control when wired", () => {
+  const html = renderToStaticMarkup(createElement(CinematicMediaCard, {
+    ...card,
+    onPlay() {},
+    onQuickInspect() {},
+  }));
+  assert.equal(html.split("</button>").length - 1, 5);
+  assert.match(html, /data-testid="card-quick-inspect-btn"/);
+  assert.match(html, /aria-label="Quick inspect Example Movie"/);
+});

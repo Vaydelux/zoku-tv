@@ -268,8 +268,8 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
       const relDate = details.startDate?.year
         ? `${details.startDate.year}-${String(details.startDate.month || 1).padStart(2, "0")}-${String(details.startDate.day || 1).padStart(2, "0")}`
         : details.seasonYear
-        ? `${details.seasonYear}-01-01`
-        : null;
+          ? `${details.seasonYear}-01-01`
+          : null;
       addItem({
         media_type: "anime",
         anilistId,
@@ -298,130 +298,131 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
           </div>
         )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/75 to-black/45" />
-        <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-20 pb-8 flex items-end gap-6">
+        <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-20 pb-8">
           <button
             onClick={() => router.back()}
             aria-label="Go back"
             data-tv-focusable="true"
-            className="absolute top-6 left-4 sm:left-8 p-2.5 rounded-xl bg-black/50 hover:bg-black/75 text-white border border-white/15"
+            className="liquid-glass-pill absolute top-6 left-4 sm:left-8 inline-flex h-10 w-10 items-center justify-center rounded-full text-on-surface hover:text-primary"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
 
-          {poster && (
-            <img
-              src={poster}
-              alt={title}
-              className="hidden sm:block w-40 aspect-[2/3] rounded-xl border border-border-custom shadow-xl object-cover shrink-0"
-            />
-          )}
+          <div className="liquid-glass-elevated flex flex-col sm:flex-row items-start sm:items-end gap-6 rounded-[30px] p-5 sm:p-7">
+            {poster && (
+              <img
+                src={poster}
+                alt={title}
+                className="w-36 sm:w-44 aspect-[2/3] rounded-[20px] border border-[var(--glass-border-strong)] shadow-2xl object-cover shrink-0"
+              />
+            )}
 
-          <div className="space-y-3 flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-primary tabular-nums">
-              <span className="inline-flex items-center gap-1">
-                <Star className="h-4 w-4 fill-primary" />
-                <span>{score}</span>
-              </span>
-              <span className="text-on-surface-variant">·</span>
-              <span className="uppercase">{details.status || "ANIME"}</span>
-              {studioName && (
-                <>
-                  <span className="text-on-surface-variant">·</span>
-                  <span className="text-on-surface">{studioName}</span>
-                </>
-              )}
-              <span className="text-on-surface-variant">·</span>
-              <span
-                data-testid="anime-maturity-badge"
-                className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase ${
-                  classification.kidsSafe
-                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                    : "border-amber-500/40 bg-amber-500/10 text-amber-300"
-                }`}
-              >
-                {classification.code}
-              </span>
-            </div>
-
-            <h1 className="text-2xl sm:text-4xl font-display font-bold tracking-tight">{title}</h1>
-
-            {nextAiring && (
-              <div
-                data-testid="anime-next-airing-banner"
-                className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-3 py-1.5 text-xs font-mono text-emerald-300 tabular-nums"
-              >
-                <Clock className="h-3.5 w-3.5 shrink-0" />
-                <span className="font-bold">Episode {nextAiring.episode}</span>
-                <span>·</span>
-                <span>{formatCountdown(nextAiring.airingAt, nowSec)}</span>
-                <span className="hidden sm:inline opacity-80">
-                  ({new Date(nextAiring.airingAt * 1000).toLocaleString(undefined, {
-                    weekday: "short",
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })})
+            <div className="space-y-3 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-primary tabular-nums">
+                <span className="inline-flex items-center gap-1">
+                  <Star className="h-4 w-4 fill-primary" />
+                  <span>{score}</span>
+                </span>
+                <span className="text-on-surface-variant">·</span>
+                <span className="uppercase">{details.status || "ANIME"}</span>
+                {studioName && (
+                  <>
+                    <span className="text-on-surface-variant">·</span>
+                    <span className="text-on-surface">{studioName}</span>
+                  </>
+                )}
+                <span className="text-on-surface-variant">·</span>
+                <span
+                  data-testid="anime-maturity-badge"
+                  className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase ${classification.kidsSafe
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                      : "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                    }`}
+                >
+                  {classification.code}
                 </span>
               </div>
-            )}
 
-            <p className="text-xs sm:text-sm text-on-surface-variant line-clamp-3 max-w-3xl leading-relaxed">
-              {details.description}
-            </p>
+              <h1 className="text-2xl sm:text-4xl font-display font-bold tracking-tight">{title}</h1>
 
-            {(details.genres ?? []).length > 0 && (
-              <p className="text-[11px] font-mono uppercase tracking-wider text-on-surface-variant">
-                {(details.genres ?? []).join(" · ")}
+              {nextAiring && (
+                <div
+                  data-testid="anime-next-airing-banner"
+                  className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-3 py-1.5 text-xs font-mono text-emerald-300 tabular-nums"
+                >
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  <span className="font-bold">Episode {nextAiring.episode}</span>
+                  <span>·</span>
+                  <span>{formatCountdown(nextAiring.airingAt, nowSec)}</span>
+                  <span className="hidden sm:inline opacity-80">
+                    ({new Date(nextAiring.airingAt * 1000).toLocaleString(undefined, {
+                      weekday: "short",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })})
+                  </span>
+                </div>
+              )}
+
+              <p className="text-xs sm:text-sm text-on-surface-variant line-clamp-3 max-w-3xl leading-relaxed">
+                {details.description}
               </p>
-            )}
 
-            <div className="flex flex-wrap gap-3 pt-2">
-              {activeSeason && (
+              {(details.genres ?? []).length > 0 && (
+                <p className="text-[11px] font-mono uppercase tracking-wider text-on-surface-variant">
+                  {(details.genres ?? []).join(" · ")}
+                </p>
+              )}
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                {activeSeason && (
+                  <button
+                    type="button"
+                    data-tv-focusable="true"
+                    onClick={() =>
+                      router.push(
+                        `/watch/anime/${activeSeason.anilistId}/${activeSeason.filmuSeason}/1`
+                      )
+                    }
+                    className="liquid-glass-cta inline-flex items-center gap-2 rounded-full px-6 py-3 text-xs font-bold"
+                  >
+                    <Play className="h-4 w-4 fill-current" />
+                    Play S{activeSeason.seasonNumber} E1
+                  </button>
+                )}
+
+                {youtubeTrailer?.id && (
+                  <button
+                    type="button"
+                    data-testid="anime-watch-trailer-btn"
+                    data-tv-focusable="true"
+                    onClick={() => setTrailerOpen(true)}
+                    className="liquid-glass-pill inline-flex items-center gap-2 rounded-full px-5 py-3 text-xs font-semibold hover:text-primary"
+                  >
+                    <Film className="h-4 w-4 text-primary" />
+                    Watch Trailer
+                  </button>
+                )}
+
                 <button
                   type="button"
                   data-tv-focusable="true"
-                  onClick={() =>
-                    router.push(
-                      `/watch/anime/${activeSeason.anilistId}/${activeSeason.filmuSeason}/1`
-                    )
-                  }
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs font-bold text-primary-contrast shadow-md hover:brightness-110 transition-all"
+                  onClick={handleWatchlist}
+                  className="liquid-glass-pill inline-flex items-center gap-2 rounded-full px-5 py-3 text-xs font-semibold"
                 >
-                  <Play className="h-4 w-4 fill-current" />
-                  Play S{activeSeason.seasonNumber} E1
+                  {inWatchlist ? <Check className="h-4 w-4 text-primary" /> : <Plus className="h-4 w-4" />}
+                  {inWatchlist ? "In Watchlist" : "Add to Watchlist"}
                 </button>
-              )}
 
-              {youtubeTrailer?.id && (
-                <button
-                  type="button"
-                  data-testid="anime-watch-trailer-btn"
-                  data-tv-focusable="true"
-                  onClick={() => setTrailerOpen(true)}
-                  className="theme-panel inline-flex items-center gap-2 rounded-xl px-5 py-3 text-xs font-semibold hover:border-primary hover:text-primary transition-colors"
-                >
-                  <Film className="h-4 w-4 text-primary" />
-                  Watch Trailer
-                </button>
-              )}
-
-              <button
-                type="button"
-                data-tv-focusable="true"
-                onClick={handleWatchlist}
-                className="theme-panel inline-flex items-center gap-2 rounded-xl px-5 py-3 text-xs font-semibold hover:border-primary"
-              >
-                {inWatchlist ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                {inWatchlist ? "In Watchlist" : "Add to Watchlist"}
-              </button>
-
-              <CollectionPickerButton mediaType="anime" id={anilistId} />
-            </div>
-
-            {bridgeMatch && (
-              <div className="pt-2">
-                <CatalogBridgeBanner match={bridgeMatch} />
+                <CollectionPickerButton mediaType="anime" id={anilistId} />
               </div>
-            )}
+
+              {bridgeMatch && (
+                <div className="pt-2">
+                  <CatalogBridgeBanner match={bridgeMatch} />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -442,11 +443,10 @@ export default function AnimeDetailPage({ params }: AnimeDetailPageProps) {
                   key={season.seasonNumber}
                   data-tv-focusable="true"
                   onClick={() => setSelectedSeason(season.seasonNumber)}
-                  className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                    selectedSeason === season.seasonNumber
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${selectedSeason === season.seasonNumber
                       ? "bg-primary text-primary-contrast border-primary"
                       : "theme-panel hover:border-primary"
-                  }`}
+                    }`}
                 >
                   Season {season.seasonNumber}
                 </button>

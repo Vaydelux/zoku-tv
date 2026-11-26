@@ -270,11 +270,11 @@ function WatchlistPageContent() {
       <Navbar />
 
       <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
-        {/* Top Header Bar with Watchlist / Watch History Tab Switcher */}
-        <div className="border-b border-border-custom pb-5 sm:pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Kakei-Style Frosted Liquid Glass Header Card */}
+        <div className="liquid-glass rounded-[28px] p-5 sm:p-7 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="space-y-3 min-w-0">
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-bold text-on-surface tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-display font-bold text-on-surface tracking-tight">
                 {activeTab === "watchlist"
                   ? "My Watchlist"
                   : activeTab === "collections"
@@ -282,7 +282,7 @@ function WatchlistPageContent() {
                   : "Watch History"}
               </h1>
               {feedbackNotice && (
-                <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[11px] font-medium text-emerald-400 animate-fade-in">
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/12 px-3 py-0.5 font-mono text-[11px] font-medium text-emerald-400 animate-fade-in">
                   <Check className="h-3 w-3" />
                   <span>{feedbackNotice}</span>
                 </span>
@@ -292,7 +292,7 @@ function WatchlistPageContent() {
             <div
               role="tablist"
               aria-label="Library view tabs"
-              className="grid grid-cols-3 sm:inline-flex w-full sm:w-auto max-w-full items-center gap-1 rounded-xl border border-border-custom bg-surface p-1"
+              className="grid grid-cols-3 sm:inline-flex w-full sm:w-auto max-w-full items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1"
             >
               <button
                 type="button"
@@ -300,7 +300,7 @@ function WatchlistPageContent() {
                 aria-selected={activeTab === "watchlist"}
                 data-testid="tab-watchlist"
                 onClick={() => selectTab("watchlist")}
-                className={`inline-flex items-center justify-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-3.5 py-2 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                className={`inline-flex items-center justify-center gap-1 sm:gap-2 rounded-full px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "watchlist"
                     ? "bg-primary text-primary-contrast shadow-sm"
                     : "text-on-surface-variant hover:text-on-surface"
@@ -321,7 +321,7 @@ function WatchlistPageContent() {
                 aria-selected={activeTab === "collections"}
                 data-testid="tab-collections"
                 onClick={() => selectTab("collections")}
-                className={`inline-flex items-center justify-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-3.5 py-2 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                className={`inline-flex items-center justify-center gap-1 sm:gap-2 rounded-full px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "collections"
                     ? "bg-primary text-primary-contrast shadow-sm"
                     : "text-on-surface-variant hover:text-on-surface"
@@ -340,7 +340,7 @@ function WatchlistPageContent() {
                 aria-selected={activeTab === "history"}
                 data-testid="tab-watch-history"
                 onClick={() => selectTab("history")}
-                className={`inline-flex items-center justify-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-3.5 py-2 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                className={`inline-flex items-center justify-center gap-1 sm:gap-2 rounded-full px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === "history"
                     ? "bg-primary text-primary-contrast shadow-sm"
                     : "text-on-surface-variant hover:text-on-surface"

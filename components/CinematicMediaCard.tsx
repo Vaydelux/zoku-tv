@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from "react";
-import { Bookmark, BookmarkCheck, CheckCircle2, Film, ImageOff, Play } from "lucide-react";
+import {
+  Bookmark,
+  BookmarkCheck,
+  CheckCircle2,
+  Film,
+  ImageOff,
+  Play,
+  SlidersHorizontal,
+} from "lucide-react";
 import { computeCardTransformOrigin, type CardTransformOrigin } from "@/lib/rail-edge-origin";
 
 export interface CinematicMediaCardProps {
@@ -20,17 +28,17 @@ export interface CinematicMediaCardProps {
   onOpen: () => void;
   onPlay?: () => void;
   onQuickTrailer?: () => void;
+  onQuickInspect?: () => void;
   onPrefetch?: () => void;
   onToggleWatchlist: () => void;
   onToggleWatched: () => void;
 }
 
 /**
- * Artwork-first 2:3 cinematic poster card.
- * - Unobstructed poster art at rest (only progress bar & subtle New mark).
- * - Viewport/rail edge-aware hover scale (grows inward, never breaks row alignment).
- * - Single clean bottom action tray inside directional gradient scrim on hover/focus.
- * - Independent accessible sibling buttons (never nested interactive nodes).
+ * iOS 27/28 Liquid Glass 2:3 squircle poster card.
+ * - Artwork-first resting state with specular glass rim.
+ * - Edge-aware hover expansion with frosted Liquid Glass bottom action dock.
+ * - Independent accessible sibling buttons (zero nested interactive elements).
  */
 export function CinematicMediaCard({
   title,
@@ -48,6 +56,7 @@ export function CinematicMediaCard({
   onOpen,
   onPlay,
   onQuickTrailer,
+  onQuickInspect,
   onPrefetch,
   onToggleWatchlist,
   onToggleWatched,
@@ -90,7 +99,7 @@ export function CinematicMediaCard({
       className={`cinematic-poster-card group/card relative min-w-0 shrink-0 ${
         fullWidth
           ? "w-full"
-          : "w-[36vw] min-w-[132px] max-w-[196px] sm:w-[172px] md:w-[184px] lg:w-[196px]"
+          : "w-[37vw] min-w-[136px] max-w-[198px] sm:w-[176px] md:w-[188px] lg:w-[198px]"
       }`}
       aria-label={title}
       onPointerEnter={handleEnter}
@@ -98,7 +107,7 @@ export function CinematicMediaCard({
     >
       <div
         style={{ transformOrigin }}
-        className="cinematic-poster-art relative aspect-[2/3] overflow-hidden rounded-lg bg-surface"
+        className="cinematic-poster-art relative aspect-[2/3] overflow-hidden rounded-[18px] bg-surface"
       >
         {/* Fallback placeholder when image is unavailable */}
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface px-3 text-center text-on-surface-variant">
@@ -118,21 +127,27 @@ export function CinematicMediaCard({
           />
         )}
 
-        {/* Subtle New release marker */}
+        {/* Specular top glass highlight */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-10 rounded-[18px] ring-1 ring-inset ring-white/15"
+        />
+
+        {/* Subtle frosted New release capsule */}
         {recent && (
           <span
             data-testid="recent-release-tag"
-            className="pointer-events-none absolute top-2 left-2 z-20 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-contrast"
+            className="pointer-events-none absolute top-2.5 left-2.5 z-20 rounded-full bg-primary/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-contrast shadow-md backdrop-blur-md"
           >
             New
           </span>
         )}
 
-        {/* Primary clickable artwork layer (draggable inside horizontal rails) */}
+        {/* Primary clickable artwork layer */}
         <button
           type="button"
           data-tv-focusable="true"
-          className="cinematic-poster-open absolute inset-0 z-10 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-on-surface focus-visible:outline-offset-[-2px]"
+          className="cinematic-poster-open absolute inset-0 z-10 rounded-[18px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-on-surface focus-visible:outline-offset-[-2px]"
           onClick={onOpen}
           aria-label={`Open ${title} details`}
           title={overview || title}
@@ -140,30 +155,30 @@ export function CinematicMediaCard({
           <span className="sr-only">Open {title} details</span>
         </button>
 
-        {/* Directional hover scrim + disciplined bottom action bar */}
+        {/* Directional hover scrim + Frosted Liquid Glass action dock */}
         <div
           className="cinematic-hover-scrim pointer-events-none absolute inset-0 z-20 flex flex-col justify-end p-2.5"
           style={{
             background:
-              "linear-gradient(to top, rgba(11,11,15,0.96) 6%, rgba(11,11,15,0.68) 46%, transparent 82%)",
+              "linear-gradient(to top, rgba(6,9,19,0.94) 8%, rgba(6,9,19,0.58) 48%, transparent 84%)",
           }}
         >
           {overview && (
-            <p className="mb-2 line-clamp-2 text-[11px] leading-snug text-[#F5F5F7]/85">
+            <p className="mb-2 line-clamp-2 text-[11px] leading-snug text-white/85">
               {overview}
             </p>
           )}
 
-          <div className="pointer-events-auto flex items-center gap-1.5">
+          <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/15 bg-black/55 p-1 backdrop-blur-xl">
             {onPlay && (
               <button
                 type="button"
                 onClick={onPlay}
                 aria-label={`Play ${title}`}
                 data-tv-focusable="true"
-                className="cinematic-poster-action inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-contrast transition-opacity hover:opacity-90"
+                className="cinematic-poster-action inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-contrast shadow-sm transition-transform hover:scale-105"
               >
-                <Play className="h-3.5 w-3.5 fill-current ml-0.5" aria-hidden="true" />
+                <Play className="h-3 w-3 fill-current ml-0.5" aria-hidden="true" />
               </button>
             )}
 
@@ -175,10 +190,10 @@ export function CinematicMediaCard({
               aria-label={saved ? `Remove ${title} from Watchlist` : `Add ${title} to Watchlist`}
               title={saved ? "In My List" : "Add to My List"}
               onClick={onToggleWatchlist}
-              className={`cinematic-poster-action inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
+              className={`cinematic-poster-action inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors ${
                 saved
                   ? "border-primary bg-primary text-primary-contrast"
-                  : "border-white/25 bg-[#14141A]/90 text-[#F5F5F7] hover:border-white hover:bg-[#1C1C24]"
+                  : "border-white/20 bg-white/10 text-white hover:bg-white/20"
               }`}
             >
               {saved ? (
@@ -196,9 +211,23 @@ export function CinematicMediaCard({
                 aria-label={`Watch trailer for ${title}`}
                 title={`Trailer: ${title}`}
                 onClick={onQuickTrailer}
-                className="cinematic-poster-action inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#14141A]/90 text-[#F5F5F7] transition-colors hover:border-white hover:bg-[#1C1C24]"
+                className="cinematic-poster-action inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20"
               >
                 <Film className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            )}
+
+            {onQuickInspect && (
+              <button
+                type="button"
+                data-tv-focusable="true"
+                data-testid="card-quick-inspect-btn"
+                aria-label={`Quick inspect ${title}`}
+                title={`Inspect ${title}`}
+                onClick={onQuickInspect}
+                className="cinematic-poster-action inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20"
+              >
+                <SlidersHorizontal className="h-3 w-3" aria-hidden="true" />
               </button>
             )}
 
@@ -209,10 +238,10 @@ export function CinematicMediaCard({
               aria-label={watched ? `Mark ${title} as not watched` : `Mark ${title} as watched`}
               title={watched ? "Watched" : "Mark as watched"}
               onClick={onToggleWatched}
-              className={`cinematic-poster-action zoku-watched-toggle ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
+              className={`cinematic-poster-action zoku-watched-toggle ml-auto inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors ${
                 watched
-                  ? "border-emerald-500/70 bg-emerald-500/20 text-emerald-400"
-                  : "border-white/25 bg-[#14141A]/90 text-[#F5F5F7] hover:border-white hover:bg-[#1C1C24]"
+                  ? "border-emerald-400/70 bg-emerald-500/25 text-emerald-300"
+                  : "border-white/20 bg-white/10 text-white hover:bg-white/20"
               }`}
             >
               <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -239,15 +268,14 @@ export function CinematicMediaCard({
         )}
       </div>
 
-      {/* Quiet editorial caption below poster */}
-      <div className="min-w-0 px-0.5 pt-2">
-        <h3 className="truncate text-[13px] font-medium leading-snug text-on-surface sm:text-sm">
+      {/* Clean aligned caption beneath poster */}
+      <div className="mt-2.5 px-0.5 space-y-0.5">
+        <h3 className="truncate font-display text-xs sm:text-[13px] font-semibold tracking-tight text-on-surface group-hover/card:text-primary transition-colors">
           {title}
         </h3>
         {metaParts.length > 0 && (
-          <p className="mt-0.5 truncate text-[11px] text-on-surface-variant tabular-nums">
+          <p className="truncate font-mono text-[10px] sm:text-[11px] text-on-surface-variant tabular-nums">
             {metaParts.join(" · ")}
-            {watched ? " · Watched" : ""}
           </p>
         )}
       </div>

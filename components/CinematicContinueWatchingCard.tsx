@@ -98,7 +98,7 @@ export function CinematicContinueWatchingCard({ item }: { item: ContinueWatching
     >
       <div
         style={{ transformOrigin }}
-        className="zoku-continue-art relative aspect-video overflow-hidden rounded-lg border border-white/8 bg-surface transition-[transform,border-color] duration-200 group-hover:border-white/25"
+        className="zoku-continue-art relative aspect-video overflow-hidden rounded-[20px] border border-[var(--glass-border)] bg-surface shadow-[var(--shadow-card)] transition-[transform,border-color,box-shadow] duration-200 group-hover:border-[var(--glass-border-strong)] group-hover:shadow-[var(--shadow-card-hover)]"
       >
         {!hasImage && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-on-surface-variant">
@@ -130,13 +130,13 @@ export function CinematicContinueWatchingCard({ item }: { item: ContinueWatching
 
         <button
           type="button"
-          className="zoku-continue-open absolute inset-0 z-10 w-full rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-on-surface"
+          className="zoku-continue-open absolute inset-0 z-10 w-full rounded-[20px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-on-surface"
           data-tv-focusable="true"
           aria-label={`Resume ${item.title} (${progress}% watched)`}
           onClick={() => router.push(buildWatchUrl(item))}
         >
-          <span className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-contrast">
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
+            <span className="liquid-glass-cta inline-flex h-12 w-12 items-center justify-center rounded-full">
               <Play className="h-5 w-5 fill-current ml-0.5" aria-hidden="true" />
             </span>
           </span>
@@ -148,7 +148,7 @@ export function CinematicContinueWatchingCard({ item }: { item: ContinueWatching
             data-tv-focusable="true"
             aria-label={`Remove ${item.title} from Continue watching`}
             onClick={() => void removeItem(item.media_type, id)}
-            className="zoku-continue-remove absolute right-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-[#0B0B0F]/85 text-[#F5F5F7] transition-colors hover:border-white hover:bg-[#14141A]"
+            className="zoku-continue-remove absolute right-2.5 top-2.5 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white backdrop-blur-xl transition-colors hover:bg-black/85"
           >
             <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>

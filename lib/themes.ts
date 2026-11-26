@@ -1,4 +1,5 @@
 export type ThemeId =
+  | "theme-liquid-glass"
   | "theme-sunset"
   | "theme-aurora"
   | "theme-moonlight"
@@ -213,16 +214,16 @@ function toLightTokens(dark: ThemeTokens): ThemeTokens {
 
   return withGradient(
     {
-      background: "#f4f4f8",
+      background: "#edf2fa",
       surface: "#ffffff",
-      surfaceHover: "#ecebf3",
+      surfaceHover: "#e4edf9",
       primary: dark.primary,
       primaryContrast,
       primaryGlow: glow,
       accent: dark.accent,
       accentContrast,
-      onSurface: "#111218",
-      onSurfaceVariant: "rgba(17, 18, 24, 0.72)",
+      onSurface: "#0f172a",
+      onSurfaceVariant: "rgba(15, 23, 42, 0.68)",
       borderColor,
     },
     "light"
@@ -235,6 +236,26 @@ type ThemeSeed = Omit<ThemeOption, "tokens" | "lightTokens" | "category"> & {
 };
 
 const THEME_SEEDS: ThemeSeed[] = [
+  {
+    id: "theme-liquid-glass",
+    name: "iOS Liquid Glass",
+    hint: "Midnight obsidian & azure glass",
+    desc: "Flagship iOS 27/28 Liquid Glass palette with midnight depth, azure refraction, and airy frosted daylight mode",
+    preview: "linear-gradient(135deg, #0A84FF 0%, #38BDF8 54%, #060913 100%)",
+    tokens: token(
+      "#060913",
+      "#0F1524",
+      "#182238",
+      "#0A84FF",
+      "#FFFFFF",
+      "rgba(10,132,255,0.34)",
+      "#38BDF8",
+      "#06101F",
+      "#F5F8FF",
+      "rgba(218,228,248,0.72)",
+      "rgba(255,255,255,0.12)"
+    ),
+  },
   {
     id: "theme-crimson",
     name: "Crimson Cinema",
@@ -724,6 +745,7 @@ const THEME_SEEDS: ThemeSeed[] = [
 ];
 
 const THEME_CATEGORY_MAP: Record<ThemeId, ThemeCategory> = {
+  "theme-liquid-glass": "Nocturne",
   "theme-crimson": "Cinema",
   "theme-gilded": "Cinema",
   "theme-sunset": "Cinema",
@@ -766,7 +788,7 @@ function enrichTheme(seed: ThemeSeed): ThemeOption {
 
 export const THEME_OPTIONS: ThemeOption[] = THEME_SEEDS.map(enrichTheme);
 
-export const DEFAULT_THEME_ID: ThemeId = "theme-crimson";
+export const DEFAULT_THEME_ID: ThemeId = "theme-liquid-glass";
 
 /** Product brand theme for splash / auth / profiles */
 export const BRAND_THEME_ID: ThemeId = DEFAULT_THEME_ID;
@@ -776,10 +798,12 @@ export const APPEARANCE_STORAGE_KEY = "zoku_appearance";
 const THEME_MAP = new Map<ThemeId, ThemeOption>(THEME_OPTIONS.map((theme) => [theme.id, theme]));
 
 const LEGACY_THEME_IDS: Record<string, ThemeId> = {
+  "iOS Liquid Glass": "theme-liquid-glass",
+  "liquid-glass": "theme-liquid-glass",
   "Crimson Cinema": "theme-crimson",
   "crimson-cinema": "theme-crimson",
-  "theme-default": "theme-crimson",
-  default: "theme-crimson",
+  "theme-default": "theme-liquid-glass",
+  default: "theme-liquid-glass",
   "Sunset Graphite": "theme-sunset",
   "sunset-graphite": "theme-sunset",
   "Dark Aurora": "theme-aurora",
@@ -904,33 +928,54 @@ export function applyTheme(
   }
 
   if (mode === "light") {
-    root.style.setProperty("--shadow-glow", "0 6px 18px rgba(17, 18, 24, 0.14)");
+    root.style.setProperty("--shadow-glow", "0 8px 22px rgba(15, 23, 42, 0.12)");
+    root.style.setProperty("--shadow-elevated", "0 20px 48px rgba(15, 23, 42, 0.14)");
+    root.style.setProperty("--shadow-card", "0 6px 20px rgba(15, 23, 42, 0.07)");
+    root.style.setProperty("--shadow-card-hover", "0 16px 36px rgba(15, 23, 42, 0.15)");
+    root.style.setProperty("--glass-bg", "rgba(255, 255, 255, 0.72)");
+    root.style.setProperty("--glass-bg-elevated", "rgba(255, 255, 255, 0.88)");
+    root.style.setProperty("--glass-bg-subtle", "rgba(255, 255, 255, 0.52)");
+    root.style.setProperty("--glass-fallback-bg", "rgba(255, 255, 255, 0.96)");
+    root.style.setProperty("--glass-border", "rgba(15, 23, 42, 0.09)");
+    root.style.setProperty("--glass-border-strong", "rgba(15, 23, 42, 0.16)");
+    root.style.setProperty("--glass-highlight-inset", "rgba(255, 255, 255, 0.96)");
     root.style.setProperty(
-      "--shadow-elevated",
-      "0 14px 36px rgba(17, 18, 24, 0.12)"
+      "--glass-shadow",
+      "0 10px 30px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04)"
     );
     root.style.setProperty(
-      "--shadow-card",
-      "0 4px 14px rgba(17, 18, 24, 0.08)"
+      "--glass-shadow-elevated",
+      "0 24px 56px rgba(15, 23, 42, 0.14), 0 8px 20px rgba(15, 23, 42, 0.06)"
     );
-    root.style.setProperty(
-      "--shadow-card-hover",
-      "0 14px 32px rgba(17, 18, 24, 0.16)"
-    );
+    root.style.setProperty("--island-bg", "rgba(11, 14, 22, 0.93)");
+    root.style.setProperty("--island-border", "rgba(255, 255, 255, 0.16)");
+    root.style.setProperty("--island-text", "#F8FAFC");
   } else {
-    root.style.setProperty("--shadow-glow", "0 6px 20px rgba(0, 0, 0, 0.45)");
+    root.style.setProperty("--shadow-glow", `0 8px 24px ${tokens.primaryGlow}`);
+    root.style.setProperty("--shadow-elevated", "0 24px 56px rgba(0, 0, 0, 0.65)");
+    root.style.setProperty("--shadow-card", "0 10px 28px rgba(0, 0, 0, 0.44)");
+    root.style.setProperty("--shadow-card-hover", "0 20px 44px rgba(0, 0, 0, 0.72)");
+    root.style.setProperty("--glass-bg", `color-mix(in srgb, ${tokens.surface} 66%, transparent)`);
     root.style.setProperty(
-      "--shadow-elevated",
-      "0 18px 44px rgba(0, 0, 0, 0.65)"
+      "--glass-bg-elevated",
+      `color-mix(in srgb, ${tokens.surface} 82%, rgba(6, 9, 19, 0.35))`
+    );
+    root.style.setProperty("--glass-bg-subtle", `color-mix(in srgb, ${tokens.surface} 42%, transparent)`);
+    root.style.setProperty("--glass-fallback-bg", `color-mix(in srgb, ${tokens.surface} 96%, ${tokens.background})`);
+    root.style.setProperty("--glass-border", "rgba(255, 255, 255, 0.13)");
+    root.style.setProperty("--glass-border-strong", "rgba(255, 255, 255, 0.22)");
+    root.style.setProperty("--glass-highlight-inset", "rgba(255, 255, 255, 0.18)");
+    root.style.setProperty(
+      "--glass-shadow",
+      "0 12px 36px rgba(0, 0, 0, 0.48), 0 2px 10px rgba(0, 0, 0, 0.28)"
     );
     root.style.setProperty(
-      "--shadow-card",
-      "0 6px 18px rgba(0, 0, 0, 0.42)"
+      "--glass-shadow-elevated",
+      "0 24px 64px rgba(0, 0, 0, 0.68), 0 6px 20px rgba(0, 0, 0, 0.42)"
     );
-    root.style.setProperty(
-      "--shadow-card-hover",
-      "0 18px 40px rgba(0, 0, 0, 0.72)"
-    );
+    root.style.setProperty("--island-bg", "rgba(8, 10, 16, 0.88)");
+    root.style.setProperty("--island-border", "rgba(255, 255, 255, 0.16)");
+    root.style.setProperty("--island-text", "#F5F8FF");
   }
 
   if (typeof localStorage !== "undefined") {

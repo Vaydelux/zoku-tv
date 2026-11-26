@@ -275,19 +275,28 @@ function ProfilesPageContent() {
         {deletingProfileId && <LoadingBanner message="Removing profile..." />}
 
         <div className="relative z-10 flex w-full max-w-5xl flex-col items-center">
-          <div className="mb-6 sm:mb-8">
+          <div className="dynamic-island-capsule mb-6 inline-flex h-10 items-center gap-2.5 rounded-full px-4 text-xs font-semibold text-white">
+            <span className="h-2 w-2 rounded-full bg-sky-400" />
+            <span>Profile Portals</span>
+            <span className="h-3 w-px bg-white/15" aria-hidden="true" />
+            <span className="font-mono text-[10px] text-sky-300">
+              {profiles.length}/{MAX_PROFILES} Active
+            </span>
+          </div>
+
+          <div className="mb-4">
             <BrandMark size="md" />
           </div>
 
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-medium tracking-tight text-center text-on-surface mb-2">
+          <h1 className="text-3xl sm:text-4xl font-display font-bold tracking-tight text-center text-on-surface mb-2">
             Who is watching?
           </h1>
-          <p className="text-xs text-on-surface-variant text-center mb-8 sm:mb-12 px-2">
-            Select a profile or manage your active portals below.
+          <p className="text-xs sm:text-sm text-on-surface-variant text-center mb-8 sm:mb-10 px-2">
+            Select a Liquid Glass profile or configure your household portals below.
           </p>
 
           <div
-            className={`flex w-full max-w-3xl flex-wrap items-start justify-center gap-6 sm:gap-8 md:gap-10 ${
+            className={`liquid-glass-elevated flex w-full max-w-3xl flex-wrap items-start justify-center gap-6 sm:gap-8 md:gap-10 rounded-[32px] p-6 sm:p-10 ${
               isBusy ? "pointer-events-none opacity-60" : ""
             }`}
           >
@@ -428,7 +437,7 @@ function ProfilesPageContent() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="profile-modal-title"
-              className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-border-custom bg-surface p-4 shadow-2xl backdrop-blur-xl sm:max-w-xl sm:rounded-3xl sm:p-6 md:p-8"
+              className="liquid-glass-elevated relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-[28px] p-5 sm:max-w-xl sm:p-7 md:p-8"
               onClick={(e) => e.stopPropagation()}
             >
               <button

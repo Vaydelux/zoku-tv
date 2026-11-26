@@ -267,13 +267,16 @@ function TmdbDiscoverContent() {
       <Navbar />
 
       <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-custom pb-6 mb-6">
+        <div className="liquid-glass rounded-[28px] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="space-y-1">
-            <h1 className="text-2xl font-display font-bold tracking-tight text-on-surface">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-widest text-primary">
+              Curated Discovery Engine
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-on-surface">
               Explore Discover Hub
             </h1>
             <p className="text-xs text-on-surface-variant">
-              Tweak algorithms, filter genres, and construct your streaming feeds custom.
+              Filter genres, years, languages, and ratings to build custom Liquid Glass feeds.
             </p>
           </div>
 
@@ -281,23 +284,23 @@ function TmdbDiscoverContent() {
             {isKidMode && (
               <span
                 data-testid="discover-kids-mode-badge"
-                className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-300"
+                className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-300"
               >
                 <Shield className="h-3.5 w-3.5" />
                 <span>Kids Mode Active</span>
               </span>
             )}
 
-            <div className="theme-panel flex rounded-xl p-1" role="tablist" aria-label="Discover Media Type">
+            <div className="flex rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1" role="tablist" aria-label="Discover Media Type">
               <button
                 type="button"
                 role="tab"
                 aria-selected={mediaType === "movie"}
                 data-testid="discover-tab-movie"
                 onClick={() => applyFilters({ type: "movie", with_genres: "" })}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
                   mediaType === "movie"
-                    ? "bg-primary text-primary-contrast"
+                    ? "bg-primary text-primary-contrast shadow-sm"
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >
@@ -309,9 +312,9 @@ function TmdbDiscoverContent() {
                 aria-selected={mediaType === "tv"}
                 data-testid="discover-tab-tv"
                 onClick={() => applyFilters({ type: "tv", with_genres: "" })}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
                   mediaType === "tv"
-                    ? "bg-primary text-primary-contrast"
+                    ? "bg-primary text-primary-contrast shadow-sm"
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
               >

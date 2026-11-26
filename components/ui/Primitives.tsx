@@ -8,12 +8,12 @@ export function PosterGridSkeleton({ count = 12 }: { count?: number }) {
     <div
       role="status"
       aria-label="Loading titles"
-      className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5 sm:gap-6"
+      className="zoku-poster-grid grid"
     >
       {Array.from({ length: count }).map((_, idx) => (
         <div
           key={idx}
-          className="aspect-[2/3] rounded-2xl border border-border-custom bg-surface/65 animate-pulse shadow-sm"
+          className="liquid-glass-subtle aspect-[2/3] rounded-[18px] animate-pulse"
         />
       ))}
     </div>
@@ -36,8 +36,8 @@ export function EmptyStatePanel({
   onAction,
 }: EmptyStatePanelProps) {
   return (
-    <div className="glass-panel flex flex-col items-center justify-center rounded-2xl p-10 sm:p-14 text-center space-y-4">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border-custom bg-background/50 text-primary">
+    <div className="liquid-glass flex flex-col items-center justify-center rounded-[26px] p-10 sm:p-14 text-center space-y-4">
+      <div className="liquid-glass-pill flex h-14 w-14 items-center justify-center rounded-2xl text-primary">
         {icon || <Film className="h-7 w-7" />}
       </div>
       <div className="space-y-1.5 max-w-md">
@@ -50,7 +50,7 @@ export function EmptyStatePanel({
         <button
           type="button"
           onClick={onAction}
-          className="mt-2 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-contrast shadow-md hover:brightness-110 transition-all active:scale-95"
+          className="liquid-glass-cta mt-2 inline-flex min-h-10 items-center gap-2 rounded-full px-6 py-2.5 text-xs font-semibold"
         >
           <span>{actionLabel}</span>
         </button>
@@ -73,9 +73,9 @@ export function ErrorStatePanel({
   return (
     <div
       role="alert"
-      className="glass-panel flex flex-col items-center justify-center rounded-2xl border border-red-500/30 bg-red-500/5 p-8 sm:p-10 text-center space-y-4"
+      className="liquid-glass flex flex-col items-center justify-center rounded-[26px] border-red-500/30 p-8 sm:p-10 text-center space-y-4"
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-red-500/30 bg-red-500/10 text-red-400">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-red-500/30 bg-red-500/12 text-red-400">
         <AlertTriangle className="h-6 w-6" />
       </div>
       <div className="space-y-1 max-w-md">
@@ -86,7 +86,7 @@ export function ErrorStatePanel({
         <button
           type="button"
           onClick={onRetry}
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-contrast shadow-md hover:brightness-110 transition-all active:scale-95"
+          className="liquid-glass-cta inline-flex min-h-10 items-center gap-2 rounded-full px-6 py-2.5 text-xs font-semibold"
         >
           <RefreshCw className="h-3.5 w-3.5" />
           <span>Try Again</span>
@@ -134,7 +134,7 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-fade-in"
       onClick={() => !loading && onCancel()}
       role="presentation"
     >
@@ -144,24 +144,24 @@ export function ConfirmDialog({
         aria-labelledby="zoku-confirm-title"
         aria-describedby="zoku-confirm-desc"
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md rounded-2xl border border-border-custom bg-surface p-6 shadow-2xl space-y-5"
+        className="liquid-glass-elevated relative w-full max-w-md rounded-[28px] p-6 space-y-5 animate-scale-up"
       >
         <button
           type="button"
           onClick={onCancel}
           disabled={loading}
           aria-label="Close dialog"
-          className="absolute right-4 top-4 rounded-lg p-1.5 text-on-surface-variant hover:bg-surface-hover hover:text-on-surface transition-colors"
+          className="absolute right-4 top-4 rounded-full p-1.5 text-on-surface-variant hover:bg-on-surface/10 hover:text-on-surface transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
 
         <div className="flex items-start gap-3.5 pr-6">
           <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${
               destructive
-                ? "border-red-500/30 bg-red-500/10 text-red-400"
-                : "border-primary/30 bg-primary/10 text-primary"
+                ? "border-red-500/30 bg-red-500/12 text-red-400"
+                : "border-primary/30 bg-primary/12 text-primary"
             }`}
           >
             <AlertTriangle className="h-5 w-5" />
@@ -182,12 +182,12 @@ export function ConfirmDialog({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex items-center justify-end gap-2.5 pt-1">
           <button
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="rounded-xl border border-border-custom px-4 py-2 text-xs font-semibold text-on-surface hover:bg-surface-hover transition-colors disabled:opacity-50"
+            className="liquid-glass-pill rounded-full px-4 py-2 text-xs font-semibold text-on-surface disabled:opacity-50"
           >
             {cancelLabel}
           </button>
@@ -195,10 +195,10 @@ export function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all disabled:opacity-50 ${
+            className={`rounded-full px-5 py-2 text-xs font-bold transition-all disabled:opacity-50 ${
               destructive
-                ? "bg-red-600 text-white hover:bg-red-500"
-                : "bg-primary text-primary-contrast hover:brightness-110"
+                ? "bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-600/25"
+                : "liquid-glass-cta"
             }`}
           >
             {loading ? "Processing..." : confirmLabel}
@@ -208,4 +208,3 @@ export function ConfirmDialog({
     </div>
   );
 }
-

@@ -329,16 +329,16 @@ export default function TitleDetailPage({ params }: TitlePageProps) {
           onClick={() => router.back()}
           aria-label="Go back"
           data-tv-focusable="true"
-          className="absolute top-6 left-4 sm:left-6 lg:left-8 z-20 p-2.5 rounded-xl bg-black/50 hover:bg-black/80 text-white backdrop-blur-md border border-border-custom hover:text-primary transition-all active:scale-95"
+          className="liquid-glass-pill absolute top-6 left-4 sm:left-6 lg:left-8 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full text-on-surface hover:text-primary active:scale-95"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
       </div>
 
-      {/* 2. Core Profile Grid */}
+      {/* 2. Liquid Glass Core Profile Sheet */}
       <div className="zoku-detail-body relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 -mt-24 sm:-mt-32 md:-mt-40 lg:-mt-48 space-y-12">
-        <div className="flex flex-col md:flex-row gap-8 items-start">
-          <div className="w-44 sm:w-60 aspect-[2/3] rounded-2xl overflow-hidden border border-border-custom bg-surface shadow-2xl shrink-0 mx-auto md:mx-0">
+        <div className="liquid-glass-elevated flex flex-col md:flex-row gap-8 items-start rounded-[30px] p-5 sm:p-7 md:p-8">
+          <div className="w-44 sm:w-56 aspect-[2/3] rounded-[22px] overflow-hidden border border-[var(--glass-border-strong)] bg-surface shadow-2xl shrink-0 mx-auto md:mx-0">
             {posterUrl ? (
               <img src={posterUrl} alt={name} className="h-full w-full object-cover" />
             ) : (

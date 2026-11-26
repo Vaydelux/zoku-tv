@@ -118,14 +118,21 @@ function GenresPageContent() {
     <div className="zoku-cinematic-genres app-page-shell min-h-screen pb-12 text-on-surface">
       <Navbar />
       <main className="mx-auto w-full px-4 pt-8 pb-14 sm:px-6 lg:px-8" aria-labelledby="genres-page-title">
-        <div className="zoku-genres-top mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div className="liquid-glass zoku-genres-top mb-8 flex flex-wrap items-end justify-between gap-4 rounded-[28px] p-5 sm:p-7">
           <header className="min-w-0">
-            <h1 id="genres-page-title" className="font-display text-3xl font-bold tracking-tight">Genres</h1>
-            <p className="mt-2 text-sm text-on-surface-variant">Find something worth watching. Every genre opens the unified Discover catalog with your content restrictions applied.</p>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-widest text-primary">
+              Unified Discovery
+            </p>
+            <h1 id="genres-page-title" className="mt-1 font-display text-3xl sm:text-4xl font-bold tracking-tight">
+              Genres
+            </h1>
+            <p className="mt-2 max-w-xl text-sm text-on-surface-variant">
+              Find something worth watching. Every genre opens the unified Discover catalog with your content restrictions applied.
+            </p>
           </header>
 
           <div className="zoku-genre-controls flex flex-wrap items-center justify-between gap-3">
-            <div className="flex gap-1 rounded-xl border border-border-custom bg-surface p-1" role="group" aria-label="Catalog">
+            <div className="flex gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1" role="group" aria-label="Catalog">
               {(["movie", "tv", "anime"] as const).map((kind) => (
                 <button
                   key={kind}
@@ -133,10 +140,10 @@ function GenresPageContent() {
                   data-tv-focusable="true"
                   aria-pressed={kind === type}
                   onClick={() => handleSelectType(kind)}
-                  className={`min-h-[40px] rounded-lg px-3 py-2 text-xs font-semibold transition-colors sm:text-sm ${
+                  className={`min-h-[38px] rounded-full px-4 py-1.5 text-xs font-semibold transition-all sm:text-sm ${
                     kind === type
-                      ? "bg-primary text-primary-contrast"
-                      : "text-on-surface-variant hover:text-on-surface hover:bg-surface-hover"
+                      ? "bg-primary text-primary-contrast shadow-sm"
+                      : "text-on-surface-variant hover:text-on-surface"
                   }`}
                 >
                   {kind === "movie" ? "Movies" : kind === "tv" ? "TV Shows" : "Anime"}
@@ -148,16 +155,16 @@ function GenresPageContent() {
                 <Link
                   href={scheduleHref}
                   data-tv-focusable="true"
-                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors"
+                  className="liquid-glass-pill inline-flex min-h-10 items-center gap-2 rounded-full !border-primary/40 !bg-primary/12 px-4 py-2 text-xs sm:text-sm font-semibold text-primary"
                 >
                   <CalendarDays className="h-4 w-4" aria-hidden="true" />
-                  <span>7-Day Airing Schedule</span>
+                  <span>7-Day Schedule</span>
                 </Link>
               )}
               <Link
                 href={browseHref}
                 data-tv-focusable="true"
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border-custom px-3 py-2 text-sm font-semibold text-on-surface hover:border-primary hover:text-primary"
+                className="liquid-glass-pill inline-flex min-h-10 items-center gap-2 rounded-full px-4 py-2 text-xs sm:text-sm font-semibold text-on-surface hover:text-primary"
               >
                 Browse all <ArrowRight className="h-4 w-4" />
               </Link>
@@ -167,13 +174,13 @@ function GenresPageContent() {
 
         <section aria-label={`${type} genre categories`} className="mb-12">
           {!policyReady || loading ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5" aria-label="Loading genres">
-              {Array.from({ length: 10 }, (_, i) => <div key={i} className="h-28 animate-pulse rounded-xl bg-surface" />)}
+            <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 xl:grid-cols-5" aria-label="Loading genres">
+              {Array.from({ length: 10 }, (_, i) => <div key={i} className="liquid-glass-subtle h-28 animate-pulse rounded-[22px]" />)}
             </div>
           ) : error ? (
-            <div role="status" className="rounded-xl border border-border-custom bg-surface p-7 text-center text-on-surface-variant">Catalog temporarily unavailable. Try again shortly.</div>
+            <div role="status" className="liquid-glass rounded-[24px] p-7 text-center text-on-surface-variant">Catalog temporarily unavailable. Try again shortly.</div>
           ) : genres.length ? (
-            <div className="zoku-genre-grid grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="zoku-genre-grid grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {genres.map((genre) => {
                 const Icon = genre.icon;
                 const url = buildDiscoverUrl({ type, genre: genre.id });
@@ -182,10 +189,10 @@ function GenresPageContent() {
                     key={genre.id}
                     href={url}
                     data-tv-focusable="true"
-                    className="zoku-genre-tile group relative flex min-h-[108px] flex-col justify-end overflow-hidden rounded-xl p-4 text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                    className="zoku-genre-tile group relative flex min-h-[112px] flex-col justify-end overflow-hidden rounded-[22px] p-4 text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                     aria-label={`Browse ${genre.name} ${type === "anime" ? "anime" : type === "tv" ? "TV shows" : "movies"}`}
                   >
-                    <Icon className="pointer-events-none absolute right-4 top-4 h-7 w-7 text-on-surface-variant opacity-35 transition-colors group-hover:text-primary group-hover:opacity-75" aria-hidden="true" />
+                    <Icon className="pointer-events-none absolute right-4 top-4 h-7 w-7 text-on-surface-variant opacity-35 transition-all group-hover:scale-110 group-hover:text-primary group-hover:opacity-85" aria-hidden="true" />
                     <span className="relative z-10 text-base font-semibold tracking-tight">{genre.name}</span>
                     <span className="relative z-10 mt-1 text-[10px] font-medium uppercase tracking-widest text-on-surface-variant">
                       {type === "anime" ? "Anime" : type === "tv" ? "TV Series" : "Movies"}
@@ -195,7 +202,7 @@ function GenresPageContent() {
               })}
             </div>
           ) : (
-            <div role="status" className="rounded-xl border border-border-custom bg-surface p-7 text-center text-on-surface-variant">No available genres for this catalog.</div>
+            <div role="status" className="liquid-glass rounded-[24px] p-7 text-center text-on-surface-variant">No available genres for this catalog.</div>
           )}
         </section>
 

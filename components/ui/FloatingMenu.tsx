@@ -316,7 +316,7 @@ export function FloatingMenu({
         data-floating-ancestors={ancestorIds.join(" ")}
         data-placement={pos?.placement ?? "bottom"}
         style={style}
-        className={`zoku-floating-menu overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-border-custom bg-surface text-on-surface shadow-2xl custom-scrollbar ${className}`.trim()}
+        className={`zoku-floating-menu overflow-x-hidden overflow-y-auto overscroll-contain rounded-[22px] border border-[var(--glass-border-strong)] text-on-surface custom-scrollbar ${className}`.trim()}
       >
         {children}
       </div>

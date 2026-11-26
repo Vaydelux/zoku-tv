@@ -110,7 +110,7 @@ export function WatchlistAnalyticsSection({
   return (
     <section
       data-testid="watchlist-analytics-section"
-      className="glass-panel rounded-2xl border border-border-custom overflow-hidden transition-all duration-300"
+      className="liquid-glass rounded-[26px] overflow-hidden transition-all duration-300"
     >
       {/* Header bar with toggle */}
       <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-custom/80 bg-surface/40 backdrop-blur-sm">

@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Play, Plus, Check, Star, Info } from "lucide-react";
+import { Play, Plus, Check, Star, Info, SlidersHorizontal } from "lucide-react";
 import { TMDBTitle } from "@/lib/tmdb";
-import { useWatchlistStore } from "@/stores";
+import { useWatchlistStore, useQuickInspectorStore } from "@/stores";
 
 const DEFAULT_INTERVAL = 7500;
 
@@ -13,11 +13,17 @@ interface HeroCarouselProps {
   loading?: boolean;
 }
 
+function resolveImageUrl(
+  path: string | null | undefined,
+  size: "original" | "w500" = "original"
+): string | null {
+  if (!path) return null;
+  if (path.startsWith("http") || path.startsWith("data:")) return path;
+  return `https://image.tmdb.org/t/p/${size}${path}`;
+}
+
 function getBackdropUrl(backdropPath: string | null | undefined): string | null {
-  if (!backdropPath) return null;
-  return backdropPath.startsWith("http")
-    ? backdropPath
-    : `https://image.tmdb.org/t/p/original${backdropPath}`;
+  return resolveImageUrl(backdropPath, "original");
 }
 
 export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
@@ -143,7 +149,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
       }}
     >
       {/* Full-bleed artwork canvas */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0B0B0F]" aria-hidden="true">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden bg-background" aria-hidden="true">
         {slides.map((slide, idx) => {
           const url = getBackdropUrl(slide.backdrop_path || slide.poster_path);
           const isCurrent = idx === activeIndex;
@@ -170,7 +176,10 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
                   className="h-full w-full object-cover object-[center_20%] sm:object-center"
                 />
               ) : (
-                <div className="h-full w-full bg-[linear-gradient(135deg,#1A1A24_0%,#111118_48%,#0B0B0F_100%)]" />
+                <div
+                  className="h-full w-full bg-background"
+                  style={{ backgroundImage: "var(--background-gradient)" }}
+                />
               )}
             </div>
           );
@@ -195,60 +204,79 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
         ) : current ? (
           <div
             key={current.id}
-            className="hero-copy flex w-full flex-col items-start gap-3 sm:gap-3.5 animate-[fade-in_0.35s_ease-out]"
+            className="hero-copy flex w-full flex-col items-start gap-3 sm:gap-4 animate-[fade-in_0.35s_ease-out]"
           >
-            {/* Quiet single-line metadata row — zero badge pills */}
-            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-on-surface-variant">
+            {/* iOS 27/28 Frosted Glass Metadata Capsules */}
+            <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
               {heroRating && (
-                <>
-                  <span className="inline-flex items-center gap-1 font-semibold text-on-surface tabular-nums">
-                    <Star className="h-3.5 w-3.5 fill-primary text-primary" aria-hidden="true" />
-                    {heroRating}
-                  </span>
-                  <span aria-hidden="true">·</span>
-                </>
+                <span className="liquid-glass-pill inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold text-on-surface tabular-nums">
+                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />
+                  {heroRating}
+                </span>
               )}
               {heroYear && (
-                <>
-                  <span className="tabular-nums">{heroYear}</span>
-                  <span aria-hidden="true">·</span>
-                </>
+                <span className="liquid-glass-pill rounded-full px-3 py-1 font-mono text-[11px] text-on-surface-variant tabular-nums">
+                  {heroYear}
+                </span>
               )}
-              <span>{heroMediaType === "tv" ? "Series" : "Film"}</span>
+              <span className="liquid-glass-pill rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
+                {heroMediaType === "tv" ? "Series" : "Film"}
+              </span>
             </div>
 
             <h1
-              className="font-display font-bold tracking-tight text-on-surface line-clamp-2"
+              className="font-display font-bold tracking-tight text-on-surface line-clamp-2 drop-shadow-[0_2px_18px_rgba(0,0,0,0.32)]"
               aria-live="polite"
             >
               {heroName}
             </h1>
 
             {current.overview && (
-              <p className="hero-overview max-w-xl text-sm leading-relaxed text-on-surface/80 line-clamp-2 sm:line-clamp-3">
+              <p className="hero-overview max-w-xl text-sm leading-relaxed text-on-surface/85 line-clamp-2 sm:line-clamp-3">
                 {current.overview}
               </p>
             )}
 
-            <div className="flex flex-wrap items-center gap-2.5 pt-2">
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
               <button
                 type="button"
                 data-tv-focusable="true"
                 onClick={() => router.push(`/watch/${heroMediaType}/${current.id}`)}
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-contrast transition-opacity hover:opacity-90 active:scale-[0.98]"
+                className="liquid-glass-cta inline-flex min-h-11 items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold"
               >
                 <Play className="h-4 w-4 fill-current shrink-0" aria-hidden="true" />
-                <span>Play</span>
+                <span>Play Now</span>
+              </button>
+
+              <button
+                type="button"
+                data-tv-focusable="true"
+                onClick={() =>
+                  useQuickInspectorStore.getState().openInspector({
+                    mediaType: heroMediaType,
+                    id: current.id,
+                    title: heroName,
+                    posterUrl: resolveImageUrl(current.poster_path, "w500"),
+                    backdropUrl: getBackdropUrl(current.backdrop_path || current.poster_path),
+                    year: heroYear,
+                    rating: heroRating ?? undefined,
+                    overview: current.overview,
+                  })
+                }
+                className="liquid-glass-pill inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-on-surface"
+              >
+                <SlidersHorizontal className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <span>Inspect</span>
               </button>
 
               <button
                 type="button"
                 data-tv-focusable="true"
                 onClick={() => router.push(`/title/${heroMediaType}/${current.id}`)}
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/15 bg-[#14141A]/90 px-5 py-2.5 text-sm font-semibold text-[#F5F5F7] transition-colors hover:bg-[#1C1C24] hover:border-white/25 active:scale-[0.98]"
+                className="liquid-glass-pill inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-on-surface"
               >
                 <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>More Info</span>
+                <span className="hidden sm:inline">More Info</span>
               </button>
 
               <button
@@ -258,10 +286,8 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
                 aria-pressed={isInWatchlist}
                 aria-label={isInWatchlist ? "Remove from watchlist" : "Add to watchlist"}
                 title={isInWatchlist ? "In My List" : "Add to My List"}
-                className={`inline-flex h-11 w-11 items-center justify-center rounded-lg border transition-colors active:scale-[0.98] ${
-                  isInWatchlist
-                    ? "border-primary bg-primary/15 text-primary"
-                    : "border-white/15 bg-[#14141A]/90 text-[#F5F5F7] hover:bg-[#1C1C24] hover:border-white/25"
+                className={`liquid-glass-pill inline-flex h-11 w-11 items-center justify-center rounded-full ${
+                  isInWatchlist ? "!border-primary !bg-primary/20 text-primary" : "text-on-surface"
                 }`}
               >
                 {isInWatchlist ? (

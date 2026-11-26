@@ -27,6 +27,7 @@ import { ServerSelect, type ServerSelectOption } from "@/components/watch/Server
 import { CinematicVideoPlayer } from "@/components/watch/CinematicVideoPlayer";
 import { useTheaterFullscreen } from "@/hooks/useTheaterFullscreen";
 import { isDirectMediaUrl } from "@/lib/player-hud-controls";
+import { useDynamicIslandStore } from "@/stores";
 
 export interface TheaterEpisodeQuickItem {
   number: number;
@@ -228,6 +229,30 @@ export function TheaterPlayerShell({
         ? "Ready"
         : "Connecting";
 
+  // Publish live playback telemetry to the floating Dynamic Island
+  useEffect(() => {
+    const setTelemetry = useDynamicIslandStore.getState().setPlayerTelemetry;
+    setTelemetry({
+      title,
+      subtitle,
+      serverName: isDirectMode ? "Direct Stream" : currentServerName,
+      synced: hasConfirmedPlayback || isDirectMode,
+      onNextServer,
+      onRetryFrame,
+    });
+    return () => {
+      setTelemetry(null);
+    };
+  }, [
+    title,
+    subtitle,
+    isDirectMode,
+    currentServerName,
+    hasConfirmedPlayback,
+    onNextServer,
+    onRetryFrame,
+  ]);
+
   const handleApplyDirectStream = (e: React.FormEvent) => {
     e.preventDefault();
     const cleaned = directStreamInput.trim();
@@ -353,18 +378,18 @@ export function TheaterPlayerShell({
               )
             ))}
 
-          {/* Auto-Hiding Top Cinema HUD (pointer-events-none wrapper so iframe center stays clickable) */}
+          {/* Auto-Hiding Top iOS 27/28 Liquid Glass Cinema HUD */}
           <div
             className={`pointer-events-none absolute inset-x-0 top-0 z-20 px-3 pt-3 pb-10 sm:px-5 sm:pt-4 transition-opacity duration-200 ${
               hudVisible ? "opacity-100" : "opacity-0"
             }`}
             style={{
               background:
-                "linear-gradient(to bottom, rgba(11,11,15,0.92) 0%, rgba(11,11,15,0.45) 58%, transparent 100%)",
+                "linear-gradient(to bottom, rgba(6,9,19,0.88) 0%, rgba(6,9,19,0.38) 58%, transparent 100%)",
             }}
           >
             <div className="flex items-center justify-between gap-3">
-              {/* Left: Back + Title + Quiet Status Dot */}
+              {/* Left: Back + Title + Frosted Status Pill */}
               <div className="pointer-events-auto flex min-w-0 items-center gap-2.5">
                 <button
                   type="button"
@@ -377,26 +402,26 @@ export function TheaterPlayerShell({
                   }}
                   aria-label={isExpanded ? "Exit fullscreen" : backLabel}
                   data-tv-focusable="true"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#14141A]/85 text-[#F5F5F7] transition-colors hover:border-white/25 hover:bg-[#1C1C24]"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white backdrop-blur-xl transition-colors hover:border-white/30 hover:bg-black/75"
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                 </button>
 
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h1 className="truncate font-display text-sm font-semibold text-[#F5F5F7] sm:text-base">
+                    <h1 className="truncate font-display text-sm font-semibold text-white sm:text-base">
                       {title}
                     </h1>
                     <span
                       data-testid="player-container-status"
-                      className="hidden sm:inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#14141A]/90 border border-white/10 px-2 py-0.5 text-[10px] font-medium text-[#A1A1AA]"
+                      className="hidden sm:inline-flex shrink-0 items-center gap-1.5 rounded-full bg-black/55 border border-white/15 px-2.5 py-0.5 text-[10px] font-semibold text-white/80 backdrop-blur-xl"
                     >
                       <span
                         className={`h-1.5 w-1.5 rounded-full ${
                           hasConfirmedPlayback || isDirectMode
                             ? "bg-emerald-400"
                             : iframeReady
-                              ? "bg-[#F5F5F7]"
+                              ? "bg-sky-300"
                               : "bg-amber-400 animate-pulse"
                         }`}
                       />
@@ -404,15 +429,15 @@ export function TheaterPlayerShell({
                     </span>
                   </div>
                   {subtitle && (
-                    <p className="truncate text-[11px] text-[#A1A1AA] sm:text-xs">
+                    <p className="truncate text-[11px] text-white/65 sm:text-xs">
                       {subtitle}
                     </p>
                   )}
                 </div>
               </div>
 
-              {/* Right: Quick Theater Controls */}
-              <div className="pointer-events-auto flex shrink-0 items-center gap-1.5">
+              {/* Right: Quick Liquid Glass Theater Controls */}
+              <div className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-black/50 p-1 backdrop-blur-xl">
                 {quickEpisodes && quickEpisodes.length > 0 && (
                   <button
                     type="button"
@@ -423,9 +448,9 @@ export function TheaterPlayerShell({
                     aria-label="Open episodes drawer"
                     title="Episodes (E)"
                     data-tv-focusable="true"
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-[#14141A]/85 px-2.5 text-xs font-medium text-[#F5F5F7] transition-colors hover:border-white/25 hover:bg-[#1C1C24]"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-white/90 transition-colors hover:bg-white/15"
                   >
-                    <ListVideo className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <ListVideo className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     <span className="hidden md:inline">Episodes</span>
                   </button>
                 )}
@@ -440,13 +465,13 @@ export function TheaterPlayerShell({
                   aria-label="Stream server and player controls"
                   title="Servers & Controls (E)"
                   data-tv-focusable="true"
-                  className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors ${
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${
                     drawerOpen
-                      ? "border-primary bg-primary/15 text-primary"
-                      : "border-white/10 bg-[#14141A]/85 text-[#F5F5F7] hover:border-white/25 hover:bg-[#1C1C24]"
+                      ? "bg-primary text-primary-contrast"
+                      : "text-white/90 hover:bg-white/15"
                   }`}
                 >
-                  <SlidersHorizontal className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   <span className="hidden sm:inline max-w-[110px] truncate">
                     {isDirectMode ? "Direct Stream" : currentServerName}
                   </span>
@@ -460,13 +485,13 @@ export function TheaterPlayerShell({
                   title="Keyboard shortcuts (?)"
                   data-testid="watch-shortcuts-toggle-btn"
                   data-tv-focusable="true"
-                  className={`hidden sm:inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${
+                  className={`hidden sm:inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
                     showShortcutsHelp
-                      ? "border-primary bg-primary/15 text-primary"
-                      : "border-white/10 bg-[#14141A]/85 text-[#F5F5F7]/85 hover:border-white/25 hover:bg-[#1C1C24]"
+                      ? "bg-primary text-primary-contrast"
+                      : "text-white/85 hover:bg-white/15"
                   }`}
                 >
-                  <Keyboard className="h-4 w-4" aria-hidden="true" />
+                  <Keyboard className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
 
                 <button
@@ -477,13 +502,13 @@ export function TheaterPlayerShell({
                   title="Theater mode (T)"
                   data-testid="theater-mode-toggle-btn"
                   data-tv-focusable="true"
-                  className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
                     isViewportTheater
-                      ? "border-primary bg-primary/15 text-primary"
-                      : "border-white/10 bg-[#14141A]/85 text-[#F5F5F7]/85 hover:border-white/25 hover:bg-[#1C1C24]"
+                      ? "bg-primary text-primary-contrast"
+                      : "text-white/85 hover:bg-white/15"
                   }`}
                 >
-                  <RectangleHorizontal className="h-4 w-4" aria-hidden="true" />
+                  <RectangleHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
 
                 <button
@@ -494,25 +519,25 @@ export function TheaterPlayerShell({
                   title="Fullscreen (F)"
                   data-testid="theater-fullscreen-toggle-btn"
                   data-tv-focusable="true"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-[#14141A]/85 text-[#F5F5F7] transition-colors hover:border-white/25 hover:bg-[#1C1C24]"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
                 >
                   {isExpanded ? (
-                    <Minimize className="h-4 w-4" aria-hidden="true" />
+                    <Minimize className="h-3.5 w-3.5" aria-hidden="true" />
                   ) : (
-                    <Maximize className="h-4 w-4" aria-hidden="true" />
+                    <Maximize className="h-3.5 w-3.5" aria-hidden="true" />
                   )}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Slide-Over Theater Drawer (works seamlessly inside Fullscreen & mobile 100dvh!) */}
+          {/* Slide-Over Smoked Liquid Glass Theater Drawer */}
           {drawerOpen && (
             <aside
               role="dialog"
               aria-label="Stream controls and episodes"
               data-testid="theater-controls-drawer"
-              className="absolute inset-y-0 right-0 z-30 flex w-[min(340px,90vw)] flex-col border-l border-white/10 bg-[#14141A] text-[#F5F5F7] shadow-2xl"
+              className="absolute inset-y-0 right-0 z-30 flex w-[min(350px,90vw)] flex-col border-l border-white/15 bg-[#080c17]/90 text-[#F5F8FF] shadow-2xl backdrop-blur-2xl"
             >
               <div className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
                 <div className="flex items-center gap-1 rounded-lg bg-[#0B0B0F] p-0.5">

@@ -13,13 +13,13 @@
   --color-on-surface-variant: var(--on-surface-variant);
   --color-border-custom: var(--border-color);
 
-  --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "DM Sans", "Segoe UI", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Consolas, monospace;
 
-  --animate-fade-in: fade-in 0.24s ease-out;
-  --animate-scale-up: scale-up 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  --animate-slide-up: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-fade-in: fade-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-scale-up: scale-up 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-slide-up: slide-up 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes fade-in {
@@ -33,7 +33,7 @@
 
 @keyframes scale-up {
   from {
-    transform: scale(0.96);
+    transform: scale(0.95);
     opacity: 0;
   }
   to {
@@ -44,12 +44,45 @@
 
 @keyframes slide-up {
   from {
-    transform: translateY(8px);
+    transform: translateY(10px);
     opacity: 0;
   }
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+@keyframes island-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes drawer-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes sheet-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -70,30 +103,54 @@
   animation: zoku-ken-burns 32s ease-in-out infinite alternate;
 }
 
-/* True Theater Obsidian default tokens (overridden at runtime by applyTheme) */
+/* Flagship iOS 27/28 Liquid Glass default tokens (overridden at runtime by applyTheme) */
 :root,
-[data-theme="theme-crimson"] {
-  --background: #0b0b0f;
-  --surface: #14141a;
-  --surface-hover: #1c1c24;
-  --primary: #e50914;
+[data-theme="theme-liquid-glass"] {
+  --background: #060913;
+  --surface: #0f1524;
+  --surface-hover: #182238;
+  --primary: #0a84ff;
   --primary-contrast: #ffffff;
-  --primary-glow: rgba(229, 9, 20, 0.28);
-  --accent: #e50914;
-  --accent-contrast: #ffffff;
-  --on-surface: #f5f5f7;
-  --on-surface-variant: #a1a1aa;
-  --border-color: rgba(255, 255, 255, 0.08);
-  --shadow-glow: 0 6px 20px rgba(0, 0, 0, 0.45);
-  --shadow-elevated: 0 18px 44px rgba(0, 0, 0, 0.65);
-  --shadow-card: 0 6px 18px rgba(0, 0, 0, 0.42);
-  --shadow-card-hover: 0 18px 40px rgba(0, 0, 0, 0.72);
-  --background-gradient: none;
-  --surface-gradient: none;
-  --button-gradient: none;
-  --orb-a: none;
-  --orb-b: none;
-  --orb-c: none;
+  --primary-glow: rgba(10, 132, 255, 0.34);
+  --accent: #38bdf8;
+  --accent-contrast: #06101f;
+  --on-surface: #f5f8ff;
+  --on-surface-variant: rgba(218, 228, 248, 0.72);
+  --border-color: rgba(255, 255, 255, 0.12);
+
+  --shadow-glow: 0 8px 24px rgba(10, 132, 255, 0.32);
+  --shadow-elevated: 0 24px 56px rgba(0, 0, 0, 0.65);
+  --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.44);
+  --shadow-card-hover: 0 20px 44px rgba(0, 0, 0, 0.72);
+
+  --glass-bg: rgba(15, 21, 36, 0.66);
+  --glass-bg-elevated: rgba(13, 19, 34, 0.84);
+  --glass-bg-subtle: rgba(15, 21, 36, 0.42);
+  --glass-fallback-bg: #111829;
+  --glass-border: rgba(255, 255, 255, 0.13);
+  --glass-border-strong: rgba(255, 255, 255, 0.22);
+  --glass-highlight-inset: rgba(255, 255, 255, 0.18);
+  --glass-shadow: 0 12px 36px rgba(0, 0, 0, 0.48), 0 2px 10px rgba(0, 0, 0, 0.28);
+  --glass-shadow-elevated: 0 24px 64px rgba(0, 0, 0, 0.68), 0 6px 20px rgba(0, 0, 0, 0.42);
+
+  --island-bg: rgba(8, 10, 16, 0.88);
+  --island-border: rgba(255, 255, 255, 0.16);
+  --island-text: #f5f8ff;
+
+  --ios-scrollbar-thumb: rgba(245, 248, 255, 0.24);
+  --ios-scrollbar-thumb-hover: rgba(245, 248, 255, 0.44);
+  --ios-scrollbar-thumb-active: color-mix(in srgb, var(--primary) 82%, rgba(255, 255, 255, 0.28));
+  --ios-scrollbar-track: transparent;
+
+  --background-gradient:
+    radial-gradient(ellipse 115% 78% at 8% -12%, rgba(10, 132, 255, 0.26) 0%, transparent 62%),
+    radial-gradient(ellipse 95% 68% at 96% 6%, rgba(56, 189, 248, 0.18) 0%, transparent 58%),
+    linear-gradient(165deg, #091022 0%, #060913 50%, #081224 100%);
+  --surface-gradient: linear-gradient(145deg, rgba(22, 32, 56, 0.76) 0%, rgba(12, 18, 32, 0.74) 100%);
+  --button-gradient: linear-gradient(135deg, #0a84ff 0%, #38bdf8 100%);
+  --orb-a: radial-gradient(circle, rgba(10, 132, 255, 0.34) 0%, transparent 70%);
+  --orb-b: radial-gradient(circle, rgba(56, 189, 248, 0.24) 0%, transparent 70%);
+  --orb-c: radial-gradient(circle, rgba(10, 132, 255, 0.2) 0%, transparent 72%);
 }
 
 html {
@@ -106,10 +163,15 @@ html {
   overflow-x: clip;
   overflow-y: visible;
   color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html.appearance-light {
   color-scheme: light;
+  --ios-scrollbar-thumb: rgba(15, 23, 42, 0.22);
+  --ios-scrollbar-thumb-hover: rgba(15, 23, 42, 0.42);
+  --ios-scrollbar-thumb-active: color-mix(in srgb, var(--primary) 86%, rgba(15, 23, 42, 0.14));
 }
 
 body {
@@ -117,7 +179,7 @@ body {
   color: var(--on-surface);
   font-family: var(--font-sans), sans-serif;
   transition:
-    background-color 0.22s ease,
+    background-color 0.26s ease,
     color 0.22s ease,
     border-color 0.22s ease;
   height: auto;
@@ -127,7 +189,7 @@ body {
   overflow: visible;
 }
 
-/* Optional subtle user-selected background pattern (off by default) */
+/* Optional subtle user-selected background pattern */
 body::after,
 .zoku-pattern-layer {
   content: "";
@@ -215,7 +277,7 @@ html[data-bg-pattern="scanlines"] .zoku-pattern-layer {
 
 /* Smooth route transition */
 .page-route-transition {
-  animation: page-route-enter 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: page-route-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   backface-visibility: hidden;
 }
 
@@ -232,7 +294,7 @@ html[data-bg-pattern="scanlines"] .zoku-pattern-layer {
   position: relative;
   min-height: 100dvh;
   color: var(--on-surface);
-  background-color: var(--background);
+  background-color: transparent;
 }
 
 .splash-shell {
@@ -243,7 +305,7 @@ html[data-bg-pattern="scanlines"] .zoku-pattern-layer {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background-color: var(--background);
+  background-color: transparent;
   color: var(--on-surface);
 }
 
@@ -262,19 +324,273 @@ html[data-bg-pattern="scanlines"] .zoku-pattern-layer {
   }
 }
 
-/* Elevated obsidian surfaces — flat, disciplined, zero glassmorphism blur or glowing borders */
+/* ==========================================================================
+   iOS 27 / 28 Liquid Glass Material System
+   ========================================================================== */
+
+.liquid-glass,
 .glass-panel,
 .theme-panel {
-  background-color: var(--surface);
+  background-color: var(--glass-bg);
   color: var(--on-surface);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight-inset),
+    var(--glass-shadow);
+  backdrop-filter: blur(24px) saturate(185%);
+  -webkit-backdrop-filter: blur(24px) saturate(185%);
 }
 
-/* Hidden scrollbars for horizontal cinematic rails and chip tracks */
+.liquid-glass-elevated {
+  background-color: var(--glass-bg-elevated);
+  color: var(--on-surface);
+  border: 1px solid var(--glass-border-strong);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight-inset),
+    var(--glass-shadow-elevated);
+  backdrop-filter: blur(34px) saturate(200%);
+  -webkit-backdrop-filter: blur(34px) saturate(200%);
+}
+
+.liquid-glass-subtle {
+  background-color: var(--glass-bg-subtle);
+  color: var(--on-surface);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 var(--glass-highlight-inset);
+  backdrop-filter: blur(18px) saturate(165%);
+  -webkit-backdrop-filter: blur(18px) saturate(165%);
+}
+
+.liquid-glass-pill {
+  background-color: var(--glass-bg);
+  color: var(--on-surface);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight-inset),
+    0 4px 16px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms ease;
+}
+
+.liquid-glass-pill:hover {
+  border-color: var(--glass-border-strong);
+}
+
+.liquid-glass-cta {
+  background-image: var(--button-gradient);
+  background-color: var(--primary);
+  color: var(--primary-contrast);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 8px 24px var(--primary-glow);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.liquid-glass-cta:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.liquid-glass-cta:active {
+  transform: scale(0.975);
+}
+
+/* Signature High-Contrast iOS Dynamic Island Capsule (Dark Obsidian in Both Light & Dark Modes) */
+.dynamic-island-capsule {
+  background: var(--island-bg);
+  color: var(--island-text);
+  border: 1px solid var(--island-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 12px 32px rgba(0, 0, 0, 0.38),
+    0 2px 8px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease,
+    background-color 220ms ease;
+}
+
+.dynamic-island-capsule:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 16px 38px rgba(0, 0, 0, 0.45),
+    0 0 0 1px color-mix(in srgb, var(--primary) 26%, transparent);
+}
+
+.dynamic-island-popover {
+  animation: island-pop 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.zoku-inspector-drawer {
+  animation: drawer-slide-in 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (max-width: 767px) {
+  .zoku-inspector-drawer {
+    animation: sheet-slide-up 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+/* Tactile iOS Pill Toggle Switch */
+.ios-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  width: 48px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  padding: 2px;
+  transition: background-color 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ios-switch-thumb {
+  height: 24px;
+  width: 24px;
+  border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ============================================================================
+ * iOS 27/28 & macOS Liquid Glass Scrollbars
+ * Floating inset translucent pills with zero stepper arrows, smooth hover
+ * expansion, and theme-accented drag feedback across Dark & Light glass modes.
+ * ========================================================================== */
+
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+  background: transparent;
+}
+
+html::-webkit-scrollbar {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: var(--ios-scrollbar-track);
+  margin-block: 4px;
+  margin-inline: 4px;
+}
+
+html::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-corner {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background-color: var(--ios-scrollbar-thumb);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  min-height: 36px;
+  min-width: 36px;
+}
+
+::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ios-scrollbar-thumb-hover);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active,
+*::-webkit-scrollbar-thumb:active {
+  background-color: var(--ios-scrollbar-thumb-active);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Compact razor-thin iOS floating scrollbar for drawers, popovers & sheets */
+.custom-scrollbar {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--ios-scrollbar-thumb);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  min-height: 28px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ios-scrollbar-thumb-hover);
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background-color: var(--ios-scrollbar-thumb-active);
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Firefox fallback (scoped so Chromium keeps full ::-webkit-scrollbar iOS pills) */
+@supports not selector(::-webkit-scrollbar) {
+  html,
+  body,
+  *,
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ios-scrollbar-thumb) transparent;
+  }
+}
+
+/* Hidden scrollbars for horizontal cinematic rails and chip tracks (wins over global) */
 .no-scrollbar,
 .rail-scroll-track {
-  scrollbar-width: none;
+  scrollbar-width: none !important;
   -ms-overflow-style: none;
 }
 
@@ -285,35 +601,11 @@ html[data-bg-pattern="scanlines"] .zoku-pattern-layer {
   height: 0;
 }
 
-/* Clean subtle vertical scrollbars strictly for drawers & floating menus */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
-  border-radius: 9999px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
 /* Floating menus & popovers */
 @keyframes zoku-menu-enter {
   from {
     opacity: 0;
-    transform: translateY(3px) scale(0.985);
+    transform: translateY(4px) scale(0.975);
   }
   to {
     opacity: 1;
@@ -322,18 +614,21 @@ html[data-bg-pattern="scanlines"] .zoku-pattern-layer {
 }
 
 .zoku-floating-menu {
-  background-color: var(--surface);
-  border-color: var(--border-color);
-  box-shadow: var(--shadow-elevated);
+  background-color: var(--glass-bg-elevated);
+  border-color: var(--glass-border-strong);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight-inset),
+    var(--glass-shadow-elevated);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
   overscroll-behavior: contain;
   isolation: isolate;
-  animation: zoku-menu-enter 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: zoku-menu-enter 0.16s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .appearance-light .zoku-floating-menu {
-  background-color: var(--surface);
-  border-color: rgba(17, 18, 24, 0.12);
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+  background-color: rgba(255, 255, 255, 0.88);
+  border-color: rgba(15, 23, 42, 0.12);
 }
 
 .zoku-dropdown-trigger,
@@ -383,7 +678,7 @@ select:disabled,
   cursor: none !important;
 }
 
-/* Hero directional scrims: deep bottom + left gradient into obsidian canvas */
+/* Hero directional scrims: atmospheric blend into themed glass canvas */
 .hero-media-scrim {
   position: absolute;
   inset: 0;
@@ -391,19 +686,19 @@ select:disabled,
   background:
     linear-gradient(
       to top,
-      var(--background) 8%,
-      color-mix(in srgb, var(--background) 62%, transparent) 38%,
+      var(--background) 6%,
+      color-mix(in srgb, var(--background) 68%, transparent) 36%,
       transparent 68%
     ),
     linear-gradient(
       to right,
-      color-mix(in srgb, var(--background) 92%, transparent) 0%,
-      color-mix(in srgb, var(--background) 48%, transparent) 38%,
-      transparent 72%
+      color-mix(in srgb, var(--background) 90%, transparent) 0%,
+      color-mix(in srgb, var(--background) 46%, transparent) 40%,
+      transparent 74%
     ),
     linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--background) 72%, transparent) 0%,
+      color-mix(in srgb, var(--background) 66%, transparent) 0%,
       transparent 24%
     );
 }
@@ -412,15 +707,20 @@ select:disabled,
   background:
     linear-gradient(
       to top,
-      var(--background) 10%,
-      color-mix(in srgb, var(--background) 78%, transparent) 34%,
-      transparent 64%
+      var(--background) 8%,
+      color-mix(in srgb, var(--background) 80%, transparent) 34%,
+      transparent 66%
     ),
     linear-gradient(
       to right,
-      color-mix(in srgb, var(--background) 90%, transparent) 0%,
-      color-mix(in srgb, var(--background) 42%, transparent) 40%,
-      transparent 74%
+      color-mix(in srgb, var(--background) 92%, transparent) 0%,
+      color-mix(in srgb, var(--background) 48%, transparent) 42%,
+      transparent 76%
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--background) 54%, transparent) 0%,
+      transparent 22%
     );
 }
 
@@ -477,12 +777,65 @@ html[data-tv-mode="true"] .rail-card-slot [data-tv-focusable="true"]:focus {
   z-index: 25;
 }
 
-/* Android TV / 60fps safeguards */
+/* Android TV / 60fps safeguards: cleanly degrade backdrop-filter to solid tinted glass */
 html[data-tv-webview="true"] [class*="backdrop-blur"],
 html[data-perf-mode="60fps"] [class*="backdrop-blur"],
-html[data-gpu-bypass-backdrop="true"] [class*="backdrop-blur"] {
+html[data-gpu-bypass-backdrop="true"] [class*="backdrop-blur"],
+html[data-tv-webview="true"] .liquid-glass,
+html[data-tv-webview="true"] .liquid-glass-elevated,
+html[data-tv-webview="true"] .liquid-glass-subtle,
+html[data-tv-webview="true"] .liquid-glass-pill,
+html[data-tv-webview="true"] .glass-panel,
+html[data-tv-webview="true"] .theme-panel,
+html[data-tv-webview="true"] .zoku-floating-menu,
+html[data-tv-webview="true"] .dynamic-island-capsule,
+html[data-perf-mode="60fps"] .liquid-glass,
+html[data-perf-mode="60fps"] .liquid-glass-elevated,
+html[data-perf-mode="60fps"] .liquid-glass-subtle,
+html[data-perf-mode="60fps"] .liquid-glass-pill,
+html[data-perf-mode="60fps"] .glass-panel,
+html[data-perf-mode="60fps"] .theme-panel,
+html[data-perf-mode="60fps"] .zoku-floating-menu,
+html[data-perf-mode="60fps"] .dynamic-island-capsule,
+html[data-gpu-bypass-backdrop="true"] .liquid-glass,
+html[data-gpu-bypass-backdrop="true"] .liquid-glass-elevated,
+html[data-gpu-bypass-backdrop="true"] .liquid-glass-subtle,
+html[data-gpu-bypass-backdrop="true"] .liquid-glass-pill,
+html[data-gpu-bypass-backdrop="true"] .glass-panel,
+html[data-gpu-bypass-backdrop="true"] .theme-panel,
+html[data-gpu-bypass-backdrop="true"] .zoku-floating-menu,
+html[data-gpu-bypass-backdrop="true"] .dynamic-island-capsule {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+html[data-tv-webview="true"] .liquid-glass,
+html[data-tv-webview="true"] .liquid-glass-elevated,
+html[data-tv-webview="true"] .liquid-glass-subtle,
+html[data-tv-webview="true"] .liquid-glass-pill,
+html[data-tv-webview="true"] .glass-panel,
+html[data-tv-webview="true"] .theme-panel,
+html[data-tv-webview="true"] .zoku-floating-menu,
+html[data-perf-mode="60fps"] .liquid-glass,
+html[data-perf-mode="60fps"] .liquid-glass-elevated,
+html[data-perf-mode="60fps"] .liquid-glass-subtle,
+html[data-perf-mode="60fps"] .liquid-glass-pill,
+html[data-perf-mode="60fps"] .glass-panel,
+html[data-perf-mode="60fps"] .theme-panel,
+html[data-perf-mode="60fps"] .zoku-floating-menu,
+html[data-gpu-bypass-backdrop="true"] .liquid-glass,
+html[data-gpu-bypass-backdrop="true"] .liquid-glass-elevated,
+html[data-gpu-bypass-backdrop="true"] .liquid-glass-subtle,
+html[data-gpu-bypass-backdrop="true"] .liquid-glass-pill,
+html[data-gpu-bypass-backdrop="true"] .glass-panel,
+html[data-gpu-bypass-backdrop="true"] .theme-panel,
+html[data-gpu-bypass-backdrop="true"] .zoku-floating-menu {
+  background-color: var(--glass-fallback-bg);
+}
+
+html[data-perf-mode="60fps"] .zoku-ambient-aura,
+html[data-tv-webview="true"] .zoku-ambient-aura {
+  display: none !important;
 }
 
 html[data-gpu-force-compositing="true"] .rail-card-slot,

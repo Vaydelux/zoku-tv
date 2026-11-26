@@ -146,7 +146,7 @@ export function AuthThemePicker({ compact = false }: AuthThemePickerProps) {
         data-testid="auth-appearance-toggle"
         aria-label={`Switch to ${pref.appearance === "dark" ? "light" : "dark"} mode`}
         title={`Switch to ${pref.appearance === "dark" ? "light" : "dark"} mode`}
-        className="flex h-10 w-10 items-center justify-center rounded-xl border border-border-custom bg-surface/90 text-on-surface shadow-lg backdrop-blur-md transition-colors hover:border-primary/60 hover:text-primary"
+        className="liquid-glass-pill flex h-10 w-10 items-center justify-center rounded-full text-on-surface hover:text-primary"
       >
         {pref.appearance === "dark" ? (
           <Sun className="h-4 w-4" aria-hidden="true" />
@@ -163,10 +163,8 @@ export function AuthThemePicker({ compact = false }: AuthThemePickerProps) {
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label="Customize theme and background pattern"
-        className={`flex h-10 items-center gap-2 rounded-xl border bg-surface/90 px-3 text-xs font-semibold text-on-surface shadow-lg backdrop-blur-md transition-colors ${
-          open
-            ? "border-primary ring-1 ring-primary"
-            : "border-border-custom hover:border-primary/60"
+        className={`liquid-glass-pill flex h-10 items-center gap-2 rounded-full px-3.5 text-xs font-semibold text-on-surface ${
+          open ? "!border-primary ring-2 ring-primary/35" : ""
         }`}
       >
         <span
@@ -204,7 +202,7 @@ export function AuthThemePicker({ compact = false }: AuthThemePickerProps) {
               transformOrigin: pos.transformOrigin,
               zIndex: 80,
             }}
-            className="flex flex-col overflow-hidden rounded-2xl border border-border-custom bg-surface/95 text-on-surface shadow-2xl backdrop-blur-xl animate-fade-in"
+            className="liquid-glass-elevated flex flex-col overflow-hidden rounded-[26px] text-on-surface animate-fade-in"
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-3 border-b border-border-custom px-4 py-3.5">

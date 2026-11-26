@@ -4,6 +4,8 @@ import { restrictedMovieCatalog, tmdbReadAccessToken } from "@/lib/server/tmdb-c
 import { parseTmdbScope, sanitizedTmdbQuery, type TmdbMediaKind } from "@/lib/server/tmdb-proxy-policy";
 import { BLOCKED_COMPANY_IDS, BLOCKED_KEYWORD_IDS, isRestrictedTmdbTitle } from "@/lib/adult-content";
 import { tmdbProxyCache } from "@/lib/server/api-cache";
+import { extractClientIp, rateLimitHeaders, tmdbRateLimiter } from "@/lib/server/rate-limit";
+import { logServerEvent, resolveRequestId } from "@/lib/server/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,8 +20,8 @@ const MOVIE_DENYLIST = new Set(
     .split(",").map(Number).filter((value) => Number.isSafeInteger(value) && value > 0)
 );
 
-function json(data: unknown, status = 200): NextResponse {
-  return NextResponse.json(data, { status, headers: RESPONSE_HEADERS });
+function json(data: unknown, status = 200, extraHeaders?: Record<string, string>): NextResponse {
+  return NextResponse.json(data, { status, headers: { ...RESPONSE_HEADERS, ...extraHeaders } });
 }
 
 function canonicalParams(params: URLSearchParams): string {
@@ -116,15 +118,34 @@ async function verifiedDetails(
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const startedAt = Date.now();
+  const requestId = resolveRequestId(request.headers);
+  const ip = extractClientIp(request.headers);
+  const limitResult = tmdbRateLimiter.consume(`tmdb:${ip}`);
+  const traceHeaders: Record<string, string> = {
+    "X-Request-Id": requestId,
+    ...rateLimitHeaders(limitResult),
+  };
+  if (!limitResult.allowed) {
+    logServerEvent("warn", {
+      route: "/api/tmdb",
+      event: "rate_limited",
+      requestId,
+      status: 429,
+      meta: { ip, retryAfterSec: limitResult.retryAfterSec },
+    });
+    return json({ error: "Too many catalog requests. Please slow down." }, 429, traceHeaders);
+  }
+
   const segments = (await params).path;
   const scope = parseTmdbScope(segments);
-  if (!scope) return json({ error: "Unsupported catalog endpoint" }, 404);
+  if (!scope) return json({ error: "Unsupported catalog endpoint" }, 404, traceHeaders);
 
   let query: URLSearchParams;
   try {
     query = sanitizedTmdbQuery(request.nextUrl.searchParams);
   } catch {
-    return json({ error: "Invalid catalog query" }, 400);
+    return json({ error: "Invalid catalog query" }, 400, traceHeaders);
   }
 
   const filtering = adultFilterEnabledForCookie(request.cookies.get(ADULT_COOKIE_NAME)?.value);
@@ -150,18 +171,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         });
         return { ...raw, parts };
       });
-      return json(collectionData);
+      return json(collectionData, 200, traceHeaders);
     }
 
     if (scope.kind === "person") {
       const cacheKey = `${policyPrefix}:person:${scope.id}`;
       const cached = tmdbProxyCache.get(cacheKey);
-      if (cached) return json(cached);
+      if (cached) return json(cached, 200, traceHeaders);
 
       const personQuery = new URLSearchParams({ append_to_response: "combined_credits" });
       const raw = await fetchTmdb(scope.path, personQuery);
       if (filtering && raw.adult === true) {
-        return json({ error: "Person unavailable" }, 404);
+        return json({ error: "Person unavailable" }, 404, traceHeaders);
       }
 
       const filterCredits = (credits: unknown): Record<string, any>[] => {
@@ -185,7 +206,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         },
       };
       tmdbProxyCache.set(cacheKey, sanitized, DETAIL_TTL_MS);
-      return json(sanitized);
+      return json(sanitized, 200, traceHeaders);
     }
 
     if (scope.kind === "detail" || scope.kind === "child") {
@@ -202,8 +223,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         filtering ? restrictedIds || new Set() : null,
         requestedAppend
       );
-      if (!details) return json({ error: "Title unavailable" }, 404);
-      if (scope.kind === "detail") return json(details);
+      if (!details) return json({ error: "Title unavailable" }, 404, traceHeaders);
+      if (scope.kind === "detail") return json(details, 200, traceHeaders);
 
       const childCacheKey = `${policyPrefix}:child:${scope.path}?${canonicalParams(query)}`;
       const childData = await tmdbProxyCache.getOrFetch(childCacheKey, DETAIL_TTL_MS, async () => {
@@ -217,7 +238,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         }
         return child;
       });
-      return json(childData);
+      return json(childData, 200, traceHeaders);
     }
 
     if (filtering) {
@@ -247,10 +268,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       }));
       return { ...data, results };
     });
-    return json(catalogData);
+    return json(catalogData, 200, traceHeaders);
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    if (message.includes("not configured")) return json({ error: "TMDB server integration not configured" }, 503);
-    return json({ error: "Content verification is temporarily unavailable" }, 503);
+    logServerEvent("error", {
+      route: "/api/tmdb",
+      event: "upstream_error",
+      requestId,
+      status: 503,
+      durationMs: Date.now() - startedAt,
+      meta: { path: scope.path, reason: message || "unknown" },
+    });
+    if (message.includes("not configured")) return json({ error: "TMDB server integration not configured" }, 503, traceHeaders);
+    return json({ error: "Content verification is temporarily unavailable" }, 503, traceHeaders);
   }
 }

@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
-import { ContinueWatchingCard } from "@/components/ContinueWatchingCard";
 import { CinematicContinueWatchingCard } from "@/components/CinematicContinueWatchingCard";
 import { RailNavButton } from "@/components/RailNavButton";
 import { FloatingMenu } from "@/components/ui/FloatingMenu";
@@ -34,7 +33,6 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
   } = useSmoothRailScroll(items.length);
 
   if (items.length === 0) return null;
-  const cinematic = process.env.NEXT_PUBLIC_ZOKU_LAYOUT !== "classic";
 
   return (
     <section
@@ -109,11 +107,7 @@ export function ContinueWatchingRail({ items }: ContinueWatchingRailProps) {
                 key={baseKey}
                 className="rail-card-slot relative z-0 flex-shrink-0 hover:z-20 focus-within:z-20"
               >
-                {cinematic ? (
-                  <CinematicContinueWatchingCard item={item} />
-                ) : (
-                  <ContinueWatchingCard item={item} />
-                )}
+                <CinematicContinueWatchingCard item={item} />
               </div>
             );
           })}

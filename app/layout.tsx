@@ -12,7 +12,7 @@ import { INLINE_FETCH_AND_EXTENSION_GUARD_SCRIPT } from "@/lib/runtime-guards";
 export const metadata: Metadata = {
   title: "Zoku TV - Infinite Streaming Portal",
   description:
-    "Zoku TV is your high-fidelity, customizable dashboard for cinematic discovery and streaming. Explore genres, manage your watchlists, track your history, and customize your experience with 24 dynamic visual themes and theme-matched background patterns.",
+    "Zoku TV is an iOS Liquid Glass cinematic streaming portal for Movies, TV Series, and Anime with Dynamic Island live activities, profile isolation, watchlists, and 25 adaptive glass themes.",
   applicationName: "Zoku TV",
   manifest: `/manifest.webmanifest?theme=${DEFAULT_THEME_ID}`,
   appleWebApp: {
@@ -47,7 +47,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0B0B0F",
+  themeColor: "#060913",
   colorScheme: "dark",
 };
 
@@ -59,10 +59,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      
-      data-theme="theme-crimson"
+      data-theme={DEFAULT_THEME_ID}
       data-scroll-behavior="smooth"
-      data-zoku-layout={process.env.NEXT_PUBLIC_ZOKU_LAYOUT === "classic" ? "classic" : "cinematic"}
       suppressHydrationWarning
     >
       <head>

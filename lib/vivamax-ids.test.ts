@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { NextRequest } from "next/server";
 import { GET } from "../app/api/vivamax-ids/route";
 
 test("Vivamax ID endpoint fetches every TMDB page and deduplicates IDs", async () => {
@@ -20,7 +21,7 @@ test("Vivamax ID endpoint fetches every TMDB page and deduplicates IDs", async (
     });
   }) as typeof fetch;
   try {
-    const response = await GET();
+    const response = await GET(new NextRequest("http://localhost/api/vivamax-ids"));
     assert.equal(response.status, 200);
     const data = await response.json() as { ids: number[]; complete: boolean };
     assert.equal(data.complete, true);

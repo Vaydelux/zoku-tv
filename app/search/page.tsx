@@ -386,26 +386,30 @@ function SearchPageContent() {
       <Navbar />
 
       <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
-        <div className="zoku-search-header flex flex-col items-center max-w-2xl mx-auto text-center gap-4 py-6">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-on-surface">
+        <div className="liquid-glass rounded-[28px] p-5 sm:p-7">
+          <div className="zoku-search-header flex flex-col items-start max-w-3xl text-left gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-widest text-primary">
+                Cross-Catalog Spotlight
+              </p>
+              {isKidMode && (
+                <span
+                  data-testid="search-kids-mode-badge"
+                  className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-300"
+                >
+                  <Shield className="h-3 w-3" />
+                  <span>Kids Safe</span>
+                </span>
+              )}
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-display font-bold tracking-tight text-on-surface">
               Search
             </h1>
-            {isKidMode && (
-              <span
-                data-testid="search-kids-mode-badge"
-                className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-300"
-              >
-                <Shield className="h-3 w-3" />
-                <span>Kids Safe</span>
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-on-surface-variant max-w-md">
-            Discover movies, TV shows, and anime in one search.
-          </p>
+            <p className="text-xs sm:text-sm text-on-surface-variant max-w-lg">
+              Discover movies, TV shows, and anime in one instant search.
+            </p>
 
-          <form onSubmit={handleSearchSubmit} className="relative w-full mt-2">
+            <form onSubmit={handleSearchSubmit} className="relative w-full mt-1">
             <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-on-surface-variant" aria-hidden="true" />
             <input
               ref={searchInputRef}
@@ -487,6 +491,7 @@ function SearchPageContent() {
               }}
             />
           </form>
+          </div>
         </div>
 
         {!queryParam ? (

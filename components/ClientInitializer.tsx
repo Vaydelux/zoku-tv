@@ -64,11 +64,14 @@ export function ClientInitializer() {
   // Initialize auth, profile listener & persisted client preferences after hydration
   useEffect(() => {
     installWindowFetchGuard(window);
-    (window as unknown as Record<string, unknown>).__ZOKU_SESSION_STORE__ = useSessionStore;
-    (window as unknown as Record<string, unknown>).__ZOKU_APPLY_THEME__ = applyTheme;
-    (window as unknown as Record<string, unknown>).__ZOKU_APPLY_PATTERN__ = applyBackgroundPattern;
-    (window as unknown as Record<string, unknown>).__ZOKU_EPISODE_STORE__ = useEpisodeProgressStore;
-    (window as unknown as Record<string, unknown>).__ZOKU_WATCH_HISTORY_STORE__ = useWatchHistoryStore;
+    if (process.env.NODE_ENV !== "production") {
+      const debugWindow = window as unknown as Record<string, unknown>;
+      debugWindow.__ZOKU_SESSION_STORE__ = useSessionStore;
+      debugWindow.__ZOKU_APPLY_THEME__ = applyTheme;
+      debugWindow.__ZOKU_APPLY_PATTERN__ = applyBackgroundPattern;
+      debugWindow.__ZOKU_EPISODE_STORE__ = useEpisodeProgressStore;
+      debugWindow.__ZOKU_WATCH_HISTORY_STORE__ = useWatchHistoryStore;
+    }
     hydrateDynamicServers();
     hydrateCollections();
     hydrateEmbedPreferences();

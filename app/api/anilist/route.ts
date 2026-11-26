@@ -3,6 +3,8 @@ import { ADULT_COOKIE_NAME, adultFilterEnabledForCookie } from "@/lib/server/adu
 import { isRestrictedAniListMedia, filterAniListMedia, sanitizeAniListDetail, type AniListSafetyMedia } from "@/lib/anilist-content-policy";
 import { BROWSE_QUERY, STUDIO_BROWSE_QUERY, DETAIL_QUERY, ELIGIBILITY_QUERY, AIRING_SCHEDULE_QUERY } from "@/lib/anilist-queries";
 import { anilistProxyCache } from "@/lib/server/api-cache";
+import { anilistRateLimiter, extractClientIp, rateLimitHeaders } from "@/lib/server/rate-limit";
+import { logServerEvent, resolveRequestId } from "@/lib/server/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,8 +33,8 @@ const BLOCKED_ANIME_IDS = new Set(
 function excluded(media: AniListSafetyMedia): boolean {
   return BLOCKED_ANIME_IDS.has(media.id) || isRestrictedAniListMedia(media);
 }
-function responseJson(body: unknown, status = 200): NextResponse {
-  return NextResponse.json(body, { status, headers: HEADERS });
+function responseJson(body: unknown, status = 200, extraHeaders?: Record<string, string>): NextResponse {
+  return NextResponse.json(body, { status, headers: { ...HEADERS, ...extraHeaders } });
 }
 function validPositive(value: unknown, max: number) {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0 && value <= max;
@@ -79,38 +81,57 @@ function stableCacheKey(policyPrefix: string, op: Operation, variables: Record<s
 }
 
 export async function POST(request: NextRequest) {
-  if (request.headers.get("origin") && request.headers.get("origin") !== request.nextUrl.origin) {
-    return responseJson({ error: "Invalid request origin" }, 403);
+  const startedAt = Date.now();
+  const requestId = resolveRequestId(request.headers);
+  const ip = extractClientIp(request.headers);
+  const limitResult = anilistRateLimiter.consume(`anilist:${ip}`);
+  const traceHeaders: Record<string, string> = {
+    "X-Request-Id": requestId,
+    ...rateLimitHeaders(limitResult),
+  };
+  if (!limitResult.allowed) {
+    logServerEvent("warn", {
+      route: "/api/anilist",
+      event: "rate_limited",
+      requestId,
+      status: 429,
+      meta: { ip, retryAfterSec: limitResult.retryAfterSec },
+    });
+    return responseJson({ error: "Too many anime catalog requests. Please slow down." }, 429, traceHeaders);
   }
-  if (!(request.headers.get("content-type") || "").startsWith("application/json")) return responseJson({ error: "JSON required" }, 415);
-  if (Number(request.headers.get("content-length") || 0) > 4096) return responseJson({ error: "Request too large" }, 413);
+
+  if (request.headers.get("origin") && request.headers.get("origin") !== request.nextUrl.origin) {
+    return responseJson({ error: "Invalid request origin" }, 403, traceHeaders);
+  }
+  if (!(request.headers.get("content-type") || "").startsWith("application/json")) return responseJson({ error: "JSON required" }, 415, traceHeaders);
+  if (Number(request.headers.get("content-length") || 0) > 4096) return responseJson({ error: "Request too large" }, 413, traceHeaders);
   let payload: { operation?: unknown; variables?: unknown };
   try {
     const body = await request.text();
-    if (body.length > 4096) return responseJson({ error: "Request too large" }, 413);
+    if (body.length > 4096) return responseJson({ error: "Request too large" }, 413, traceHeaders);
     payload = JSON.parse(body) as typeof payload;
   } catch {
-    return responseJson({ error: "Invalid JSON" }, 400);
+    return responseJson({ error: "Invalid JSON" }, 400, traceHeaders);
   }
   const operation = payload?.operation;
   if (typeof operation !== "string" || !Object.hasOwn(OPERATIONS, operation)) {
-    return responseJson({ error: "Unsupported AniList operation" }, 404);
+    return responseJson({ error: "Unsupported AniList operation" }, 404, traceHeaders);
   }
   const op = operation as Operation;
   const vars = payload?.variables ?? {};
   if (!vars || typeof vars !== "object" || Array.isArray(vars) || !validVariables(op, vars as Record<string, unknown>)) {
-    return responseJson({ error: "Invalid AniList parameters" }, 400);
+    return responseJson({ error: "Invalid AniList parameters" }, 400, traceHeaders);
   }
   const variables = { ...(vars as Record<string, unknown>) };
   const filterEnabled = adultFilterEnabledForCookie(request.cookies.get(ADULT_COOKIE_NAME)?.value);
-  if (filterEnabled && variables.isAdult === true) return responseJson({ error: "Adult catalog search is unavailable" }, 403);
+  if (filterEnabled && variables.isAdult === true) return responseJson({ error: "Adult catalog search is unavailable" }, 403, traceHeaders);
   if (filterEnabled && op === "browse") variables.isAdult = false;
 
   const ttlMs = OPERATION_TTL_MS[op];
   const cacheKey = ttlMs > 0 ? stableCacheKey(filterEnabled ? "safe" : "open", op, variables) : null;
   if (cacheKey) {
     const cached = anilistProxyCache.get(cacheKey);
-    if (cached) return responseJson({ data: cached });
+    if (cached) return responseJson({ data: cached }, 200, traceHeaders);
   }
 
   try {
@@ -171,13 +192,21 @@ export async function POST(request: NextRequest) {
 
     const data = await executeUpstream();
     if (data === null) {
-      return responseJson({ error: "Anime unavailable" }, 404);
+      return responseJson({ error: "Anime unavailable" }, 404, traceHeaders);
     }
     if (cacheKey && ttlMs > 0) {
       anilistProxyCache.set(cacheKey, data, ttlMs);
     }
-    return responseJson({ data });
-  } catch {
-    return responseJson({ error: "AniList verification is temporarily unavailable" }, 503);
+    return responseJson({ data }, 200, traceHeaders);
+  } catch (error) {
+    logServerEvent("error", {
+      route: "/api/anilist",
+      event: "upstream_error",
+      requestId,
+      status: 503,
+      durationMs: Date.now() - startedAt,
+      meta: { operation: op, reason: error instanceof Error ? error.message : "unknown" },
+    });
+    return responseJson({ error: "AniList verification is temporarily unavailable" }, 503, traceHeaders);
   }
 }

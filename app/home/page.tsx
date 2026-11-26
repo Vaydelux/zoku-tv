@@ -1,24 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import {
-  AlertTriangle,
-  Film,
-  Sparkles,
-  Palette,
-  Sun,
-  Moon,
-  History,
-  Bookmark,
-  Shield,
-} from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import {
   useSessionStore,
   useContinueWatchingStore,
   useWatchHistoryStore,
   useWatchlistStore,
   useRailFilterStore,
+  useDynamicIslandStore,
 } from "@/stores";
 import { Navbar } from "@/components/Navbar";
 import { HeroCarousel } from "@/components/HeroCarousel";
@@ -58,10 +48,6 @@ import {
   isGenreIdAllowedInKidsMode,
   isAnimeGenreAllowedInKidsMode,
 } from "@/lib/kids-mode";
-import {
-  getThemeOption,
-  normalizeAppearance,
-} from "@/lib/themes";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
@@ -71,13 +57,11 @@ export default function HomePage() {
   const watchHistoryItems = useWatchHistoryStore((state) => state.items);
   const removeWatchHistoryItem = useWatchHistoryStore((state) => state.removeItem);
   const watchlistItems = useWatchlistStore((state) => state.items);
+  const pushActivity = useDynamicIslandStore((state) => state.pushActivity);
 
   const catalogMode = currentProfile?.catalogMode ?? "tmdb";
   useDocumentTitle(catalogMode === "anime" ? "Anime Home" : "Home");
-  const cinematicLayout = process.env.NEXT_PUBLIC_ZOKU_LAYOUT !== "classic";
   const isKidMode = Boolean(currentProfile?.kidMode);
-  const currentTheme = getThemeOption(currentProfile?.themePreference);
-  const currentAppearance = normalizeAppearance(currentProfile?.appearancePreference);
 
   const [heroSlides, setHeroSlides] = useState<TMDBTitle[]>([]);
   const [trendingMovies, setTrendingMovies] = useState<TMDBTitle[]>([]);
@@ -344,13 +328,11 @@ export default function HomePage() {
 
   const handleCatalogToggle = (nextMode: "tmdb" | "anime") => {
     if (!currentProfile || nextMode === catalogMode) return;
+    pushActivity(nextMode === "anime" ? "Switched to Anime" : "Movies & TV", {
+      detail: "Catalog active",
+      tone: "accent",
+    });
     void updateProfile(currentProfile.id, { catalogMode: nextMode });
-  };
-
-  const handleAppearanceToggle = () => {
-    if (!currentProfile) return;
-    const nextAppearance = currentAppearance === "dark" ? "light" : "dark";
-    void updateProfile(currentProfile.id, { appearancePreference: nextAppearance });
   };
 
   const categorySortContext = useMemo<RailSortContext>(() => {
@@ -445,9 +427,8 @@ export default function HomePage() {
         <HeroCarousel slides={heroSlides} loading={loadingTrending} />
       )}
 
-      {/* Responsive inline browse bar beneath hero */}
+      {/* Floating iOS 27/28 Liquid Glass browse strip beneath hero */}
       <HomeBrowseShell
-        cinematic={cinematicLayout}
         catalogMode={catalogMode}
         onCatalogChange={handleCatalogToggle}
         hasHero={loadingTrending || (catalogMode === "anime" ? animeHero.length > 0 : heroSlides.length > 0)}
@@ -465,155 +446,12 @@ export default function HomePage() {
             />
           ) : null
         }
-      >
-      <div className="relative z-20 mx-auto -mt-3 sm:-mt-4 w-full px-3 sm:px-6 lg:px-8">
-        <div className="glass-panel rounded-2xl p-2.5 sm:p-4">
-          <div className="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 sm:gap-3 shrink-0">
-              <div
-                role="group"
-                aria-label="Catalog mode switcher"
-                className="inline-flex flex-1 xs:flex-initial items-center rounded-xl border border-border-custom bg-background p-1"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleCatalogToggle("tmdb")}
-                  className={`inline-flex flex-1 xs:flex-initial items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                    catalogMode === "tmdb"
-                      ? "bg-primary text-primary-contrast"
-                      : "text-on-surface-variant hover:text-on-surface"
-                  }`}
-                >
-                  <Film className="h-3.5 w-3.5 shrink-0" />
-                  <span>Cinema & TV</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCatalogToggle("anime")}
-                  className={`inline-flex flex-1 xs:flex-initial items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                    catalogMode === "anime"
-                      ? "bg-primary text-primary-contrast"
-                      : "text-on-surface-variant hover:text-on-surface"
-                  }`}
-                >
-                  <Sparkles className="h-3.5 w-3.5 shrink-0" />
-                  <span>AniList Anime</span>
-                </button>
-              </div>
-
-              {isKidMode && (
-                <span
-                  data-testid="home-kids-mode-badge"
-                  className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-300"
-                >
-                  <Shield className="h-3 w-3 shrink-0" />
-                  <span>Kids Mode Active</span>
-                </span>
-              )}
-
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Link
-                  href="/settings?section=theme"
-                  className="theme-panel inline-flex items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-on-surface transition-colors hover:border-primary hover:text-primary cursor-pointer"
-                  title="Customize Theme in Settings"
-                >
-                  <span
-                    className="h-3 w-3 rounded-full border border-white/25 shrink-0"
-                    style={{ backgroundImage: currentTheme.preview }}
-                  />
-                  <Palette className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <span className="hidden sm:inline">{currentTheme.name}</span>
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={handleAppearanceToggle}
-                  aria-label={`Switch to ${currentAppearance === "dark" ? "light" : "dark"} mode`}
-                  title={`Appearance: ${currentAppearance}`}
-                  className="theme-panel inline-flex items-center justify-center rounded-xl p-1.5 text-on-surface transition-colors hover:border-primary hover:text-primary cursor-pointer"
-                >
-                  {currentAppearance === "dark" ? (
-                    <Sun className="h-4 w-4" />
-                  ) : (
-                    <Moon className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-
-              <div className="flex items-center gap-1.5 sm:gap-2 font-mono text-[10px] sm:text-[11px] text-on-surface-variant tabular-nums">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelectedRailFilter(selectedRailFilter === "history" ? "all" : "history")
-                  }
-                  className={`inline-flex items-center gap-1 rounded-lg border px-2 sm:px-2.5 py-1 transition-colors cursor-pointer ${
-                    selectedRailFilter === "history"
-                      ? "border-primary bg-primary text-primary-contrast"
-                      : "border-border-custom bg-background hover:border-primary/50"
-                  }`}
-                >
-                  <History className={`h-3 w-3 shrink-0 ${selectedRailFilter === "history" ? "text-primary-contrast" : "text-primary"}`} />
-                  <strong className={selectedRailFilter === "history" ? "text-primary-contrast" : "text-on-surface"}>
-                    {filteredHistory.length}
-                  </strong>{" "}
-                  <span>History</span>
-                </button>
-                <Link
-                  href="/watchlist"
-                  className="inline-flex items-center gap-1 rounded-lg border border-border-custom bg-background px-2 sm:px-2.5 py-1 hover:border-primary/50 transition-colors cursor-pointer"
-                >
-                  <Bookmark className="h-3 w-3 shrink-0 text-primary" />
-                  <strong className="text-on-surface">{catalogWatchlist.length}</strong>{" "}
-                  <span>Watchlist</span>
-                </Link>
-              </div>
-            </div>
-
-            <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
-              <div
-                data-testid="command-deck-rail-filters"
-                className="no-scrollbar flex flex-1 max-w-full items-center gap-1.5 overflow-x-auto touch-pan-x pt-0.5 pb-1 px-0.5 scroll-smooth"
-              >
-                {filterChips.map((chip) => {
-                  const active = selectedRailFilter === chip.id;
-                  return (
-                    <button
-                      key={chip.id}
-                      type="button"
-                      onClick={() => setSelectedRailFilter(chip.id)}
-                      data-testid={`deck-rail-filter-${chip.id}`}
-                      className={`shrink-0 rounded-full border px-3 py-1 text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
-                        active
-                          ? "border-primary bg-primary text-primary-contrast"
-                          : "border-border-custom bg-background text-on-surface-variant hover:border-primary/50 hover:text-on-surface"
-                      }`}
-                    >
-                      {chip.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {selectedRailFilter !== "history" && (
-                <div className="shrink-0">
-                  <RailSortDropdown
-                    value={railSort}
-                    onChange={(nextSort) => setRailSort(nextSort)}
-                    ariaLabel="Sort all rails"
-                    testId="all-rails-sort-dropdown"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      </HomeBrowseShell>
+      />
 
       <section className="zoku-home-rails relative z-10 bg-transparent pt-2 space-y-2 pb-16">
         {isOffline && (
           <div className="mx-auto w-full px-[var(--cinematic-gutter)]">
-            <div className="rounded-xl border border-amber-500/30 bg-surface p-4 space-y-1.5">
+            <div className="liquid-glass rounded-[22px] border-amber-500/35 p-4 space-y-1.5">
               <div className="flex items-center gap-2 text-amber-400">
                 <AlertTriangle className="h-4 w-4" />
                 <h2 className="text-xs font-semibold uppercase tracking-wider">Offline Mode Active</h2>

@@ -1,38 +1,21 @@
 /*
- * Zoku TV — Consolidated Cinematic Layout System
+ * Zoku TV — iOS 27/28 Liquid Glass Cinema Layout System
  * Single source of truth for responsive gutters, full-bleed hero framing,
- * horizontal snap rails, poster grids, settings grid, and theater player layout.
+ * floating glass chrome, horizontal snap rails, squircle grids, and Kakei split panels.
  */
 
-:root,
-html[data-zoku-layout="cinematic"] {
+:root {
   --cinematic-gutter: clamp(16px, 3.5vw, 56px);
-  --cinematic-page-max: 1320px;
-  --cinematic-radius: 10px;
-  --cinematic-header-height: 64px;
+  --cinematic-page-max: 1360px;
+  --cinematic-radius: 20px;
+  --cinematic-header-height: 72px;
 }
 
-/* Top Navigation */
+/* Floating Liquid Glass Top Navigation */
 .site-nav .zoku-nav-link {
   position: relative;
   white-space: nowrap;
   text-decoration: none;
-}
-
-.site-nav .zoku-nav-link::after {
-  content: "";
-  position: absolute;
-  right: 12px;
-  bottom: 0;
-  left: 12px;
-  height: 2px;
-  border-radius: 2px;
-  background: transparent;
-  transition: background-color 160ms ease;
-}
-
-.site-nav .zoku-nav-link-active::after {
-  background: var(--primary);
 }
 
 /* Full-Bleed Cinematic Hero Billboard */
@@ -40,28 +23,28 @@ html[data-zoku-layout="cinematic"] {
 .zoku-anime-hero {
   position: relative;
   width: 100%;
-  min-height: clamp(500px, 76svh, 860px);
-  background-color: var(--background);
+  min-height: clamp(520px, 78svh, 860px);
+  background-color: transparent;
 }
 
 .zoku-hero-content,
 .zoku-anime-hero-content {
-  min-height: clamp(500px, 76svh, 860px);
+  min-height: clamp(520px, 78svh, 860px);
   padding-inline: var(--cinematic-gutter);
-  padding-top: calc(var(--cinematic-header-height) + 24px);
-  padding-bottom: clamp(56px, 7svh, 96px);
+  padding-top: calc(var(--cinematic-header-height) + 32px);
+  padding-bottom: clamp(52px, 7svh, 92px);
 }
 
 .zoku-hero .hero-copy,
 .zoku-anime-hero .hero-copy {
-  max-width: min(600px, 100%);
+  max-width: min(640px, 100%);
 }
 
 .zoku-hero .hero-copy h1,
 .zoku-anime-hero .hero-copy h1 {
-  font-size: clamp(2rem, 4.4vw, 3.75rem);
-  line-height: 1.05;
-  letter-spacing: -0.03em;
+  font-size: clamp(2.1rem, 4.4vw, 3.85rem);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
 
@@ -70,12 +53,12 @@ html[data-zoku-layout="cinematic"] {
   .zoku-anime-hero,
   .zoku-hero-content,
   .zoku-anime-hero-content {
-    min-height: clamp(470px, 68svh, 660px);
+    min-height: clamp(480px, 68svh, 660px);
   }
 
   .zoku-hero-content,
   .zoku-anime-hero-content {
-    padding-bottom: 64px;
+    padding-bottom: 60px;
   }
 }
 
@@ -95,23 +78,23 @@ html[data-zoku-layout="cinematic"] {
 .zoku-hero [aria-label="Carousel slides"] button::before {
   content: "";
   display: block;
-  width: 16px;
-  height: 3px;
+  width: 14px;
+  height: 4px;
   border-radius: 999px;
-  background: rgba(245, 245, 247, 0.35);
-  transition: width 220ms ease, background-color 220ms ease;
+  background: rgba(245, 248, 255, 0.34);
+  transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1), background-color 220ms ease;
 }
 
 .zoku-hero [aria-label="Carousel slides"] button[aria-selected="true"]::before {
-  width: 32px;
+  width: 34px;
   background: var(--primary);
 }
 
 .zoku-hero [aria-label="Carousel slides"] button:hover::before {
-  background: rgba(245, 245, 247, 0.72);
+  background: rgba(245, 248, 255, 0.78);
 }
 
-/* Inline Home Browse Filter Bar */
+/* Floating Liquid Glass Browse Strip */
 .zoku-home-browse {
   position: relative;
   z-index: 20;
@@ -121,8 +104,8 @@ html[data-zoku-layout="cinematic"] {
 /* Horizontal Snap-Scrolling Rails */
 .rail-section {
   position: relative;
-  padding-block: 10px 20px;
-  scroll-margin-top: 76px;
+  padding-block: 10px 22px;
+  scroll-margin-top: 84px;
 }
 
 .rail-section-header {
@@ -130,14 +113,14 @@ html[data-zoku-layout="cinematic"] {
 }
 
 .rail-section .rail-scroll-track {
-  gap: clamp(10px, 1.25vw, 16px);
+  gap: clamp(12px, 1.35vw, 18px);
   padding-inline: var(--cinematic-gutter);
   scroll-padding-inline: var(--cinematic-gutter);
-  padding-block: 12px 16px;
+  padding-block: 12px 18px;
   scroll-snap-type: x mandatory;
 }
 
-/* Edge-Aware Poster Art Expansion (strict caption baseline alignment, zero row shift) */
+/* Edge-Aware Squircle Liquid Glass Poster Art Expansion */
 .cinematic-poster-card {
   scroll-snap-align: start;
   color: var(--on-surface);
@@ -146,13 +129,13 @@ html[data-zoku-layout="cinematic"] {
 @media (hover: hover) and (pointer: fine) {
   .cinematic-poster-card:hover .cinematic-poster-art,
   .cinematic-poster-card:focus-within .cinematic-poster-art {
-    transform: scale(1.045);
+    transform: translateY(-3px) scale(1.045);
     z-index: 20;
   }
 
   .cinematic-poster-card .cinematic-hover-scrim {
     opacity: 0;
-    transition: opacity 180ms ease;
+    transition: opacity 200ms ease;
   }
 
   .cinematic-poster-card:hover .cinematic-hover-scrim,
@@ -174,18 +157,22 @@ html[data-zoku-layout="cinematic"] {
 }
 
 .cinematic-poster-art {
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background-color: var(--surface);
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease, box-shadow 200ms ease;
+  border: 1px solid var(--glass-border);
+  background-color: var(--glass-bg);
+  box-shadow: var(--shadow-card);
+  transition:
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 200ms ease,
+    box-shadow 220ms ease;
 }
 
 .cinematic-poster-card:hover .cinematic-poster-art,
 .cinematic-poster-card:focus-within .cinematic-poster-art {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: var(--glass-border-strong);
   box-shadow: var(--shadow-card-hover);
 }
 
-/* Continue Watching 16:9 Cards */
+/* Continue Watching 16:9 Glass Cards */
 .zoku-continue-card {
   scroll-snap-align: start;
 }
@@ -193,7 +180,7 @@ html[data-zoku-layout="cinematic"] {
 @media (hover: hover) and (pointer: fine) {
   .zoku-continue-card:hover .zoku-continue-art,
   .zoku-continue-card:focus-within .zoku-continue-art {
-    transform: scale(1.03);
+    transform: translateY(-2px) scale(1.03);
     z-index: 20;
   }
 
@@ -211,7 +198,7 @@ html[data-zoku-layout="cinematic"] {
 /* Shared Responsive Poster Grids (Search, Discover, Watchlist, Genres) */
 .zoku-poster-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(12px, 1.4vw, 20px);
+  gap: clamp(14px, 1.5vw, 22px);
   align-items: start;
 }
 
@@ -247,7 +234,7 @@ html[data-zoku-layout="cinematic"] {
   }
 }
 
-/* Editorial Obsidian Genre Tiles (zero rainbow/purple gradients) */
+/* Liquid Glass Genre Tiles */
 .zoku-cinematic-genres main {
   max-width: var(--cinematic-page-max);
   margin-inline: auto;
@@ -256,20 +243,29 @@ html[data-zoku-layout="cinematic"] {
 
 .zoku-genre-tile {
   isolation: isolate;
-  background-color: var(--surface);
-  border: 1px solid var(--border-color);
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight-inset),
+    var(--glass-shadow);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
   color: var(--on-surface);
   transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    transform 160ms ease;
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms ease;
 }
 
 .zoku-genre-tile:hover,
 .zoku-genre-tile:focus-visible {
-  background-color: var(--surface-hover);
-  border-color: var(--primary);
-  transform: translateY(-2px);
+  background-color: var(--glass-bg-elevated);
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--glass-border-strong));
+  transform: translateY(-3px);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight-inset),
+    var(--shadow-card-hover);
 }
 
 /* Search, Watchlist & Settings Reading Measure */
@@ -280,103 +276,100 @@ html[data-zoku-layout="cinematic"] {
 }
 
 .zoku-cinematic-search .zoku-search-header {
-  max-width: min(700px, 100%);
+  max-width: min(760px, 100%);
   margin-inline: 0;
   align-items: flex-start;
   text-align: left;
-  gap: 10px;
+  gap: 12px;
 }
 
 .zoku-cinematic-search [data-testid="search-page-input"] {
-  border: 1px solid var(--border-color);
-  background-color: var(--surface);
-  border-radius: 10px;
-  min-height: 50px;
-  box-shadow: none;
+  border: 1px solid var(--glass-border-strong);
+  background-color: var(--glass-bg-elevated);
+  border-radius: 18px;
+  min-height: 54px;
+  box-shadow: inset 0 1px 0 var(--glass-highlight-inset);
 }
 
 .zoku-cinematic-search [data-testid="search-page-input"]:focus-visible {
   border-color: var(--primary);
-  box-shadow: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
 }
 
 .zoku-cinematic-search [aria-label="Filter search results"] > button[aria-pressed="true"] {
-  background: var(--primary);
+  background-image: var(--button-gradient);
+  background-color: var(--primary);
   color: var(--primary-contrast);
-  border-color: var(--primary);
+  border-color: transparent;
 }
 
-/* Settings Responsive Non-Scrolling Tab Grid */
+/* Kakei-Style Frosted Split Sidebar Layout for Settings */
 .zoku-cinematic-settings > div:not(.site-nav) {
-  max-width: 920px;
+  max-width: 1240px;
   margin-inline: auto;
 }
 
 .zoku-settings-layout {
-  display: block;
-  max-width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .zoku-settings-layout {
+    grid-template-columns: 272px minmax(0, 1fr);
+    gap: 24px;
+  }
 }
 
 .zoku-settings-nav {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 8px;
-  max-width: 100%;
+  gap: 6px;
   width: 100%;
   min-width: 0;
-  overflow: visible;
-  border-radius: 12px;
-  padding: 10px;
-  background-color: var(--surface);
-  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 12px;
 }
 
-.zoku-settings-nav > p {
-  display: none;
-}
-
-.zoku-settings-nav > button {
-  min-width: 0;
-  width: 100%;
-  min-height: 48px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 550;
-  padding: 10px;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  line-height: 1.35;
-  text-align: left;
-  gap: 9px;
-}
-
-.zoku-settings-nav > button svg {
-  flex-shrink: 0;
-}
-
-@media (min-width: 680px) {
+@media (min-width: 640px) and (max-width: 1023px) {
   .zoku-settings-nav {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 960px) {
+@media (min-width: 1024px) {
   .zoku-settings-nav {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    position: sticky;
+    top: 92px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px;
   }
 }
 
-.zoku-settings-content {
-  margin-top: 20px;
+.zoku-settings-nav > button {
+  min-width: 0;
   width: 100%;
-  max-width: 920px;
-  min-height: 300px;
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
+  min-height: 44px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+  text-align: left;
+  gap: 10px;
+}
+
+.zoku-settings-content {
+  width: 100%;
+  min-height: 360px;
+  border-radius: 26px;
   padding: clamp(20px, 3vw, 36px);
-  background-color: var(--surface);
-  box-shadow: none;
 }
 
 /* Title & Anime Detail Composition */
@@ -408,10 +401,15 @@ html[data-zoku-layout="cinematic"] {
   }
 }
 
-/* Mobile Bottom Tab Bar */
+/* Detached iOS 27/28 Floating Mobile Liquid Glass Pill Dock */
 .zoku-mobile-tabbar {
-  background-color: var(--background);
-  border-top: 1px solid var(--border-color);
+  background-color: var(--glass-bg-elevated);
+  border: 1px solid var(--glass-border-strong);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight-inset),
+    var(--glass-shadow-elevated);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
 }
 
 .zoku-mobile-tab {
@@ -419,19 +417,9 @@ html[data-zoku-layout="cinematic"] {
   min-width: 0;
 }
 
-.zoku-mobile-tab[aria-current="page"]::after {
-  content: "";
-  position: absolute;
-  bottom: 2px;
-  width: 20px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--primary);
-}
-
 @media (max-width: 1023px) {
   .zoku-has-mobile-nav {
-    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
   }
 }
 
@@ -443,8 +431,8 @@ html[data-zoku-layout="cinematic"] {
 
 /* Theater & Full-Screen Player Stage */
 .zoku-theater-stage {
-  background-color: #0b0b0f;
-  color: #f5f5f7;
+  background-color: #060913;
+  color: #f5f8ff;
 }
 
 .zoku-theater-stage:fullscreen,

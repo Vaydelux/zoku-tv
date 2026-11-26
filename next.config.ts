@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
+import { buildSecurityHeaders } from "./lib/server/security-headers";
 
 const nextConfig: NextConfig = {
-  cleanDistDir: false,
+  cleanDistDir: true,
   images: {
     remotePatterns: [
       {
@@ -22,10 +23,14 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    optimizePackageImports: ["lucide-react", "framer-motion", "motion"],
+    optimizePackageImports: ["lucide-react", "framer-motion"],
   },
   async headers() {
     return [
+      {
+        source: "/(.*)",
+        headers: buildSecurityHeaders(process.env.NODE_ENV === "production"),
+      },
       {
         source: "/avatars/:path*",
         headers: [
