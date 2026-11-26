@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { TMDBTitle } from "./tmdb";
-import { pickFeaturedHeroSlides } from "./load-home-content";
+import { pickFeaturedHeroSlides, combineHomeTrendingFeeds } from "./load-home-content";
 
 function item(id: number, backdrop_path: string | null, overview = "Safe synopsis"): TMDBTitle {
   return {
@@ -36,4 +36,19 @@ test("featured selection deduplicates IDs and rejects invalid entries", () => {
 test("featured selection returns empty only when the catalog itself has no safe entries", () => {
   assert.deepEqual(pickFeaturedHeroSlides([], []), []);
   assert.deepEqual(pickFeaturedHeroSlides([item(5, null)], [], 0), []);
+});
+
+test("cold Home preserves available feeds when an independent endpoint fails", () => {
+  const movie = item(10, "/movie.jpg");
+  const tv: TMDBTitle = { ...item(20, "/tv.jpg"), media_type: "tv" };
+  const rejected: PromiseRejectedResult = { status: "rejected", reason: new Error("503") };
+  const fulfilled = (value: TMDBTitle[]): PromiseFulfilledResult<TMDBTitle[]> => ({ status: "fulfilled", value });
+  const partial = combineHomeTrendingFeeds([rejected, fulfilled([movie]), fulfilled([tv])]);
+  assert.deepEqual(partial.trendingMovies, [movie]);
+  assert.deepEqual(partial.trendingTV, [tv]);
+  assert.ok(partial.heroSlides.length > 0);
+  const fallback = combineHomeTrendingFeeds([fulfilled([movie, tv]), rejected, rejected]);
+  assert.deepEqual(fallback.trendingMovies, [movie]);
+  assert.deepEqual(fallback.trendingTV, [tv]);
+  assert.throws(() => combineHomeTrendingFeeds([rejected, rejected, rejected]), /temporarily unavailable/);
 });

@@ -17,9 +17,10 @@ interface TitleCardProps {
   title: TMDBTitle;
   mediaType?: "movie" | "tv";
   fullWidth?: boolean;
+  prioritizeArtwork?: boolean;
 }
 
-export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProps) {
+export function TitleCard({ title, mediaType, fullWidth = false, prioritizeArtwork = false }: TitleCardProps) {
   const router = useRouter();
   const actualMediaType = mediaType || title.media_type || "movie";
   const { addItem, removeItem, hasItem } = useWatchlistStore();
@@ -92,6 +93,7 @@ export function TitleCard({ title, mediaType, fullWidth = false }: TitleCardProp
       saved={isInWatchlist}
       progressPercent={playProgress.hasProgress ? playProgress.progressPercent : null}
       fullWidth={fullWidth}
+      prioritizeArtwork={prioritizeArtwork}
       onOpen={() => router.push(`/title/${actualMediaType}/${title.id}`)}
       onPlay={() => router.push(`/watch/${actualMediaType}/${title.id}`)}
       onQuickTrailer={() => {
