@@ -449,22 +449,20 @@ function SettingsPageContent() {
     setSaving(true);
     try {
       if (confirmAction === "clear_cache") {
-        const keysToRemove: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (
-            key &&
-            (key.startsWith("zoku_tmdb_cache_") ||
-              key.startsWith("zoku_anilist_cache_") ||
-              key.includes("cache"))
-          ) {
-            keysToRemove.push(key);
-          }
+        // Only clear Zoku catalog caches; preserve profiles, preferences and
+        // unrelated applications' CacheStorage entries on the same origin.
+        for (const storage of [localStorage, sessionStorage]) {
+          const keys = Object.keys(storage).filter((key) =>
+            key.startsWith("zoku_tmdb_cache_") ||
+            key.startsWith("zoku_anilist_cache_") ||
+            key.startsWith("zoku_home_tmdb_") ||
+            key === "zoku_last_search_session_v1"
+          );
+          keys.forEach((key) => storage.removeItem(key));
         }
-        keysToRemove.forEach((key) => localStorage.removeItem(key));
         if (typeof window !== "undefined" && "caches" in window) {
           const cacheNames = await caches.keys();
-          await Promise.all(cacheNames.map((name) => caches.delete(name)));
+          await Promise.all(cacheNames.filter((name) => name.startsWith("zoku-tv-")).map((name) => caches.delete(name)));
         }
         setConfirmAction(null);
         notifySuccess("Catalog & service-worker caches cleared!");
