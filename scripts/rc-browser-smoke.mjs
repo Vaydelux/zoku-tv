@@ -182,13 +182,16 @@ async function runBrowserChecks() {
     await installIsolatedCatalog(ctx);
     let posterFailures = 0;
     let failNextPoster = false;
+    let recoveredPosterRequests = 0;
     await ctx.route("https://image.tmdb.org/t/p/**/rc-movie-poster.jpg", async (route) => {
-      if (failNextPoster) {
+      const isCardPoster = new URL(route.request().url()).pathname.includes("/w500/");
+      if (failNextPoster && isCardPoster) {
         failNextPoster = false;
         posterFailures++;
         await route.abort("failed");
         return;
       }
+      if (isCardPoster && posterFailures > 0) recoveredPosterRequests++;
       await route.fulfill({ status: 200, contentType: "image/svg+xml", headers: { "Cache-Control": "no-store" }, body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="60"><rect width="40" height="60" fill="#2563eb"/></svg>' });
     });
     const page = await ctx.newPage();
@@ -246,9 +249,10 @@ async function runBrowserChecks() {
     await page.getByTestId("settings-perf-mode-60fps").click();
     failNextPoster = true;
     await page.getByRole("button", { name: "Back to Home" }).click();
-    await page.waitForURL(/\\/home(?:\\?|$)/);
+    await page.waitForURL(/\/home(?:\?|$)/);
     await page.waitForFunction(() => [...document.querySelectorAll(".cinematic-poster-card img")].some((img) => img instanceof HTMLImageElement && img.src.includes("rc-movie-poster.jpg") && img.complete && img.naturalWidth > 0));
     assert.equal(posterFailures, 1, "Artwork regression must exercise a transient request failure");
+    assert.ok(recoveredPosterRequests > 0, "A subsequent artwork request must succeed after failure");
     evidence.push({ check: "Settings to Home poster recovery", result: "pass" });
 
     // Regression: Settings nav must wrap into a proper grid without horizontal
