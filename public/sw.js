@@ -1,7 +1,7 @@
 // Only cache public, static resources. Personalized HTML, auth and API responses
 // must never be persisted in CacheStorage (including for offline navigation).
-const SHELL_CACHE_NAME = "zoku-tv-public-v5";
-const IMAGE_CACHE_NAME = "zoku-tv-images-v5";
+const SHELL_CACHE_NAME = "zoku-tv-public-v6";
+const IMAGE_CACHE_NAME = "zoku-tv-images-v6";
 const ACTIVE_CACHES = [SHELL_CACHE_NAME, IMAGE_CACHE_NAME];
 const MAX_IMAGE_ENTRIES = 120;
 const PUBLIC_IMAGE_HOSTS = new Set(["image.tmdb.org", "s4.anilist.co"]);
@@ -27,12 +27,19 @@ async function trimImages() {
 }
 
 async function cacheFirstImage(request) {
-  const cache = await caches.open(IMAGE_CACHE_NAME);
-  const saved = await cache.match(request);
-  if (saved) return saved;
+  // CacheStorage is optional. Clearing caches, storage restrictions and
+  // quota failures must not prevent an otherwise valid network image.
+  try {
+    const cache = await caches.open(IMAGE_CACHE_NAME);
+    const saved = await cache.match(request);
+    if (saved) return saved;
+  } catch {
+    // Continue to the network.
+  }
   const response = await fetch(request);
   if (cacheable(response)) {
     try {
+      const cache = await caches.open(IMAGE_CACHE_NAME);
       await cache.put(request, response.clone());
       await trimImages();
     } catch {
@@ -55,7 +62,12 @@ async function networkFirstPublicAsset(request) {
     }
     return response;
   } catch {
-    return (await caches.match(request)) || Response.error();
+    try {
+      const cache = await caches.open(SHELL_CACHE_NAME);
+      return (await cache.match(request)) || Response.error();
+    } catch {
+      return Response.error();
+    }
   }
 }
 

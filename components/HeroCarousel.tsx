@@ -1,5 +1,7 @@
 "use client";
 
+import { RecoverableArtwork } from "@/components/RecoverableArtwork";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Plus, Check, Star, Info, SlidersHorizontal } from "lucide-react";
@@ -34,7 +36,6 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
   const [isPaused, setIsPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [isTabHidden, setIsTabHidden] = useState(false);
-  const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
   const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const slideCount = slides.length;
@@ -153,7 +154,7 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
         {slides.map((slide, idx) => {
           const url = getBackdropUrl(slide.backdrop_path || slide.poster_path);
           const isCurrent = idx === activeIndex;
-          const canRenderImg = Boolean(url && !failedImages[slide.id]);
+          const canRenderImg = Boolean(url);
 
           return (
             <div
@@ -163,16 +164,14 @@ export function HeroCarousel({ slides, loading = false }: HeroCarouselProps) {
               }`}
             >
               {canRenderImg ? (
-                <img
+                <RecoverableArtwork
                   src={url!}
                   alt=""
                   fetchPriority={idx === 0 ? "high" : "auto"}
                   loading={idx === 0 ? "eager" : "lazy"}
                   decoding="async"
                   draggable={false}
-                  onError={() =>
-                    setFailedImages((prev) => ({ ...prev, [slide.id]: true }))
-                  }
+                  fallback={<div className="h-full w-full bg-background" style={{ backgroundImage: "var(--background-gradient)" }} />}
                   className="h-full w-full object-cover object-[center_20%] sm:object-center"
                 />
               ) : (

@@ -1,5 +1,7 @@
 "use client";
 
+import { RecoverableArtwork } from "@/components/RecoverableArtwork";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Info, Play, Plus, SlidersHorizontal, Star } from "lucide-react";
@@ -28,7 +30,6 @@ export function CinematicAnimeHero({
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
   const current = slides[Math.min(active, Math.max(slides.length - 1, 0))];
 
   useEffect(() => {
@@ -102,7 +103,7 @@ export function CinematicAnimeHero({
       <div className="pointer-events-none absolute inset-0 overflow-hidden bg-background" aria-hidden="true">
         {slides.map((slide, index) => {
           const url = slide.bannerImage || getAnimePoster(slide);
-          const canRenderImg = Boolean(url && !failedImages[slide.id]);
+          const canRenderImg = Boolean(url);
           return (
             <div
               key={slide.id}
@@ -111,7 +112,7 @@ export function CinematicAnimeHero({
               }`}
             >
               {canRenderImg ? (
-                <img
+                <RecoverableArtwork
                   src={url!}
                   alt=""
                   fetchPriority={index === 0 ? "high" : "auto"}
@@ -119,9 +120,7 @@ export function CinematicAnimeHero({
                   decoding="async"
                   draggable={false}
                   referrerPolicy="no-referrer"
-                  onError={() =>
-                    setFailedImages((prev) => ({ ...prev, [slide.id]: true }))
-                  }
+                  fallback={<div className="h-full w-full bg-background" style={{ backgroundImage: "var(--background-gradient)" }} />}
                   className="h-full w-full object-cover object-center"
                 />
               ) : (

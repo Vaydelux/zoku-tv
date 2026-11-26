@@ -106,7 +106,7 @@ test("public images cache successfully, while private/no-store responses never c
     headers: { "Cache-Control": "private, no-store" },
   }));
   await guarded.request("https://zoku.example/avatars/secret.png", "cors", "image");
-  assert.equal(guarded.cacheData.get("zoku-tv-images-v5")?.size, 0);
+  assert.equal(guarded.cacheData.get("zoku-tv-images-v6")?.size, 0);
 
   assert.equal(await sw.request("https://other.example/poster.png", "cors", "image"), undefined);
   assert.equal(await sw.request("https://image.tmdb.org/t/p/123.jpg", "cors", ""), undefined);
@@ -121,4 +121,18 @@ test("activation evicts previous Zoku caches without touching other applications
   await pending;
   assert.equal(sw.cacheData.has("zoku-tv-shell-v4"), false);
   assert.equal(sw.cacheData.has("another-app"), true);
+});
+
+
+test("artwork still loads when CacheStorage.open or match fails", async () => {
+  const sw = bootServiceWorker(async () => new Response("network poster"));
+  const url = "https://image.tmdb.org/t/p/w500/recovery.jpg";
+  const originalOpen = sw.caches.open;
+  sw.caches.open = async () => { throw new Error("storage unavailable"); };
+  assert.equal(await (await sw.request(url, "no-cors", "image"))?.text(), "network poster");
+  sw.caches.open = async (name: string) => {
+    const cache = await originalOpen(name);
+    return { ...cache, match: async () => { throw new Error("cache cleared"); } };
+  };
+  assert.equal(await (await sw.request(url, "no-cors", "image"))?.text(), "network poster");
 });

@@ -173,7 +173,7 @@ export function ClientInitializer() {
         unsubscribeCollections();
       };
     }
-  }, [user, currentProfile, pathname, initWatchlist, initContinueWatching, initWatchHistory, initEpisodeProgress, initDynamicServers, initCollections]);
+  }, [user?.uid, currentProfile?.id, isBrandRoute(pathname), initWatchlist, initContinueWatching, initWatchHistory, initEpisodeProgress, initDynamicServers, initCollections]);
 
   return null;
 }

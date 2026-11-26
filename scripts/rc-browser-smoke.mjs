@@ -97,7 +97,7 @@ async function checkPolicyGuards() {
 const movie = {
   id: 101, title: "Demo Movie", media_type: "movie",
   overview: "A test-only movie used to qualify the UI.",
-  poster_path: null, backdrop_path: null, adult: false,
+  poster_path: "/rc-movie-poster.jpg", backdrop_path: null, adult: false,
   genre_ids: [12, 878], release_date: "2026-07-01", vote_average: 7.9,
 };
 const series = {
@@ -177,8 +177,20 @@ async function runBrowserChecks() {
       deviceScaleFactor: 1,
       reducedMotion: "reduce",
       ignoreHTTPSErrors: false,
+      serviceWorkers: "block", // Deterministic image/catalog interception; SW has dedicated tests.
     });
     await installIsolatedCatalog(ctx);
+    let posterFailures = 0;
+    let failNextPoster = false;
+    await ctx.route("https://image.tmdb.org/t/p/**/rc-movie-poster.jpg", async (route) => {
+      if (failNextPoster) {
+        failNextPoster = false;
+        posterFailures++;
+        await route.abort("failed");
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: "image/svg+xml", headers: { "Cache-Control": "no-store" }, body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="60"><rect width="40" height="60" fill="#2563eb"/></svg>' });
+    });
     const page = await ctx.newPage();
     page.on("pageerror", (error) => warningEvents.push({ type: "pageerror", message: error.message }));
     page.setDefaultTimeout(15_000);
@@ -228,6 +240,17 @@ async function runBrowserChecks() {
       evidence.push({ check: "Home " + viewport.label + " focusable controls", result: "pass", count: interactive });
     }
 
+    // Navigate through an actual settings change and return to Home with a
+    // transient poster failure. Artwork must recover without a full refresh.
+    await page.goto(new URL("/settings?section=theme", base).href, { waitUntil: "domcontentloaded" });
+    await page.getByTestId("settings-perf-mode-60fps").click();
+    failNextPoster = true;
+    await page.getByRole("button", { name: "Back to Home" }).click();
+    await page.waitForURL(/\\/home(?:\\?|$)/);
+    await page.waitForFunction(() => [...document.querySelectorAll(".cinematic-poster-card img")].some((img) => img instanceof HTMLImageElement && img.src.includes("rc-movie-poster.jpg") && img.complete && img.naturalWidth > 0));
+    assert.equal(posterFailures, 1, "Artwork regression must exercise a transient request failure");
+    evidence.push({ check: "Settings to Home poster recovery", result: "pass" });
+
     // Regression: Settings nav must wrap into a proper grid without horizontal
     // scrollbars or clipped tabs at mobile and desktop sizes.
     await page.goto(new URL("/settings?section=profiles", base).href, { waitUntil: "domcontentloaded" });
@@ -247,7 +270,7 @@ async function runBrowserChecks() {
           count: tabs.length,
         };
       });
-      assert.equal(navInfo.display, "grid", "Settings sections must be a grid");
+      assert.equal(navInfo.display, viewport.width >= 1024 ? "flex" : "grid", "Settings navigation must adapt to the viewport");
       assert.equal(navInfo.count, 9, "All nine settings sections must remain accessible");
       assert.ok(navInfo.scrollWidth <= navInfo.width + 2 && navInfo.allVisible,
         "Settings nav must not require horizontal scrolling: " + JSON.stringify(navInfo));
@@ -261,7 +284,7 @@ async function runBrowserChecks() {
     // Home genre preferences must be saved and survive a full page reload.
     // The local demo uses the same session-store update path as Firebase mode.
     await page.goto(new URL("/settings?section=genre-rails", base).href, { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: "Home Genre Channels Selection" }).waitFor();
+    await page.getByRole("heading", { name: "Home Genre Channels" }).waitFor();
     await page.getByRole("button", { name: "Reset Default" }).click();
     const selectionCounter = page.getByTestId("genre-selected-count");
     await page.waitForFunction(() =>
@@ -269,7 +292,8 @@ async function runBrowserChecks() {
     );
     const genreSave = page.getByTestId("save-genre-rails");
     await genreSave.click();
-    await page.getByText("Genre rail preferences saved in local demo mode (not Firestore).").waitFor();
+    await page.waitForFunction(() => document.querySelector('[data-testid="save-genre-rails"]')?.disabled === true);
+    assert.equal(await page.getByTestId("genre-save-error").count(), 0);
     await page.reload({ waitUntil: "domcontentloaded" });
     await selectionCounter.waitFor({ timeout: 20_000 });
     await page.waitForFunction(() =>

@@ -838,8 +838,8 @@ html[data-tv-webview="true"] .zoku-ambient-aura {
   display: none !important;
 }
 
-html[data-gpu-force-compositing="true"] .rail-card-slot,
-html[data-gpu-force-compositing="true"] .rail-scroll-track,
+/* Avoid nested forced GPU layers on every poster and its scrolling parent.
+   Those layers can exhaust texture memory and cause blank artwork on TVs. */
 html[data-gpu-force-compositing="true"] .hero-media-scrim {
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;

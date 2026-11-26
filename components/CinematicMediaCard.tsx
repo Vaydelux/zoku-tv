@@ -1,5 +1,7 @@
 "use client";
 
+import { RecoverableArtwork } from "@/components/RecoverableArtwork";
+
 import React, { useCallback, useRef, useState } from "react";
 import {
   Bookmark,
@@ -62,10 +64,9 @@ export function CinematicMediaCard({
   onToggleWatched,
 }: CinematicMediaCardProps) {
   const cardRef = useRef<HTMLElement>(null);
-  const [failedImage, setFailedImage] = useState<string | null>(null);
   const [transformOrigin, setTransformOrigin] = useState<CardTransformOrigin>("center center");
 
-  const imageAvailable = Boolean(imageUrl && imageUrl !== failedImage);
+  const imageAvailable = Boolean(imageUrl);
   const progress =
     typeof progressPercent === "number" && Number.isFinite(progressPercent)
       ? Math.max(0, Math.min(100, progressPercent))
@@ -115,14 +116,12 @@ export function CinematicMediaCard({
         </div>
 
         {imageAvailable && (
-          <img
-            key={imageUrl}
+          <RecoverableArtwork
             src={imageUrl!}
             alt=""
             loading="lazy"
             decoding="async"
             draggable={false}
-            onError={() => setFailedImage(imageUrl!)}
             className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           />
         )}

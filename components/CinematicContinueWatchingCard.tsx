@@ -1,5 +1,7 @@
 "use client";
 
+import { RecoverableArtwork } from "@/components/RecoverableArtwork";
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ImageOff, Play, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -18,7 +20,6 @@ export function CinematicContinueWatchingCard({ item }: { item: ContinueWatching
   const router = useRouter();
   const cardRef = useRef<HTMLElement>(null);
   const removeItem = useContinueWatchingStore((state) => state.removeItem);
-  const [failedImage, setFailedImage] = useState<string | null>(null);
   const [newEpBadge, setNewEpBadge] = useState<string | null>(null);
   const [transformOrigin, setTransformOrigin] = useState<CardTransformOrigin>("center center");
 
@@ -28,7 +29,7 @@ export function CinematicContinueWatchingCard({ item }: { item: ContinueWatching
     : rawImage
       ? `https://image.tmdb.org/t/p/w780${rawImage}`
       : null;
-  const hasImage = Boolean(imageUrl && failedImage !== imageUrl);
+  const hasImage = Boolean(imageUrl);
   const progress = Math.min(100, Math.max(0, Math.round(item.progress_percent ?? 0)));
   const id = getContinueWatchingItemId(item);
   const episode =
@@ -106,14 +107,14 @@ export function CinematicContinueWatchingCard({ item }: { item: ContinueWatching
           </div>
         )}
         {hasImage && (
-          <img
+          <RecoverableArtwork
             src={imageUrl!}
             alt=""
             loading="lazy"
             decoding="async"
             draggable={false}
             referrerPolicy="no-referrer"
-            onError={() => setFailedImage(imageUrl!)}
+            fallback={<div className="pointer-events-none absolute inset-0 flex items-center justify-center text-on-surface-variant"><ImageOff className="h-7 w-7 opacity-35" aria-hidden="true" /></div>}
             className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           />
         )}
